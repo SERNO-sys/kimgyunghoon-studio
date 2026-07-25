@@ -4,7 +4,7 @@ import matter from 'gray-matter';
 import { remark } from 'remark';
 import remarkHtml from 'remark-html';
 
-import type { ContentItem, Frontmatter } from '../types/common.js';
+import type { ContentItem, Frontmatter } from '../types/common';
 
 export type FrontmatterParser<TFrontmatter extends object> = (
   data: Frontmatter,

@@ -1,9 +1,9 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 
-import { getMarkdownSlugs, getNumber, getString, getStringArray, parseMarkdownFile } from './markdown.js';
-import type { Frontmatter } from '../types/common.js';
-import type { DiaryFrontmatter, DiaryItem } from '../types/diary.js';
+import { getMarkdownSlugs, getNumber, getString, getStringArray, parseMarkdownFile } from './markdown';
+import type { Frontmatter } from '../types/common';
+import type { DiaryFrontmatter, DiaryItem } from '../types/diary';
 
 const diaryDirectory = path.join(process.cwd(), 'content', 'diary');
 

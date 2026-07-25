@@ -1,4 +1,4 @@
-import type { ContentItem } from './common.js';
+import type { ContentItem } from './common';
 
 export interface MusicFrontmatter {
   title: string;

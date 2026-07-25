@@ -7,9 +7,9 @@ import {
   getString,
   getStringArray,
   parseMarkdownFile,
-} from './markdown.js';
-import type { Frontmatter } from '../types/common.js';
-import type { MusicFrontmatter, MusicItem } from '../types/music.js';
+} from './markdown';
+import type { Frontmatter } from '../types/common';
+import type { MusicFrontmatter, MusicItem } from '../types/music';
 
 const musicDirectory = path.join(process.cwd(), 'content', 'music');
 
