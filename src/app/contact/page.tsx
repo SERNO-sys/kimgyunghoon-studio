@@ -1,8 +1,7 @@
 import { Camera, ExternalLink, Mail, Music2, Play } from 'lucide-react';
 
 import { Card } from '../../components/ui/Card';
-
-const contactEmail = 'contact@kimgyunghoon.studio';
+import { siteConfig } from '../../lib/site';
 
 const channels = [
   { label: 'YouTube', description: '음악과 작곡의 기록을 영상으로 만나보세요.', href: 'https://www.youtube.com', icon: Play },
@@ -35,9 +34,9 @@ export default function ContactPage() {
               </div>
               <a
                 className="inline-flex min-h-11 items-center justify-center rounded-sm bg-stone-950 px-5 py-2.5 text-sm font-semibold tracking-wide text-stone-50 transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
-                href={`mailto:${contactEmail}`}
+                href={`mailto:${siteConfig.contactEmail}`}
               >
-                {contactEmail}
+                {siteConfig.contactEmail}
               </a>
             </div>
           </Card>

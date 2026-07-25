@@ -1,5 +1,7 @@
 import { Mail, Play } from 'lucide-react';
 
+import { siteConfig } from '../../lib/site';
+
 const currentYear = new Date().getFullYear();
 
 export function Footer() {
@@ -20,7 +22,7 @@ export function Footer() {
           <a
             aria-label="Email"
             className="inline-flex size-9 items-center justify-center rounded-sm transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-            href="mailto:"
+            href={`mailto:${siteConfig.contactEmail}`}
           >
             <Mail aria-hidden="true" size={18} />
           </a>
