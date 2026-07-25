@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { RelatedMusicSection } from '../../../components/diary/RelatedMusicSection';
@@ -13,6 +14,23 @@ export async function generateStaticParams() {
   const diaries = await getAllDiaries();
 
   return diaries.map((diary) => ({ slug: diary.slug }));
+}
+
+export async function generateMetadata({ params }: DiaryDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const diary = await getDiaryBySlug(slug);
+
+  if (!diary) {
+    return {};
+  }
+
+  return {
+    title: diary.title,
+    description: diary.summary,
+    alternates: { canonical: `/diary/${diary.slug}` },
+    openGraph: { type: 'article', url: `/diary/${diary.slug}`, title: diary.title, description: diary.summary },
+    twitter: { card: 'summary', title: diary.title, description: diary.summary },
+  };
 }
 
 export default async function DiaryDetailPage({ params }: DiaryDetailPageProps) {

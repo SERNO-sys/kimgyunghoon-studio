@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import './globals.css';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
+import { siteConfig } from '../lib/site';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,34 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'KIM GYUNG HOON STUDIO',
-  description: 'A place where music and its creation are preserved together.',
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  keywords: ['김경훈', 'KIM GYUNG HOON', '작곡가', '음악', '작곡 일기', 'music archive'],
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'ko_KR',
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [{ url: '/icon.svg', width: 512, height: 512, alt: siteConfig.name }],
+  },
+  twitter: {
+    card: 'summary',
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: ['/icon.svg'],
+  },
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

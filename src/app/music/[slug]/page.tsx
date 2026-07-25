@@ -1,9 +1,11 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { RelatedDiarySection } from '../../../components/music/RelatedDiarySection';
 import { YoutubePlayer } from '../../../components/music/YoutubePlayer';
 import { getAllMusic, getMusicBySlug } from '../../../lib/music';
 import { getRelatedDiaries } from '../../../lib/relations';
+import { siteConfig } from '../../../lib/site';
 
 interface MusicDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -15,6 +17,23 @@ export async function generateStaticParams() {
   return music.map((item) => ({ slug: item.slug }));
 }
 
+export async function generateMetadata({ params }: MusicDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const music = await getMusicBySlug(slug);
+
+  if (!music) {
+    return {};
+  }
+
+  return {
+    title: music.title,
+    description: music.description,
+    alternates: { canonical: `/music/${music.slug}` },
+    openGraph: { type: 'music.song', url: `/music/${music.slug}`, title: music.title, description: music.description },
+    twitter: { card: 'summary', title: music.title, description: music.description },
+  };
+}
+
 export default async function MusicDetailPage({ params }: MusicDetailPageProps) {
   const { slug } = await params;
   const music = await getMusicBySlug(slug);
@@ -24,9 +43,19 @@ export default async function MusicDetailPage({ params }: MusicDetailPageProps) 
   }
 
   const relatedDiaries = await getRelatedDiaries(music);
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'MusicRecording',
+    name: music.title,
+    datePublished: music.date,
+    description: music.description,
+    url: `${siteConfig.url}/music/${music.slug}`,
+    byArtist: { '@type': 'Person', name: '김경훈' },
+  };
 
   return (
     <main className="bg-[#fffdf8] py-12 sm:py-20">
+      <script dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} type="application/ld+json" />
       <article className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         <header className="border-b border-stone-200 pb-10 sm:pb-12">
           <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">MUSIC ARCHIVE · {music.date}</p>
