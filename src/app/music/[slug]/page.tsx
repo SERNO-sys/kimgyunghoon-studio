@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { LazyYoutubePlayer } from '../../../components/music/LazyYoutubePlayer';
 import { RelatedDiarySection } from '../../../components/music/RelatedDiarySection';
-import { YoutubePlayer } from '../../../components/music/YoutubePlayer';
 import { getAllMusic, getMusicBySlug } from '../../../lib/music';
 import { getRelatedDiaries } from '../../../lib/relations';
 import { siteConfig } from '../../../lib/site';
@@ -63,7 +63,7 @@ export default async function MusicDetailPage({ params }: MusicDetailPageProps) 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">{music.description}</p>
         </header>
         <div className="mt-10">
-          <YoutubePlayer title={music.title} youtubeId={music.youtubeId} />
+          <LazyYoutubePlayer title={music.title} youtubeId={music.youtubeId} />
         </div>
         <div
           className="mt-12 text-[1.0625rem] leading-8 text-stone-700 [&_h1]:mt-12 [&_h1]:font-serif [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:tracking-tight [&_h2]:mt-10 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_p]:mt-5 [&_ul]:mt-5 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6"
