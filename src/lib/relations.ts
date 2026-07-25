@@ -1,7 +1,7 @@
-import { getDiaryBySlug } from './diary.js';
-import { getMusicBySlug } from './music.js';
-import type { DiaryItem } from '../types/diary.js';
-import type { MusicItem } from '../types/music.js';
+import { getDiaryBySlug } from './diary';
+import { getMusicBySlug } from './music';
+import type { DiaryItem } from '../types/diary';
+import type { MusicItem } from '../types/music';
 
 export async function getRelatedDiaries(music: MusicItem): Promise<DiaryItem[]> {
   const diaries = await Promise.all(music.relatedDiarySlugs.map((slug) => getDiaryBySlug(slug)));
