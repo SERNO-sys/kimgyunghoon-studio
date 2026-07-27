@@ -2,7 +2,7 @@
 title: 백중기도
 date: '2026-07-01'
 description: 백중의 마음을 담아 완성한 기도곡입니다.
-youtubeId: ''
+youtubeId: AQKHVOcWptc
 coverImage: /images/covers/baekjung-prayer.jpg
 featured: true
 relatedDiarySlugs:

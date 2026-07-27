@@ -13,7 +13,7 @@ export function Footer() {
           <a
             aria-label="YouTube"
             className="inline-flex size-9 items-center justify-center rounded-sm transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-            href="https://www.youtube.com"
+            href={siteConfig.youtubeUrl}
             rel="noreferrer"
             target="_blank"
           >

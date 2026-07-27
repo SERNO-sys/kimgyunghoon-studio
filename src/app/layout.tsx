@@ -1,21 +1,6 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata } from 'next';
 import './globals.css';
-import { Footer } from '../components/layout/Footer';
-import { Header } from '../components/layout/Header';
-import { siteConfig } from '../lib/site';
-
-const geistSans = Geist({
-  display: 'swap',
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  display: 'swap',
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { siteConfig } from '@/lib/site';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -54,15 +39,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col">
-        <Header />
-        <div className="flex flex-1 flex-col">{children}</div>
-        <Footer />
-      </body>
+    <html lang="en" className="h-full antialiased">
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }
