@@ -1,27 +1,43 @@
-import { MusicCard } from '@/components/music/MusicCard';
-import { getAllMusic } from '@/lib/music';
+import { PostCard } from '@/components/posts/PostCard';
+import { getPublicSiteContext } from '@/lib/site-context';
+
+function getPostDescription(content: string): string {
+  return content.slice(0, 160).replace(/[#*`_\[\]]/g, '').trim();
+}
 
 export default async function MusicPage() {
-  const music = await getAllMusic();
+  const { site, posts } = await getPublicSiteContext();
+  const music = posts.filter(
+    (post) => post.status === 'published' && post.category.toLowerCase() === 'music'
+  );
 
   return (
-    <main className="bg-[#f8f5ed] py-16 sm:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">MUSIC ARCHIVE</p>
-        <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl">Music</h1>
-        <p className="mt-5 max-w-2xl leading-8 text-stone-600">
-          완성된 음악과 그 안에 담긴 이야기를 기록합니다.
+    <div className="max-w-6xl mx-auto px-6 py-16 space-y-12">
+      <div className="space-y-4 border-b border-stone-200 pb-8 text-center">
+        <span className="text-xs font-bold tracking-widest text-amber-800 uppercase">
+          BLOG
+        </span>
+        <h1 className="text-4xl font-serif text-stone-900 font-bold">Blog</h1>
+        <p className="text-stone-600">
+          {site?.name ?? 'This site'}의 다양한 이야기와 기록을 남깁니다.
         </p>
-        {music.length > 0 ? (
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {music.map((item) => (
-              <MusicCard key={item.slug} music={item} />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-12 text-stone-600">등록된 음악이 없습니다.</p>
-        )}
       </div>
-    </main>
+
+      {music.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {music.map((post) => (
+            <PostCard
+              key={post.id}
+              href={`/music/${post.slug}`}
+              post={post}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="py-20 text-center text-stone-400 border border-dashed border-stone-300 rounded-lg">
+          등록된 포스트가 없습니다. 대시보드에서 첫 글을 작성해 보세요.
+        </div>
+      )}
+    </div>
   );
 }

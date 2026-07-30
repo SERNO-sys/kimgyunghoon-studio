@@ -55,7 +55,7 @@ export default function EditPostPage() {
         <p className="mt-2 text-stone-600">Update your post content.</p>
       </div>
       <Card>
-        <PostForm post={post} />
+        <PostForm post={post} siteId={post.siteId} />
       </Card>
     </div>
   );

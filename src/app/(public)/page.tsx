@@ -1,22 +1,22 @@
-import { FeaturedMusic } from '@/components/sections/FeaturedMusic';
 import { Hero } from '@/components/sections/Hero';
-import { LatestDiary } from '@/components/sections/LatestDiary';
+import { LatestPosts } from '@/components/sections/LatestPosts';
 import { Philosophy } from '@/components/sections/Philosophy';
-import { getAllDiaries } from '@/lib/diary';
-import { getAllMusic } from '@/lib/music';
-import { siteConfig } from '@/lib/site';
+import {
+  getPublicSiteContext,
+  resolveSiteConfig,
+} from '@/lib/site-context';
 
 export default async function Home() {
-  const [music, diaries] = await Promise.all([getAllMusic(), getAllDiaries()]);
-  const featuredMusic = music.filter((item) => item.featured);
+  const { site, settings, posts } = await getPublicSiteContext();
+  const config = resolveSiteConfig(site, settings);
 
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Person',
-    name: '김경훈',
-    url: siteConfig.url,
-    jobTitle: 'Composer',
-    description: siteConfig.description,
+    name: config.name,
+    url: site ? `/` : '',
+    jobTitle: 'Creator',
+    description: config.description,
   };
 
   return (
@@ -25,10 +25,24 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         type="application/ld+json"
       />
-      <Hero />
-      <FeaturedMusic music={featuredMusic} />
-      <LatestDiary diaries={diaries} />
-      <Philosophy />
+      <Hero
+        siteName={config.name}
+        description={config.bannerDescription}
+        imageUrl={config.heroImageUrl}
+        themeColors={config.themeColors}
+      />
+      <LatestPosts
+        posts={posts}
+        title="Recent Updates"
+        subtitle="LATEST POSTS"
+        emptyText="No posts yet."
+        themeColors={config.themeColors}
+      />
+      <Philosophy
+        label={config.bannerTitle}
+        title={config.heroSubtitle}
+        content={config.aboutPhilosophy}
+      />
     </main>
   );
 }

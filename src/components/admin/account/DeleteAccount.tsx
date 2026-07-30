@@ -12,13 +12,25 @@ export function DeleteAccount() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmation, setConfirmation] = useState('');
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirmation !== 'DELETE') {
       return;
     }
-    toast.addToast('Account deletion requested. (Mock)', 'success');
-    setIsConfirming(false);
-    setConfirmation('');
+    try {
+      const response = await fetch('/api/admin/account', { method: 'DELETE' });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toast.addToast('Account deleted successfully.', 'success');
+        window.location.href = '/admin/login';
+      } else {
+        toast.addToast(
+          result.message || 'Failed to delete account.',
+          'error'
+        );
+      }
+    } catch {
+      toast.addToast('An unexpected error occurred.', 'error');
+    }
   };
 
   return (

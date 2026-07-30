@@ -1,0 +1,38 @@
+# Cloudflare configuration for the multi-tenant homepage SaaS platform.
+# 1. Replace <YOUR_ACCOUNT_ID> with your Cloudflare account ID.
+# 2. Replace <YOUR_DATABASE_ID> with the D1 database ID created by `wrangler d1 create`.
+# 3. Replace <YOUR_R2_BUCKET_NAME> with your R2 bucket name.
+# 4. Run `wrangler d1 migrations apply DB` to create tables.
+# 5. Run `npm install` then `npx @cloudflare/next-on-pages` to build for Pages.
+
+name = "kimgyunghoon-studio"
+account_id = "a7d07d413295043712df1a0ae1a166bd"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = ".vercel/output/static"
+
+# D1 database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "homepagebuilder"
+database_id = "7b30413f-4e8d-4be9-9eb1-94e7bfd7ec6d"
+
+# R2 bucket binding for user uploaded media
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "homepagebuilder-images"
+
+# Plain environment variables (non-secrets)
+[vars]
+NODE_ENV = "production"
+NEXTAUTH_URL = "https://kimgyunghoon-studio.pages.dev"
+GOOGLE_REDIRECT_URI = "https://kimgyunghoon-studio.pages.dev/api/auth/callback"
+R2_PUBLIC_URL = "https://pub-b1642f7b304b430b9818d0f1370a6a73.r2.dev"
+
+# Secrets to add with `wrangler pages secret put`:
+# - SESSION_SECRET
+# - AUTH_SECRET
+# - GOOGLE_CLIENT_ID
+# - GOOGLE_CLIENT_SECRET
+# - GEMINI_API_KEY (optional)

@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
 import { setupSchema, type SetupSchema } from '@/lib/admin/setup';
 import { ContactStep } from './steps/ContactStep';
+import { DomainStep } from './steps/DomainStep';
 import { GeneralStep } from './steps/GeneralStep';
 import { ReviewStep } from './steps/ReviewStep';
 import { SocialStep } from './steps/SocialStep';
@@ -16,6 +16,7 @@ import { ThemeStep } from './steps/ThemeStep';
 
 const steps = [
   { id: 'general', label: 'General' },
+  { id: 'domain', label: 'Domain' },
   { id: 'contact', label: 'Contact' },
   { id: 'social', label: 'Social' },
   { id: 'theme', label: 'Theme' },
@@ -25,24 +26,43 @@ const steps = [
 const defaultValues: SetupSchema = {
   name: '',
   description: '',
+  domain: '',
   contactEmail: '',
   contactPhone: '',
-  social: { youtube: '', instagram: '', twitter: '' },
+  social: {
+    youtube: '',
+    instagram: '',
+    twitter: '',
+    tiktok: '',
+    facebook: '',
+    soundcloud: '',
+    spotify: '',
+    threads: '',
+  },
   theme: 'default',
 };
 
 const stepFields: Record<number, string[]> = {
   0: ['name', 'description'],
-  1: ['contactEmail', 'contactPhone'],
-  2: ['social.youtube', 'social.instagram', 'social.twitter'],
-  3: ['theme'],
-  4: [],
+  1: ['domain'],
+  2: ['contactEmail', 'contactPhone'],
+  3: [
+    'social.youtube',
+    'social.instagram',
+    'social.twitter',
+    'social.tiktok',
+    'social.facebook',
+    'social.soundcloud',
+    'social.spotify',
+    'social.threads',
+  ],
+  4: ['theme'],
+  5: [],
 };
 
 export function SetupWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
   const toast = useToast();
 
   const form = useForm<SetupSchema>({
@@ -79,7 +99,9 @@ export function SetupWizard() {
       const result = await response.json();
       if (response.ok && result.success) {
         toast.addToast('Site configuration saved successfully.', 'success');
-        router.push('/admin');
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 1000);
       } else {
         toast.addToast(
           result.message || 'Failed to save configuration.',
@@ -131,10 +153,11 @@ export function SetupWizard() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="min-h-[280px]">
             {currentStep === 0 && <GeneralStep form={form} />}
-            {currentStep === 1 && <ContactStep form={form} />}
-            {currentStep === 2 && <SocialStep form={form} />}
-            {currentStep === 3 && <ThemeStep form={form} />}
-            {currentStep === 4 && <ReviewStep form={form} />}
+            {currentStep === 1 && <DomainStep form={form} />}
+            {currentStep === 2 && <ContactStep form={form} />}
+            {currentStep === 3 && <SocialStep form={form} />}
+            {currentStep === 4 && <ThemeStep form={form} />}
+            {currentStep === 5 && <ReviewStep form={form} />}
           </div>
 
           <div className="mt-8 flex items-center justify-between border-t border-stone-200 pt-6">

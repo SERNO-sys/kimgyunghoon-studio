@@ -1,80 +1,136 @@
-import { Camera, ExternalLink, Mail, Music2, Play } from 'lucide-react';
+import { Mail, MessageSquare, Send } from 'lucide-react';
 
-import { Card } from '@/components/ui/Card';
-import { siteConfig } from '@/lib/site';
+import { getPublicSiteContext, resolveSiteConfig } from '@/lib/site-context';
 
-const channels = [
-  { label: 'YouTube', description: '음악과 작곡의 기록을 영상으로 만나보세요.', href: siteConfig.youtubeUrl, icon: Play },
-  { label: 'Music Streaming', description: '발매된 음악을 스트리밍으로 감상하세요.', href: 'https://open.spotify.com', icon: Music2 },
-  { label: 'Instagram', description: '새로운 소식과 일상의 영감을 나눕니다.', href: 'https://www.instagram.com', icon: Camera },
-];
+export default async function ContactPage() {
+  const { site, settings } = await getPublicSiteContext();
+  const config = resolveSiteConfig(site, settings);
 
-export default function ContactPage() {
+  const channels = [
+    ...(config.youtubeUrl ? [{ label: 'YouTube', href: config.youtubeUrl }] : []),
+    ...(config.instagramUrl
+      ? [{ label: 'Instagram', href: config.instagramUrl }]
+      : []),
+    ...(config.twitterUrl ? [{ label: 'Twitter', href: config.twitterUrl }] : []),
+  ];
+
   return (
-    <main className="bg-[#f8f5ed] py-16 sm:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">GET IN TOUCH</p>
-        <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl">Contact</h1>
-        <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">
-          음악과 작업에 관한 이야기, 협업 제안은 아래 채널을 통해 전해주세요.
+    <div className="max-w-6xl mx-auto px-6 py-16 space-y-12">
+      <div className="space-y-4 border-b border-stone-200 pb-8 text-center">
+        <span className="text-xs font-bold tracking-widest text-amber-800 uppercase">
+          CONTACT
+        </span>
+        <h1 className="text-4xl font-serif text-stone-900 font-bold">
+          Get in Touch
+        </h1>
+        <p className="text-stone-600">
+          {config.name}에 대한 문의와 협업 제안을 환영합니다.
         </p>
+      </div>
 
-        <section aria-labelledby="email-heading" className="mt-12">
-          <Card className="max-w-3xl border-amber-800/20 bg-[#fffdf8] p-6 sm:p-8">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <form className="space-y-6 bg-stone-50 border border-stone-200 rounded-lg p-6">
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-sm font-bold text-stone-800">
+              Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              placeholder="Your name"
+              className="w-full rounded-sm border border-stone-300 bg-[#fffdf8] px-3 py-2 text-sm text-stone-900 focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-bold text-stone-800">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              className="w-full rounded-sm border border-stone-300 bg-[#fffdf8] px-3 py-2 text-sm text-stone-900 focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
+            />
+          </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="message"
+              className="text-sm font-bold text-stone-800"
+            >
+              Message
+            </label>
+            <textarea
+              id="message"
+              rows={5}
+              placeholder="Write your message..."
+              className="w-full rounded-sm border border-stone-300 bg-[#fffdf8] px-3 py-2 text-sm text-stone-900 focus:border-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-700"
+            />
+          </div>
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 rounded-sm bg-stone-900 px-5 py-2.5 text-sm font-semibold text-stone-50 hover:bg-stone-800 transition"
+          >
+            <Send size={16} />
+            Send message
+          </button>
+        </form>
+
+        <div className="space-y-6">
+          {config.email ? (
+            <a
+              href={`mailto:${config.email}`}
+              className="group block rounded-lg border border-stone-200 bg-stone-50 p-6 hover:border-amber-700/40 transition"
+            >
+              <div className="flex items-start gap-4">
                 <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-900">
-                  <Mail aria-hidden="true" size={20} />
+                  <Mail size={20} />
                 </span>
                 <div>
-                  <p className="text-xs font-semibold tracking-[0.18em] text-amber-900">OFFICIAL EMAIL</p>
-                  <h2 className="mt-2 font-serif text-2xl font-semibold text-stone-950" id="email-heading">Email</h2>
-                  <p className="mt-2 leading-7 text-stone-600">작업 의뢰와 협업 문의를 이메일로 보내주세요.</p>
+                  <h3 className="font-serif text-xl font-bold text-stone-900">
+                    Email
+                  </h3>
+                  <p className="mt-1 text-sm text-stone-600">{config.email}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-amber-800 group-hover:underline">
+                    Send email →
+                  </span>
                 </div>
               </div>
-              <a
-                className="inline-flex min-h-11 items-center justify-center rounded-sm bg-stone-950 px-5 py-2.5 text-sm font-semibold tracking-wide text-stone-50 transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
-                href={`mailto:${siteConfig.contactEmail}`}
-              >
-                {siteConfig.contactEmail}
-              </a>
+            </a>
+          ) : null}
+
+          {channels.length > 0 ? (
+            <div className="space-y-4">
+              <h3 className="font-serif text-xl font-bold text-stone-900">
+                Channels
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {channels.map((channel) => (
+                  <a
+                    key={channel.label}
+                    href={channel.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 hover:border-amber-700/40 transition"
+                  >
+                    <span className="inline-flex size-10 items-center justify-center rounded-full bg-amber-50 text-amber-900">
+                      <MessageSquare size={18} />
+                    </span>
+                    <span className="font-bold text-stone-800">
+                      {channel.label}
+                    </span>
+                  </a>
+                ))}
+              </div>
             </div>
-          </Card>
-        </section>
+          ) : null}
 
-        <section aria-labelledby="channels-heading" className="mt-16 sm:mt-20">
-          <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">LISTEN &amp; FOLLOW</p>
-          <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl" id="channels-heading">
-            Channels
-          </h2>
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
-            {channels.map((channel) => {
-              const Icon = channel.icon;
-
-              return (
-                <a
-                  className="group block rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700"
-                  href={channel.href}
-                  key={channel.label}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <Card className="flex h-full flex-col">
-                    <span className="inline-flex size-11 items-center justify-center rounded-full bg-amber-50 text-amber-900">
-                      <Icon aria-hidden="true" size={20} />
-                    </span>
-                    <h3 className="mt-6 font-serif text-2xl font-semibold text-stone-950">{channel.label}</h3>
-                    <p className="mt-3 flex-1 leading-7 text-stone-600">{channel.description}</p>
-                    <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-stone-900 transition-colors group-hover:text-amber-900">
-                      채널 열기 <ExternalLink aria-hidden="true" size={16} />
-                    </span>
-                  </Card>
-                </a>
-              );
-            })}
-          </div>
-        </section>
+          {channels.length === 0 && !config.email ? (
+            <div className="rounded-lg border border-dashed border-stone-300 p-8 text-center text-stone-400">
+              등록된 연락처가 없습니다. 설정 페이지에서 연락처를 추가해 보세요.
+            </div>
+          ) : null}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/admin/session';
+import { getDb } from '@/lib/db/client';
+import {
+  deletePost,
+  getPostById,
+  updatePost,
+} from '@/lib/db/queries';
 import { postSchema, type Post } from '@/lib/admin/posts';
-import { mockPosts } from '@/lib/admin/posts-store';
 
 export const runtime = 'edge';
 
@@ -19,7 +24,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const post = mockPosts.find((item) => item.id === id);
+  const db = getDb();
+  const post = await getPostById(db, id);
   if (!post) {
     return NextResponse.json(
       { success: false, message: 'Not found' },
@@ -39,8 +45,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const index = mockPosts.findIndex((item) => item.id === id);
-  if (index === -1) {
+  const db = getDb();
+  const existing = await getPostById(db, id);
+  if (!existing) {
     return NextResponse.json(
       { success: false, message: 'Not found' },
       { status: 404 }
@@ -62,8 +69,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     const data = result.data;
-    const updatedPost: Post = {
-      ...mockPosts[index],
+    const updatedPost: Partial<Post> = {
       title: data.title,
       slug: data.slug,
       category: data.category,
@@ -72,14 +78,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
             .split(',')
             .map((tag) => tag.trim())
             .filter(Boolean)
-        : [],
+            .join(',')
+        : '',
+      audioUrl: data.audioUrl || undefined,
+      featuredImageUrl: data.featuredImageUrl || undefined,
       content: data.content,
       status: data.status,
       updatedAt: new Date().toISOString(),
     };
 
-    mockPosts[index] = updatedPost;
-    return NextResponse.json({ success: true, post: updatedPost });
+    const post = await updatePost(db, id, updatedPost);
+    return NextResponse.json({ success: true, post });
   } catch {
     return NextResponse.json(
       { success: false, message: 'Failed to process request' },
@@ -98,14 +107,15 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const index = mockPosts.findIndex((item) => item.id === id);
-  if (index === -1) {
+  const db = getDb();
+  const existing = await getPostById(db, id);
+  if (!existing) {
     return NextResponse.json(
       { success: false, message: 'Not found' },
       { status: 404 }
     );
   }
 
-  mockPosts.splice(index, 1);
+  await deletePost(db, id);
   return NextResponse.json({ success: true });
 }

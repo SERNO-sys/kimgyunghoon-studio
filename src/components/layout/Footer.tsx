@@ -1,32 +1,55 @@
-import { Mail, Play } from 'lucide-react';
-
-import { siteConfig } from '../../lib/site';
+import { SocialLinks } from './SocialLinks';
 
 const currentYear = new Date().getFullYear();
 
-export function Footer() {
+interface FooterProps {
+  siteName?: string;
+  email?: string;
+  phone?: string;
+  socialUrls: Parameters<typeof SocialLinks>[0]['socialUrls'];
+  themeColors?: {
+    background: string;
+    foreground: string;
+    primary: string;
+    card: string;
+  };
+}
+
+export function Footer({
+  siteName = '',
+  email,
+  phone,
+  socialUrls,
+  themeColors,
+}: FooterProps) {
   return (
-    <footer className="border-t border-stone-200 bg-stone-950 text-stone-300">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-        <p className="text-sm">© {currentYear} KIM GYUNG HOON STUDIO. All rights reserved.</p>
-        <div className="flex items-center gap-2">
-          <a
-            aria-label="YouTube"
-            className="inline-flex size-9 items-center justify-center rounded-sm transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-            href={siteConfig.youtubeUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            <Play aria-hidden="true" size={18} />
-          </a>
-          <a
-            aria-label="Email"
-            className="inline-flex size-9 items-center justify-center rounded-sm transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
-            href={`mailto:${siteConfig.contactEmail}`}
-          >
-            <Mail aria-hidden="true" size={18} />
-          </a>
+    <footer
+      className="border-t border-current/10"
+      style={
+        themeColors
+          ? { backgroundColor: themeColors.background, color: themeColors.foreground }
+          : undefined
+      }
+    >
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 px-4 py-8 text-center sm:px-6 lg:px-8">
+        <div className="space-y-1">
+          <p className="text-sm">© {currentYear} {siteName}</p>
+          {(email || phone) && (
+            <div className="flex flex-wrap items-center gap-3 text-sm text-current/60">
+              {email && (
+                <a className="hover:text-current" href={`mailto:${email}`}>
+                  {email}
+                </a>
+              )}
+              {phone && (
+                <a className="hover:text-current" href={`tel:${phone}`}>
+                  {phone}
+                </a>
+              )}
+            </div>
+          )}
         </div>
+        <SocialLinks socialUrls={socialUrls} />
       </div>
     </footer>
   );

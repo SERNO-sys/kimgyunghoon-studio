@@ -1,12 +1,12 @@
 \# Admin UI Specification
 
-Version 2.0
+
+
+Version 2.0 (Dynamic SaaS WebApp Architecture)
 
 
 
 Project
-
-
 
 Site Builder CMS
 
@@ -28,25 +28,21 @@ Every management feature begins here.
 
 
 
-The dashboard must allow beginners to manage
-
-their website without editing source code.
+The dashboard must allow complete beginners to manage their website without editing source code, Markdown files, or infrastructure settings.
 
 
 
-No GitHub.
+No GitHub UI required.
+
+No Cloudflare UI required.
+
+No Markdown manual editing.
+
+No Hardcoded Static Templates in React Components.
 
 
 
-No Cloudflare.
-
-
-
-No Markdown editing.
-
-
-
-Everything is managed through UI.
+Everything is dynamically managed through UI and bound to Cloudflare D1 Database and JSON Configurations.
 
 
 
@@ -54,43 +50,21 @@ Everything is managed through UI.
 
 
 
-\# 2. Design Principles
+\# 2. Design Principles \& SaaS Architecture Rules
 
 
 
-The interface should follow these principles.
+The interface and component architecture MUST follow these strict principles:
 
 
 
-Simple
+\- \*\*Zero Hardcoding\*\*: Never place static texts, personal names, specific template content, audio paths, or fixed image URLs inside React components.
 
+\- \*\*Pure Presentational Components\*\*: Components only render data passed dynamically from the Service Layer, Cloudflare D1 Database, or JSON configs for the given `siteId`.
 
+\- \*\*Dynamic Site Isolation\*\*: Every site created via `/admin/setup` operates as an independent dynamic web app.
 
-Fast
-
-
-
-Minimal
-
-
-
-Consistent
-
-
-
-Responsive
-
-
-
-Beginner Friendly
-
-
-
-Every screen should have one clear purpose.
-
-
-
-Avoid unnecessary options.
+\- \*\*Simple \& Beginner Friendly\*\*: Every screen has one clear purpose with minimal clicks.
 
 
 
@@ -102,41 +76,39 @@ Avoid unnecessary options.
 
 
 
-```
-
-
-
 +----------------------------------------------------------+
 
-| Logo | Site Name | Search | Notification | User |
+| Logo | Site Name | Search | Notification | User Profile  |
 
 +----------------------+-----------------------------------+
 
-| Sidebar | |
+| Sidebar              |                                   |
 
-| | |
+| - Dashboard          | Main Workspace Area               |
 
-| | Dashboard |
+| - Posts              | (Pure Dynamic Presentational UI)  |
 
-| | |
+| - Pages              |                                   |
 
-| | |
+| - Media              |                                   |
 
-| | |
+| - Appearance         |                                   |
 
-| | |
+| - Site Settings      |                                   |
 
-| | |
+| - SEO                |                                   |
 
-| | |
+| - AI Assistant       |                                   |
 
-| | |
+| - Deployment         |                                   |
+
+| - Domain             |                                   |
+
+| - Account            |                                   |
 
 +----------------------+-----------------------------------+
 
 
-
-```
 
 
 
@@ -148,55 +120,31 @@ Avoid unnecessary options.
 
 
 
-Dashboard
+\- Dashboard
+
+\- Posts
+
+\- Pages
+
+\- Media
+
+\- Appearance
+
+\- Site Settings
+
+\- SEO
+
+\- AI Assistant
+
+\- Deployment
+
+\- Domain
+
+\- Account
 
 
 
-Posts
-
-
-
-Pages
-
-
-
-Media
-
-
-
-Appearance
-
-
-
-Site Settings
-
-
-
-SEO
-
-
-
-AI Assistant
-
-
-
-Deployment
-
-
-
-Domain
-
-
-
-Account
-
-
-
-\---
-
-
-
-Each menu owns one responsibility.
+Each menu owns one single responsibility and handles data exclusively via APIs and D1 database queries.
 
 
 
@@ -208,47 +156,39 @@ Each menu owns one responsibility.
 
 
 
-Purpose
+Purpose: Provide overall project status for the currently active site (`siteId`).
 
 
 
-Provide overall project status.
+Widgets (Dynamic Data Only):
+
+\- Recent Posts (Fetched from D1)
+
+\- Deployment Status
+
+\- Storage Usage (Cloudflare R2)
+
+\- Latest Activity Log
+
+\- Website Status
+
+\- Quick Actions
+
+\- Recent AI Activity
 
 
 
-\---
+Quick Actions:
 
+\- Create Post
 
+\- Upload Image
 
-Widgets
+\- Deploy Site
 
+\- Open Public Website (`/sites/\[siteId]`)
 
-
-Recent Posts
-
-
-
-Deployment Status
-
-
-
-Storage Usage
-
-
-
-Latest Activity
-
-
-
-Website Status
-
-
-
-Quick Actions
-
-
-
-Recent AI Activity
+\- Site Settings
 
 
 
@@ -256,199 +196,23 @@ Recent AI Activity
 
 
 
-Quick Actions
+\# 6. Posts (Content Management)
 
 
 
-Create Post
+Purpose: Manage blog articles and content entries dynamically.
 
 
 
-Upload Image
+Functions:
 
+\- Create, Edit, Delete, Preview, Draft, Publish, Unpublish, Duplicate, Search, Filter, Sort
 
 
-Deploy
 
+Data Rule:
 
-
-Generate About
-
-
-
-Open Website
-
-
-
-Settings
-
-
-
-\---
-
-
-
-\# 6. Posts
-
-
-
-Purpose
-
-
-
-Manage blog articles.
-
-
-
-\---
-
-
-
-Functions
-
-
-
-Create
-
-
-
-Edit
-
-
-
-Delete
-
-
-
-Preview
-
-
-
-Draft
-
-
-
-Publish
-
-
-
-Unpublish
-
-
-
-Duplicate
-
-
-
-Search
-
-
-
-Filter
-
-
-
-Sort
-
-
-
-\---
-
-
-
-Screen Layout
-
-
-
-```
-
-
-
-\--------------------------------------------------
-
-
-
-All Posts
-
-
-
-\--------------------------------------------------
-
-
-
-Search
-
-
-
-Category
-
-
-
-Status
-
-
-
-Date
-
-
-
-\--------------------------------------------------
-
-
-
-Title
-
-
-
-Category
-
-
-
-Status
-
-
-
-Date
-
-
-
-Actions
-
-
-
-\--------------------------------------------------
-
-
-
-```
-
-
-
-\---
-
-
-
-Actions
-
-
-
-Edit
-
-
-
-Preview
-
-
-
-Duplicate
-
-
-
-Delete
-
-
-
-Publish
+\- All post lists and contents are retrieved from D1 or synchronized Markdown repositories via API. No static dummy posts inside code.
 
 
 
@@ -460,135 +224,23 @@ Publish
 
 
 
-Purpose
+Purpose: Dynamic article creation and editing interface.
 
 
 
-Create articles.
+Sections:
+
+\- Title, Slug (Auto-generated), Category, Tags, Featured Image, Editor (Tiptap/Markdown), SEO Metadata, Publishing Controls
 
 
 
-\---
+Editor Toolbar:
 
-
-
-Sections
-
-
-
-Title
-
-
-
-Slug
-
-
-
-Category
-
-
-
-Tags
-
-
-
-Featured Image
-
-
-
-Editor
-
-
-
-SEO
-
-
-
-Publish
+\- Formatting tools, Image insertion (R2 URL bound), AI Assist Modal
 
 
 
 \---
-
-
-
-Editor Toolbar
-
-
-
-Bold
-
-
-
-Italic
-
-
-
-Heading
-
-
-
-Quote
-
-
-
-Code
-
-
-
-Table
-
-
-
-Image
-
-
-
-Video
-
-
-
-Link
-
-
-
-Undo
-
-
-
-Redo
-
-
-
-Preview
-
-
-
-AI Assist
-
-
-
-\---
-
-
-
-Publishing
-
-
-
-Draft
-
-
-
-Preview
-
-
-
-Publish
-
-
-
-Schedule
 
 
 
@@ -596,47 +248,19 @@ Schedule
 
 
 
-Purpose
+Purpose: Manage static page configurations dynamically.
 
 
 
-Manage static pages.
+Supported Dynamic Types:
+
+\- Standard Page, Landing Page, Portfolio Page, Contact Page
 
 
 
-Examples
+Rule:
 
-
-
-Home
-
-
-
-About
-
-
-
-Contact
-
-
-
-Privacy Policy
-
-
-
-Terms of Service
-
-
-
-Gallery
-
-
-
-FAQ
-
-
-
-Landing Page
+\- Page layouts render dynamically based on D1/JSON definitions (`site.json`, `pages` table in D1). Do not hardcode static layout components for specific templates.
 
 
 
@@ -644,39 +268,17 @@ Landing Page
 
 
 
-Functions
+\# 9. Media Library (Cloudflare R2)
 
 
 
-Create
+Purpose: Centralized media asset management with automatic WebP compression.
 
 
 
-Edit
+Upload Flow:
 
-
-
-Delete
-
-
-
-Duplicate
-
-
-
-Preview
-
-
-
-Publish
-
-
-
-Hide
-
-
-
-Reorder
+Drag \& Drop -> Validation -> Compression/WebP -> Upload to Cloudflare R2 -> Store Metadata in D1 -> Return Public R2 URL -> Bind to Editor/Settings
 
 
 
@@ -684,419 +286,29 @@ Reorder
 
 
 
-Page Types
+\# 10. Appearance \& Theme Engine
 
 
 
-Standard Page
+Purpose: Customize website design without changing source code.
 
 
 
-Landing Page
+Modules:
 
+\- Themes Selection (Updates `theme.json` dynamic config)
 
+\- Navigation Manager (Updates `navigation.json` dynamically)
 
-Portfolio Page
+\- Footer Manager (Updates `footer` dynamic settings)
 
+\- Homepage Hero / Banner Settings
 
 
-Gallery Page
 
+Rule:
 
-
-Contact Page
-
-
-
-Custom Template
-
-
-
-\---
-
-
-
-\# 9. Media Library
-
-
-
-Purpose
-
-
-
-Manage all uploaded assets.
-
-
-
-\---
-
-
-
-Supported Files
-
-
-
-Images
-
-
-
-Logo
-
-
-
-Background
-
-
-
-BGM
-
-
-
-Documents (Future)
-
-
-
-Video (Future)
-
-
-
-\---
-
-
-
-Functions
-
-
-
-Upload
-
-
-
-Preview
-
-
-
-Rename
-
-
-
-Replace
-
-
-
-Delete
-
-
-
-Copy URL
-
-
-
-Search
-
-
-
-Filter
-
-
-
-\---
-
-
-
-Upload Flow
-
-
-
-Drag \& Drop
-
-
-
-↓
-
-
-
-Validate
-
-
-
-↓
-
-
-
-Compress
-
-
-
-↓
-
-
-
-Convert to WebP
-
-
-
-↓
-
-
-
-Upload to Cloudflare R2
-
-
-
-↓
-
-
-
-Generate Public URL
-
-
-
-↓
-
-
-
-Store Metadata
-
-
-
-↓
-
-
-
-Done
-
-
-
-\---
-
-
-
-Media Card
-
-
-
-Thumbnail
-
-
-
-Filename
-
-
-
-File Size
-
-
-
-Upload Date
-
-
-
-Used By
-
-
-
-Copy URL
-
-
-
-Delete
-
-
-
-\---
-
-
-
-\# 10. Appearance
-
-
-
-Purpose
-
-
-
-Customize website design.
-
-
-
-\---
-
-
-
-Modules
-
-
-
-Themes
-
-
-
-Homepage
-
-
-
-Navigation
-
-
-
-Footer
-
-
-
-Logo
-
-
-
-Favicon
-
-
-
-Typography
-
-
-
-Colors
-
-
-
-Buttons
-
-
-
-Animations (Future)
-
-
-
-\---
-
-
-
-Theme Screen
-
-
-
-Theme List
-
-
-
-↓
-
-
-
-Live Preview
-
-
-
-↓
-
-
-
-Apply Theme
-
-
-
-↓
-
-
-
-Save
-
-
-
-\---
-
-
-
-Navigation Screen
-
-
-
-Menu List
-
-
-
-Add Menu
-
-
-
-Delete Menu
-
-
-
-Reorder
-
-
-
-External Link
-
-
-
-Visibility
-
-
-
-\---
-
-
-
-Footer Screen
-
-
-
-Footer Text
-
-
-
-Copyright
-
-
-
-Social Icons
-
-
-
-Contact
-
-
-
-Custom HTML (Future)
-
-
-
-\---
-
-
-
-Homepage Screen
-
-
-
-Hero Title
-
-
-
-Hero Subtitle
-
-
-
-Hero Button
-
-
-
-Banner Image
-
-
-
-Featured Posts
-
-
-
-Latest Posts
-
-
-
-BGM
+\- Changing themes or appearance MUST only update JSON configuration values or D1 rows. It must NEVER modify or rewrite React component source files.
 
 
 
@@ -1108,187 +320,19 @@ BGM
 
 
 
-Purpose
+Purpose: Configure global website metadata for the active `siteId`.
 
 
 
-Configure global website information.
+Sections (Stored in D1 / `site.json`):
 
+\- General: Site Name, Description, Language, Timezone
 
+\- Contact: Public Email, Phone, Address
 
-\---
+\- Social: Links to YouTube, Instagram, GitHub, etc.
 
-
-
-Sections
-
-
-
-General
-
-
-
-Contact
-
-
-
-Social
-
-
-
-Localization
-
-
-
-SEO Defaults
-
-
-
-Analytics
-
-
-
-Maintenance
-
-
-
-\---
-
-
-
-General
-
-
-
-Site Name
-
-
-
-Description
-
-
-
-Language
-
-
-
-Timezone
-
-
-
-Date Format
-
-
-
-\---
-
-
-
-Contact
-
-
-
-Email
-
-
-
-Phone
-
-
-
-Address
-
-
-
-Business Hours
-
-
-
-\---
-
-
-
-Social
-
-
-
-YouTube
-
-
-
-Instagram
-
-
-
-Facebook
-
-
-
-Threads
-
-
-
-TikTok
-
-
-
-X
-
-
-
-GitHub
-
-
-
-LinkedIn
-
-
-
-\---
-
-
-
-Localization
-
-
-
-Language
-
-
-
-Timezone
-
-
-
-Date Format
-
-
-
-Currency (Future)
-
-
-
-\---
-
-
-
-Maintenance
-
-
-
-Maintenance Mode
-
-
-
-Coming Soon
-
-
-
-Site Visibility
-
-
-
-Read Only Mode (Future)
+\- Localization \& Maintenance Mode
 
 
 
@@ -1300,39 +344,15 @@ Read Only Mode (Future)
 
 
 
-Purpose
+Purpose: Manage search engine optimization metadata dynamically.
 
 
 
-Manage search engine optimization.
+Features:
 
+\- Global SEODefaults, Open Graph Images, Twitter Cards, Schema.org Structured Data
 
-
-\---
-
-
-
-Global SEO
-
-
-
-Site Title
-
-
-
-Default Description
-
-
-
-Keywords
-
-
-
-Canonical URL
-
-
-
-Robots
+\- All fields dynamically read from `seo.json` or D1 `sites` table.
 
 
 
@@ -1340,323 +360,19 @@ Robots
 
 
 
-Social Preview
+\# 13. AI Assistant (Google Gemini)
 
 
 
-Open Graph Image
+Purpose: Assist in generating and improving content safely.
 
 
 
-Facebook Preview
+Rules:
 
+\- AI is strictly a writing assistant. It NEVER publishes content automatically.
 
-
-Twitter Card
-
-
-
-\---
-
-
-
-Structured Data
-
-
-
-Schema
-
-
-
-Organization
-
-
-
-Website
-
-
-
-Article
-
-
-
-Breadcrumb
-
-
-
-\---
-
-
-
-Functions
-
-
-
-Generate with AI
-
-
-
-Preview
-
-
-
-Validate
-
-
-
-Save
-
-
-
-\# 13. AI Assistant
-
-
-
-Purpose
-
-
-
-Assist users in creating high-quality website content using AI.
-
-
-
-The AI Assistant is a writing assistant.
-
-
-
-It never publishes content automatically.
-
-
-
-The user always reviews and approves AI-generated content.
-
-
-
-\---
-
-
-
-\## AI Dashboard
-
-
-
-Sections
-
-
-
-Quick Generate
-
-
-
-Rewrite
-
-
-
-SEO Assistant
-
-
-
-Translation (Future)
-
-
-
-History
-
-
-
-Templates
-
-
-
-Provider Settings
-
-
-
-\---
-
-
-
-\## Quick Generate
-
-
-
-Generate
-
-
-
-About Page
-
-
-
-Homepage Hero
-
-
-
-Introduction
-
-
-
-Footer Copyright
-
-
-
-Privacy Policy
-
-
-
-Terms of Service
-
-
-
-SEO Description
-
-
-
-Meta Keywords
-
-
-
-Blog Summary
-
-
-
-\---
-
-
-
-\## Rewrite
-
-
-
-Rewrite Existing Content
-
-
-
-Improve Readability
-
-
-
-Professional Tone
-
-
-
-Friendly Tone
-
-
-
-Shorten
-
-
-
-Expand
-
-
-
-Grammar Correction
-
-
-
-\---
-
-
-
-\## Prompt Templates
-
-
-
-Frequently used prompts should be saved.
-
-
-
-Examples
-
-
-
-Business Introduction
-
-
-
-Portfolio
-
-
-
-Restaurant
-
-
-
-Temple
-
-
-
-Church
-
-
-
-Landing Page
-
-
-
-Blog Article
-
-
-
-\---
-
-
-
-\## AI History
-
-
-
-Every AI generation is stored.
-
-
-
-History includes
-
-
-
-Prompt
-
-
-
-Generated Result
-
-
-
-Date
-
-
-
-Provider
-
-
-
-Model
-
-
-
-Status
-
-
-
-Users can
-
-
-
-Reuse
-
-
-
-Copy
-
-
-
-Delete
-
-
-
-Restore
+\- Generated text is presented for preview and inserted into the editor only upon user confirmation.
 
 
 
@@ -1668,17 +384,13 @@ Restore
 
 
 
-Purpose
+Purpose: Manage Cloudflare Pages deployment status transparently without requiring Git terminal knowledge.
 
 
 
-Manage publishing and deployment.
+Features:
 
-
-
-Users should understand deployment
-
-without learning Git or Cloudflare.
+\- Current Build Status, Deployment History, Trigger Deployment, Build Logs
 
 
 
@@ -1686,35 +398,17 @@ without learning Git or Cloudflare.
 
 
 
-\## Dashboard
+\# 15. Domain Manager
 
 
 
-Current Status
+Purpose: Connect custom domains via Cloudflare API.
 
 
 
-Last Deployment
+Features:
 
-
-
-Deployment History
-
-
-
-Current Branch
-
-
-
-Current Commit
-
-
-
-Build Duration
-
-
-
-Deployment URL
+\- Domain Format Validation, Ownership Check, DNS / SSL Status Display
 
 
 
@@ -1722,59 +416,25 @@ Deployment URL
 
 
 
-\## Available Actions
+\# 16. Account \& Security
 
 
 
-Deploy
+Purpose: Manage authenticated user profile.
 
 
 
-Rollback
+Authentication Rule:
+
+\- \*\*Google OAuth Only\*\* (or System Secret Key).
+
+\- \*\*NO Password Login, NO Password Reset/Change Forms\*\*.
 
 
 
-Rebuild
+Features:
 
-
-
-View Logs
-
-
-
-Refresh Status
-
-
-
-\---
-
-
-
-\## Deployment History
-
-
-
-Deployment Time
-
-
-
-Commit
-
-
-
-Status
-
-
-
-Duration
-
-
-
-Triggered By
-
-
-
-Rollback Button
+\- Display Name, Profile Avatar (Google OAuth sync), Session Info, Current Active Sites, Logout
 
 
 
@@ -1782,739 +442,13 @@ Rollback Button
 
 
 
-\## Build Status
+\# 17. User Journey \& Public Site Routing
 
 
 
-Waiting
+1\. \*\*Setup Journey\*\*: First-time user completes `/admin/setup` -> D1 inserts initial dynamic site record and seed data -> Redirects to Dashboard.
 
-
-
-Building
-
-
-
-Success
-
-
-
-Failed
-
-
-
-Cancelled
-
-
-
-\---
-
-
-
-\## Build Log
-
-
-
-Step List
-
-
-
-Elapsed Time
-
-
-
-Error Messages
-
-
-
-Warnings
-
-
-
-Completion Status
-
-
-
-\---
-
-
-
-\# 15. Domain
-
-
-
-Purpose
-
-
-
-Connect a custom domain.
-
-
-
-No DNS knowledge required.
-
-
-
-\---
-
-
-
-\## Sections
-
-
-
-Current Domain
-
-
-
-Connect Domain
-
-
-
-SSL Status
-
-
-
-DNS Verification
-
-
-
-Connection History
-
-
-
-\---
-
-
-
-\## Domain Workflow
-
-
-
-Enter Domain
-
-
-
-↓
-
-
-
-Validate
-
-
-
-↓
-
-
-
-Cloudflare Verification
-
-
-
-↓
-
-
-
-DNS Check
-
-
-
-↓
-
-
-
-SSL Request
-
-
-
-↓
-
-
-
-Connected
-
-
-
-\---
-
-
-
-\## Display Information
-
-
-
-Primary Domain
-
-
-
-Subdomain
-
-
-
-SSL Status
-
-
-
-Last Verification
-
-
-
-Connection Date
-
-
-
-\---
-
-
-
-\# 16. Account
-
-
-
-Purpose
-
-
-
-Manage administrator account.
-
-
-
-\---
-
-
-
-\## Profile
-
-
-
-Name
-
-
-
-Email
-
-
-
-Profile Image
-
-
-
-Language
-
-
-
-Timezone
-
-
-
-Password
-
-
-
-\---
-
-
-
-\## Security
-
-
-
-Secret Key
-
-
-
-Change Password
-
-
-
-Login History
-
-
-
-Sessions
-
-
-
-Future OAuth
-
-
-
-\---
-
-
-
-\## Preferences
-
-
-
-Theme
-
-
-
-Language
-
-
-
-Notifications
-
-
-
-Dashboard Layout
-
-
-
-Default Editor
-
-
-
-Auto Save
-
-
-
-\---
-
-
-
-\# 17. Notification Center
-
-
-
-Purpose
-
-
-
-Provide system feedback.
-
-
-
-\---
-
-
-
-Types
-
-
-
-Success
-
-
-
-Information
-
-
-
-Warning
-
-
-
-Error
-
-
-
-\---
-
-
-
-Examples
-
-
-
-Article Published
-
-
-
-Image Uploaded
-
-
-
-Deployment Success
-
-
-
-Deployment Failed
-
-
-
-AI Generation Complete
-
-
-
-Settings Saved
-
-
-
-Domain Connected
-
-
-
-\---
-
-
-
-\# 18. Global Search
-
-
-
-Purpose
-
-
-
-Search the entire administration system.
-
-
-
-\---
-
-
-
-Search Targets
-
-
-
-Posts
-
-
-
-Pages
-
-
-
-Media
-
-
-
-Settings
-
-
-
-Menus
-
-
-
-SEO
-
-
-
-AI History
-
-
-
-Deployment History
-
-
-
-\---
-
-
-
-Search Features
-
-
-
-Keyword
-
-
-
-Recent
-
-
-
-Filter
-
-
-
-Category
-
-
-
-Quick Jump
-
-
-
-\---
-
-
-
-\# 19. Responsive Design
-
-
-
-The Admin Dashboard supports
-
-
-
-Desktop
-
-
-
-Tablet
-
-
-
-Mobile
-
-
-
-\---
-
-
-
-Desktop
-
-
-
-Full Sidebar
-
-
-
-Multiple Panels
-
-
-
-Large Tables
-
-
-
-\---
-
-
-
-Tablet
-
-
-
-Collapsible Sidebar
-
-
-
-Adaptive Layout
-
-
-
-\---
-
-
-
-Mobile
-
-
-
-Bottom Navigation
-
-
-
-Stack Layout
-
-
-
-Touch Friendly
-
-
-
-\---
-
-
-
-\# 20. User Flow
-
-
-
-The administrator should complete
-
-all common tasks within three clicks.
-
-
-
-Examples
-
-
-
-Dashboard
-
-
-
-↓
-
-
-
-New Post
-
-
-
-↓
-
-
-
-Publish
-
-
-
-\----------------------------
-
-
-
-Dashboard
-
-
-
-↓
-
-
-
-Media
-
-
-
-↓
-
-
-
-Upload
-
-
-
-\----------------------------
-
-
-
-Dashboard
-
-
-
-↓
-
-
-
-Settings
-
-
-
-↓
-
-
-
-Save
-
-
-
-\----------------------------
-
-
-
-Dashboard
-
-
-
-↓
-
-
-
-AI
-
-
-
-↓
-
-
-
-Generate
-
-
-
-\----------------------------
-
-
-
-Dashboard
-
-
-
-↓
-
-
-
-Deploy
-
-
-
-↓
-
-
-
-Deploy
-
-
-
-\----------------------------
-
-
-
-Dashboard
-
-
-
-↓
-
-
-
-Domain
-
-
-
-↓
-
-
-
-Connect
-
-
-
-\---
-
-
-
-\# 21. UI Principles
-
-
-
-Every screen should follow
-
-the same design language.
-
-
-
-Rules
-
-
-
-One primary action per screen
-
-
-
-Consistent spacing
-
-
-
-Consistent typography
-
-
-
-Consistent button placement
-
-
-
-Consistent form layout
-
-
-
-Minimal clicks
-
-
-
-Clear feedback
-
-
-
-No unnecessary complexity
+2\. \*\*Public Viewing Journey\*\*: Clicking `Open Website` or navigating to `/sites/\[siteId]` renders the pure dynamic public view using ONLY the active D1/JSON data. Fallback UI appears gracefully if no content exists, with zero hardcoded legacy text.
 
 
 

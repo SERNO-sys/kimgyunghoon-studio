@@ -32,10 +32,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.dev.vars
 !.env.example
+!.dev.vars.example
 
 # vercel
 .vercel
+.wrangler/
+
+# user uploads / temp
+public/uploads/
+temp_home.html
 
 # typescript
 *.tsbuildinfo

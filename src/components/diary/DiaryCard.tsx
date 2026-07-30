@@ -23,7 +23,7 @@ export function DiaryCard({ diary }: DiaryCardProps) {
         className="mt-6 text-sm font-semibold text-stone-900 underline decoration-stone-400 underline-offset-4 transition-colors hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700"
         href={`/diary/${diary.slug}`}
       >
-        일기 읽기
+        자세히 보기
       </Link>
     </Card>
   );

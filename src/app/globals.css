@@ -22,6 +22,7 @@
 
 html {
   min-width: 320px;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -30,3 +31,39 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+.markdown-content img,
+.prose img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid #e7e5e4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.markdown-content figure,
+.prose figure {
+  margin: 1.5rem 0;
+}
+
+.markdown-content figure figcaption,
+.prose figure figcaption {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #78716c;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content p,
+.prose h1,
+.prose h2,
+.prose h3,
+.prose p {
+  margin-bottom: 1rem;
+  line-height: 1.75;
+}
+

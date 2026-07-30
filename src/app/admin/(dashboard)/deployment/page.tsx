@@ -69,10 +69,11 @@ export default function DeploymentPage() {
             Deployment
           </h1>
           <p className="mt-2 text-stone-600">
-            Manage Cloudflare Pages deployments.
+            Save a snapshot of your site and publish changes. Roll back to any
+            previous version instantly.
           </p>
         </div>
-        <Button onClick={triggerDeploy}>Deploy Now</Button>
+        <Button onClick={triggerDeploy}>Publish / Deploy</Button>
       </div>
       <DeploymentStatus deployments={deployments} />
       <Card className="space-y-4">

@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/admin/session';
-import { mockMedia } from '@/lib/admin/media-store';
+import { getDb } from '@/lib/db/client';
+import {
+  deleteMedia,
+  getMediaById,
+  listMediaBySite,
+  listSitesByOwner,
+} from '@/lib/db/queries';
 
 export const runtime = 'edge';
+
+async function getCurrentSiteId(userId: string): Promise<string | null> {
+  const db = getDb();
+  const sites = await listSitesByOwner(db, userId);
+  return sites[0]?.id ?? null;
+}
 
 export async function GET() {
   const session = await getSession();
@@ -12,7 +24,18 @@ export async function GET() {
       { status: 401 }
     );
   }
-  return NextResponse.json({ success: true, media: mockMedia });
+
+  const siteId = await getCurrentSiteId(session.userId);
+  if (!siteId) {
+    return NextResponse.json(
+      { success: false, message: 'No site configured' },
+      { status: 404 }
+    );
+  }
+
+  const db = getDb();
+  const media = await listMediaBySite(db, siteId);
+  return NextResponse.json({ success: true, media });
 }
 
 export async function DELETE(request: Request) {
@@ -33,14 +56,15 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const index = mockMedia.findIndex((item) => item.id === id);
-  if (index === -1) {
+  const db = getDb();
+  const existing = await getMediaById(db, id);
+  if (!existing) {
     return NextResponse.json(
       { success: false, message: 'Not found' },
       { status: 404 }
     );
   }
 
-  mockMedia.splice(index, 1);
+  await deleteMedia(db, id);
   return NextResponse.json({ success: true });
 }

@@ -5,7 +5,11 @@ import { useState } from 'react';
 
 import { Navigation } from './Navigation';
 
-export function MobileMenu() {
+interface MobileMenuProps {
+  navItems?: { href: string; label: string }[];
+}
+
+export function MobileMenu({ navItems }: MobileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -25,7 +29,7 @@ export function MobileMenu() {
           className="absolute inset-x-0 top-full border-y border-stone-200 bg-[#fffdf8] px-4 py-4 shadow-lg"
           id="mobile-navigation"
         >
-          <Navigation onNavigate={() => setIsOpen(false)} />
+          <Navigation items={navItems} onNavigate={() => setIsOpen(false)} />
         </div>
       ) : null}
     </div>

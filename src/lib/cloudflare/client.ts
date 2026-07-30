@@ -32,7 +32,9 @@ export async function triggerPagesDeploy(
 
   const record: DeploymentRecord = {
     id: crypto.randomUUID(),
+    siteId: '',
     commitHash,
+    version: commitHash,
     status: 'waiting',
     startedAt: new Date().toISOString(),
   };

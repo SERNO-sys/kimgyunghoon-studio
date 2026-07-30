@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Globe } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { useToast } from '@/hooks/useToast';
 
 interface Site {
   id: string;
@@ -10,26 +12,48 @@ interface Site {
   role: string;
 }
 
-const mockSites: Site[] = [
-  {
-    id: '1',
-    name: 'Kim Gyung Hoon Studio',
-    domain: 'example.com',
-    role: 'Owner',
-  },
-];
-
 export function OwnedSites() {
+  const toast = useToast();
+  const [sites, setSites] = useState<Site[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/admin/account')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.sites)) {
+          setSites(data.sites);
+        }
+      })
+      .catch(() => {
+        toast.addToast('Failed to load owned sites.', 'error');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [toast]);
+
+  if (isLoading) {
+    return (
+      <Card className="space-y-4">
+        <h2 className="font-serif text-lg font-semibold text-stone-950">
+          Owned Sites
+        </h2>
+        <p className="text-sm text-stone-500">Loading…</p>
+      </Card>
+    );
+  }
+
   return (
     <Card className="space-y-4">
       <h2 className="font-serif text-lg font-semibold text-stone-950">
         Owned Sites
       </h2>
-      {mockSites.length === 0 ? (
+      {sites.length === 0 ? (
         <p className="text-sm text-stone-500">No owned sites yet.</p>
       ) : (
         <ul className="divide-y divide-stone-200">
-          {mockSites.map((site) => (
+          {sites.map((site) => (
             <li
               key={site.id}
               className="flex items-center justify-between py-3"

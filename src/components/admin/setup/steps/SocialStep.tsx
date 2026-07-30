@@ -11,6 +11,11 @@ const socialFields = [
   { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/...' },
   { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/...' },
   { key: 'twitter', label: 'Twitter / X', placeholder: 'https://x.com/...' },
+  { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@...' },
+  { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/...' },
+  { key: 'soundcloud', label: 'SoundCloud', placeholder: 'https://soundcloud.com/...' },
+  { key: 'spotify', label: 'Spotify', placeholder: 'https://open.spotify.com/...' },
+  { key: 'threads', label: 'Threads', placeholder: 'https://threads.net/@...' },
 ] as const;
 
 export function SocialStep({ form }: SocialStepProps) {

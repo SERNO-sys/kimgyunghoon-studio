@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  keywords: ['김경훈', 'KIM GYUNG HOON', '작곡가', '음악', '작곡 일기', 'music archive'],
+  keywords: ['site builder', 'homepage', 'saas', 'multi-tenant'],
   alternates: {
     canonical: '/',
   },

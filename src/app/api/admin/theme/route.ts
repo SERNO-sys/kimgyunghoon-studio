@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/admin/session';
-import { themeSchema, type ThemeId } from '@/lib/admin/theme';
+import { getDb } from '@/lib/db/client';
+import { listSitesByOwner, updateSite } from '@/lib/db/queries';
+import { themeSchema } from '@/lib/admin/theme';
 
 export const runtime = 'edge';
-
-let mockTheme: { id: ThemeId } = { id: 'default' };
 
 export async function GET() {
   const session = await getSession();
@@ -14,7 +14,21 @@ export async function GET() {
       { status: 401 }
     );
   }
-  return NextResponse.json({ success: true, theme: mockTheme });
+
+  const db = getDb();
+  const sites = await listSitesByOwner(db, session.userId);
+  if (sites.length === 0) {
+    return NextResponse.json(
+      { success: false, message: 'No site found' },
+      { status: 404 }
+    );
+  }
+
+  const site = sites[0];
+  return NextResponse.json({
+    success: true,
+    theme: { id: site.theme || 'default' },
+  });
 }
 
 export async function POST(request: Request) {
@@ -40,7 +54,16 @@ export async function POST(request: Request) {
       );
     }
 
-    mockTheme = result.data;
+    const db = getDb();
+    const sites = await listSitesByOwner(db, session.userId);
+    if (sites.length === 0) {
+      return NextResponse.json(
+        { success: false, message: 'No site found' },
+        { status: 404 }
+      );
+    }
+
+    await updateSite(db, sites[0].id, { theme: result.data.id });
     return NextResponse.json({ success: true, message: 'Theme saved' });
   } catch {
     return NextResponse.json(
@@ -59,6 +82,15 @@ export async function DELETE() {
     );
   }
 
-  mockTheme = { id: 'default' };
+  const db = getDb();
+  const sites = await listSitesByOwner(db, session.userId);
+  if (sites.length === 0) {
+    return NextResponse.json(
+      { success: false, message: 'No site found' },
+      { status: 404 }
+    );
+  }
+
+  await updateSite(db, sites[0].id, { theme: 'default' });
   return NextResponse.json({ success: true, message: 'Theme reset' });
 }

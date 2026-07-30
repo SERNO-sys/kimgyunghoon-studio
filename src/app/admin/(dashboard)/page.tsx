@@ -1,16 +1,16 @@
 import Link from 'next/link';
-import { FileText, Image as ImageIcon, Music, Settings } from 'lucide-react';
+import { FileText, Image as ImageIcon, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { getSession } from '@/lib/admin/session';
+import { getDb } from '@/lib/db/client';
+import {
+  countMediaBySite,
+  countPostsBySite,
+  listSitesByOwner,
+} from '@/lib/db/queries';
 import { SyncStatus } from '@/components/admin/dashboard/SyncStatus';
 import { AIQuickGenerate } from '@/components/admin/dashboard/AIQuickGenerate';
-
-const stats = [
-  { label: 'Music', value: '0', icon: Music },
-  { label: 'Posts', value: '0', icon: FileText },
-  { label: 'Media', value: '0', icon: ImageIcon },
-  { label: 'Settings', value: '—', icon: Settings },
-];
 
 const quickLinks = [
   { label: 'Create Post', href: '/admin/posts/new' },
@@ -19,18 +19,49 @@ const quickLinks = [
   { label: 'Deploy Site', href: '/admin/deployment' },
 ];
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const session = await getSession();
+  const db = getDb();
+  const sites = session ? listSitesByOwner(db, session.userId) : [];
+  const site = sites[0];
+
+  const stats = site
+    ? [
+        {
+          label: 'Posts',
+          value: String(countPostsBySite(db, site.id)),
+          icon: FileText,
+        },
+        {
+          label: 'Media',
+          value: String(countMediaBySite(db, site.id)),
+          icon: ImageIcon,
+        },
+        {
+          label: 'Site',
+          value: site.name,
+          icon: Settings,
+        },
+      ]
+    : [
+        { label: 'Posts', value: '0', icon: FileText },
+        { label: 'Media', value: '0', icon: ImageIcon },
+        { label: 'Site', value: '—', icon: Settings },
+      ];
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-serif text-3xl font-semibold text-stone-950">
-          Dashboard
+          {site ? site.name : 'Dashboard'}
         </h1>
         <p className="mt-2 text-stone-600">
-          Manage your site content and configuration.
+          {site
+            ? site.description
+            : 'Manage your site content and configuration.'}
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -38,11 +69,11 @@ export default function AdminDashboardPage() {
               key={stat.label}
               className="flex flex-row items-center justify-between"
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-stone-500">
                   {stat.label}
                 </p>
-                <p className="mt-1 font-serif text-3xl font-semibold text-stone-950">
+                <p className="mt-1 truncate font-serif text-2xl font-semibold text-stone-950">
                   {stat.value}
                 </p>
               </div>

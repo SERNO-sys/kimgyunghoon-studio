@@ -7,9 +7,11 @@ import { AdminSidebar } from './AdminSidebar';
 
 interface AdminShellProps {
   children: React.ReactNode;
+  siteName?: string;
+  siteUrl?: string;
 }
 
-export function AdminShell({ children }: AdminShellProps) {
+export function AdminShell({ children, siteName, siteUrl }: AdminShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -17,9 +19,11 @@ export function AdminShell({ children }: AdminShellProps) {
       <div className="min-h-screen bg-[#f8f5ed]">
         <AdminSidebar
           isOpen={isSidebarOpen}
+          siteName={siteName}
           onToggle={() => setIsSidebarOpen((current) => !current)}
         />
         <AdminHeader
+          siteUrl={siteUrl}
           onMenuToggle={() => setIsSidebarOpen((current) => !current)}
         />
         <main className="pt-16 lg:ml-64">

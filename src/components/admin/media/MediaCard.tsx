@@ -26,11 +26,20 @@ export function MediaCard({ media, onDelete }: MediaCardProps) {
 
   return (
     <Card className="flex flex-col gap-3">
-      <div className="flex aspect-video items-center justify-center rounded-sm bg-stone-100">
-        <ImageIcon
-          className="size-10 text-stone-400"
-          aria-hidden="true"
-        />
+      <div className="relative aspect-video overflow-hidden rounded-sm bg-stone-100">
+        {media.url ? (
+          <img
+            src={media.url}
+            alt={media.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <ImageIcon
+            className="absolute inset-0 m-auto size-10 text-stone-400"
+            aria-hidden="true"
+          />
+        )}
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-stone-950">

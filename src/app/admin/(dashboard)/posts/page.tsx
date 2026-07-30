@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -11,10 +12,17 @@ import type { Post } from '@/lib/admin/posts';
 
 export default function PostsPage() {
   const toast = useToast();
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') ?? '');
+  const [category, setCategory] = useState(searchParams.get('category') ?? '');
   const [status, setStatus] = useState('all');
+
+  useEffect(() => {
+    setSearch(searchParams.get('search') ?? '');
+    setCategory(searchParams.get('category') ?? '');
+  }, [searchParams]);
 
   useEffect(() => {
     fetch('/api/admin/posts')
@@ -36,13 +44,15 @@ export default function PostsPage() {
     return posts.filter((post) => {
       const matchesSearch =
         search === '' ||
-        post.title.toLowerCase().includes(search.toLowerCase()) ||
-        post.category.toLowerCase().includes(search.toLowerCase());
+        post.title.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory =
+        category === '' ||
+        post.category.toLowerCase() === category.toLowerCase();
       const matchesStatus =
         status === 'all' || post.status === status;
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [posts, search, status]);
+  }, [posts, search, category, status]);
 
   const handleDelete = async (post: Post) => {
     if (!window.confirm(`Delete "${post.title}"?`)) return;
@@ -73,7 +83,7 @@ export default function PostsPage() {
         </div>
         <Button
           asChild
-          href="/admin/posts/new"
+          href={`/admin/posts/new${category ? `?category=${encodeURIComponent(category)}` : ''}`}
           className="inline-flex items-center gap-2"
         >
           <Plus className="size-4" aria-hidden="true" />

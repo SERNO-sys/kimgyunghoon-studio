@@ -4,11 +4,14 @@ export type PostStatus = 'draft' | 'published';
 
 export interface Post {
   id: string;
+  siteId: string;
   title: string;
   slug: string;
   category: string;
-  tags: string[];
+  tags: string;
   content: string;
+  audioUrl?: string;
+  featuredImageUrl?: string;
   status: PostStatus;
   createdAt: string;
   updatedAt: string;
@@ -25,6 +28,16 @@ export const postSchema = z.object({
     ),
   category: z.string().min(1, 'Category is required'),
   tags: z.string().optional(),
+  audioUrl: z
+    .union([z.literal(''), z.string().url('Must be a valid URL')])
+    .optional(),
+  featuredImageUrl: z
+    .union([
+      z.literal(''),
+      z.string().url('Must be a valid URL'),
+      z.string().regex(/^\/[^\s]*$/, 'Must be a valid URL'),
+    ])
+    .optional(),
   content: z.string().min(1, 'Content is required'),
   status: z.enum(['draft', 'published']),
 });

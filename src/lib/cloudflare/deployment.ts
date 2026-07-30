@@ -21,7 +21,9 @@ export function rollbackDeployment(id: string): DeploymentRecord | null {
 
   const rollbackRecord: DeploymentRecord = {
     id: crypto.randomUUID(),
+    siteId: deployment.siteId,
     commitHash: deployment.commitHash,
+    version: deployment.version,
     status: 'success',
     startedAt: new Date().toISOString(),
     completedAt: new Date().toISOString(),

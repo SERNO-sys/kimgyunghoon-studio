@@ -52,11 +52,15 @@ export function getStringArray(data: Frontmatter, key: string, sourcePath: strin
 }
 
 export async function getMarkdownSlugs(directory: string): Promise<string[]> {
-  const entries = await fs.readdir(directory, { withFileTypes: true });
+  try {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
 
-  return entries
-    .filter((entry) => entry.isFile() && path.extname(entry.name) === '.md')
-    .map((entry) => path.basename(entry.name, '.md'));
+    return entries
+      .filter((entry) => entry.isFile() && path.extname(entry.name) === '.md')
+      .map((entry) => path.basename(entry.name, '.md'));
+  } catch {
+    return [];
+  }
 }
 
 export async function parseMarkdownFile<TFrontmatter extends object>(
@@ -75,4 +79,20 @@ export async function parseMarkdownFile<TFrontmatter extends object>(
     content: parsed.content,
     html,
   };
+}
+
+export async function renderMarkdown(content: string): Promise<string> {
+  return String(await remark().use(remarkHtml).process(content));
+}
+
+export function wrapMarkdownImages(html: string): string {
+  return html.replace(
+    /<img([^>]*)alt="([^"]*)"([^>]*)>/g,
+    '<figure class="markdown-image">$&<figcaption>$2</figcaption></figure>'
+  );
+}
+
+export async function renderPostContent(content: string): Promise<string> {
+  const html = await renderMarkdown(content);
+  return wrapMarkdownImages(html);
 }

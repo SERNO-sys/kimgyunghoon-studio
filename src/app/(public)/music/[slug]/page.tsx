@@ -1,78 +1,127 @@
-import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { LazyYoutubePlayer } from '@/components/music/LazyYoutubePlayer';
-import { RelatedDiarySection } from '@/components/music/RelatedDiarySection';
-import { getAllMusic, getMusicBySlug } from '@/lib/music';
-import { getRelatedDiaries } from '@/lib/relations';
-import { siteConfig } from '@/lib/site';
+import { getPublicSiteContext } from '@/lib/site-context';
+import { renderPostContent } from '@/lib/markdown';
 
 interface MusicDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  const music = await getAllMusic();
-
-  return music.map((item) => ({ slug: item.slug }));
+function getYouTubeId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.slice(1);
+    }
+    if (parsed.hostname.includes('youtube.com')) {
+      return parsed.searchParams.get('v');
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
-export async function generateMetadata({ params }: MusicDetailPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const music = await getMusicBySlug(slug);
+function AudioEmbed({ audioUrl }: { audioUrl: string }) {
+  const lower = audioUrl.toLowerCase();
+  const youtubeId = getYouTubeId(audioUrl);
 
-  if (!music) {
-    return {};
+  if (youtubeId) {
+    return (
+      <iframe
+        className="w-full rounded-lg aspect-video"
+        src={`https://www.youtube.com/embed/${youtubeId}`}
+        title="YouTube audio player"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    );
   }
 
-  return {
-    title: music.title,
-    description: music.description,
-    alternates: { canonical: `/music/${music.slug}` },
-    openGraph: { type: 'music.song', url: `/music/${music.slug}`, title: music.title, description: music.description },
-    twitter: { card: 'summary', title: music.title, description: music.description },
-  };
+  if (/\.(mp3|wav|m4a|ogg|aac|flac)(\?.*)?$/.test(lower)) {
+    return (
+      <audio
+        controls
+        className="w-full rounded-lg"
+        src={audioUrl}
+      >
+        Your browser does not support the audio element.
+      </audio>
+    );
+  }
+
+  return (
+    <a
+      href={audioUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-2 rounded-sm bg-amber-50 px-4 py-2 text-sm font-bold text-amber-900 hover:bg-amber-100 transition"
+    >
+      외부 음원 링크 열기 →
+    </a>
+  );
 }
 
 export default async function MusicDetailPage({ params }: MusicDetailPageProps) {
   const { slug } = await params;
-  const music = await getMusicBySlug(slug);
+  const { site, posts } = await getPublicSiteContext();
 
-  if (!music) {
+  const post = posts.find(
+    (p) =>
+      p.slug === slug &&
+      p.status === 'published' &&
+      p.category.toLowerCase() === 'music'
+  );
+
+  if (!post) {
     notFound();
   }
 
-  const relatedDiaries = await getRelatedDiaries(music);
-  const structuredData = {
-    '@context': 'https://schema.org',
-    '@type': 'MusicRecording',
-    name: music.title,
-    datePublished: music.date,
-    description: music.description,
-    url: `${siteConfig.url}/music/${music.slug}`,
-    byArtist: { '@type': 'Person', name: '김경훈' },
-  };
+  const contentHtml = await renderPostContent(post.content);
 
   return (
-    <main className="bg-[#fffdf8] py-12 sm:py-20">
-      <script dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} type="application/ld+json" />
-      <article className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        <header className="border-b border-stone-200 pb-10 sm:pb-12">
-          <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">MUSIC ARCHIVE · {music.date}</p>
-          <h1 className="mt-4 font-serif text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl">{music.title}</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">{music.description}</p>
-        </header>
-        <div className="mt-10">
-          <LazyYoutubePlayer title={music.title} youtubeId={music.youtubeId} />
+    <article className="max-w-3xl mx-auto px-6 py-16 space-y-8">
+      <div className="space-y-4 border-b border-stone-200 pb-8 text-center">
+        <span className="text-xs font-bold tracking-widest text-amber-800 uppercase">
+          {post.category}
+        </span>
+        <h1 className="text-3xl font-serif text-stone-900 font-bold">
+          {post.title}
+        </h1>
+        <time className="text-sm text-stone-500">
+          {new Date(post.updatedAt).toLocaleDateString()}
+        </time>
+      </div>
+
+      {post.featuredImageUrl ? (
+        <figure className="overflow-hidden rounded-sm border border-stone-200 shadow-sm">
+          <img
+            alt={post.title}
+            className="aspect-video w-full object-cover"
+            src={post.featuredImageUrl}
+          />
+        </figure>
+      ) : null}
+
+      {post.audioUrl ? (
+        <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+          <AudioEmbed audioUrl={post.audioUrl} />
         </div>
-        <div
-          className="mt-12 text-[1.0625rem] leading-8 text-stone-700 [&_h1]:mt-12 [&_h1]:font-serif [&_h1]:text-3xl [&_h1]:font-semibold [&_h1]:tracking-tight [&_h2]:mt-10 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_p]:mt-5 [&_ul]:mt-5 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6"
-          dangerouslySetInnerHTML={{ __html: music.html }}
-        />
-        <div className="mt-14 sm:mt-20">
-          <RelatedDiarySection diaries={relatedDiaries} />
-        </div>
-      </article>
-    </main>
+      ) : null}
+
+      <div
+        className="markdown-content max-w-none whitespace-pre-line text-stone-700 leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: contentHtml }}
+      />
+
+      <div className="pt-8">
+        <a
+          href="/music"
+          className="text-sm font-bold text-amber-800 hover:underline"
+        >
+          ← Blog 목록으로
+        </a>
+      </div>
+    </article>
   );
 }

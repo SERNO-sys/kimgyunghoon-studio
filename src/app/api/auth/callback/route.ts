@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getEnv } from '@/config/env';
 import { setSession } from '@/lib/admin/session';
@@ -17,20 +18,20 @@ interface GoogleUserInfo {
   picture?: string;
 }
 
-function getCookieValue(header: string | null, name: string): string | undefined {
-  return header
-    ?.split('; ')
-    .find((row) => row.startsWith(`${name}=`))
-    ?.split('=')[1];
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const oauthState = getCookieValue(request.headers.get('cookie'), 'oauth_state');
+
+  const cookieStore = await cookies();
+  const oauthState = cookieStore.get('oauth_state')?.value;
 
   if (!code || !state || state !== oauthState) {
+    console.error('[oauth/callback] invalid_state', {
+      hasCode: Boolean(code),
+      hasState: Boolean(state),
+      cookieState: oauthState,
+    });
     return NextResponse.redirect(new URL('/admin/login?error=invalid_state', request.url));
   }
 

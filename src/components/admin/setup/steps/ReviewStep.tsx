@@ -23,6 +23,10 @@ export function ReviewStep({ form }: ReviewStepProps) {
           <dd className="mt-0.5 text-stone-900">{values.description}</dd>
         </div>
         <div className="py-3">
+          <dt className="font-medium text-stone-500">Custom Domain</dt>
+          <dd className="mt-0.5 text-stone-900">{values.domain || '자동 생성됨'}</dd>
+        </div>
+        <div className="py-3">
           <dt className="font-medium text-stone-500">Email</dt>
           <dd className="mt-0.5 text-stone-900">{values.contactEmail}</dd>
         </div>

@@ -1,20 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { Image as ImageIcon, Sparkles, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { useToast } from '@/hooks/useToast';
 import { postSchema, type Post, type PostFormData } from '@/lib/admin/posts';
 import { slugify } from '@/lib/admin/slug';
-import { AIGenerateModal } from '@/components/admin/ai/AIGenerateModal';
+import { AIDraftAssistant } from '@/components/admin/ai/AIDraftAssistant';
+import type { Category } from '@/lib/db/types';
 
 interface PostFormProps {
   post?: Post;
+  defaultCategory?: string;
+  siteId?: string;
 }
 
 interface SlugInputProps {
@@ -40,20 +45,27 @@ function SlugInput({ form, setIsSlugManual }: SlugInputProps) {
   );
 }
 
-export function PostForm({ post }: PostFormProps) {
+export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
   const router = useRouter();
   const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSlugManual, setIsSlugManual] = useState(Boolean(post));
-  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isDraftAssistantOpen, setIsDraftAssistantOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isDraggingContent, setIsDraggingContent] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const contentFileInputRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement | null>(null);
 
   const form = useForm<PostFormData>({
     resolver: zodResolver(postSchema),
     defaultValues: {
       title: post?.title ?? '',
       slug: post?.slug ?? '',
-      category: post?.category ?? '',
-      tags: post?.tags.join(', ') ?? '',
+      category: post?.category ?? defaultCategory ?? '',
+      tags: post?.tags ?? '',
+      audioUrl: post?.audioUrl ?? '',
+      featuredImageUrl: post?.featuredImageUrl ?? '',
       content: post?.content ?? '',
       status: post?.status ?? 'draft',
     },
@@ -71,6 +83,134 @@ export function PostForm({ post }: PostFormProps) {
       form.setValue('slug', slugify(title), { shouldValidate: true });
     }
   }, [title, slug, isSlugManual, form]);
+
+  const selectedCategory = form.watch('category');
+  const postCategories = categories.filter(
+    (c) => c.slug !== 'home' && c.slug !== 'about' && c.slug !== 'contact'
+  );
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await fetch('/api/admin/categories');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+          if (defaultCategory) {
+            const writable = data.categories.filter(
+              (c: Category) =>
+                c.slug !== 'home' && c.slug !== 'about' && c.slug !== 'contact'
+            );
+            const matched = writable.find(
+              (c: Category) =>
+                c.slug === defaultCategory || c.title === defaultCategory
+            );
+            if (matched) {
+              form.setValue('category', matched.slug, { shouldValidate: true });
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    loadCategories();
+  }, [defaultCategory, form]);
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await fetch('/api/admin/media/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        toast.addToast(result.message || 'Image upload failed.', 'error');
+        return null;
+      }
+      return result.media?.url ?? null;
+    } catch {
+      toast.addToast('Image upload failed.', 'error');
+      return null;
+    }
+  };
+
+  const handleFeaturedDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const url = await uploadImage(file);
+    if (url) {
+      form.setValue('featuredImageUrl', url, { shouldValidate: true });
+    }
+  };
+
+  const handleFeaturedFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const url = await uploadImage(file);
+    if (url) {
+      form.setValue('featuredImageUrl', url, { shouldValidate: true });
+    }
+    event.target.value = '';
+  };
+
+  const insertMarkdownImages = async (files: File[]) => {
+    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) return;
+
+    const textarea = contentRef.current;
+    const start = textarea?.selectionStart ?? form.getValues('content').length;
+    let current = form.getValues('content') ?? '';
+    let insertAt = start;
+
+    for (const file of imageFiles) {
+      const url = await uploadImage(file);
+      if (url) {
+        const markdown = `![image](${url})\n`;
+        current = current.slice(0, insertAt) + markdown + current.slice(insertAt);
+        insertAt += markdown.length;
+      }
+    }
+
+    if (current !== form.getValues('content')) {
+      form.setValue('content', current, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+      requestAnimationFrame(() => {
+        if (contentRef.current) {
+          contentRef.current.selectionStart = contentRef.current.selectionEnd = insertAt;
+        }
+      });
+    }
+  };
+
+  const handleContentDrop = async (event: React.DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    setIsDraggingContent(false);
+    await insertMarkdownImages(Array.from(event.dataTransfer.files));
+  };
+
+  const handleContentFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    await insertMarkdownImages(Array.from(event.target.files ?? []));
+    event.target.value = '';
+  };
+
+  const { ref: contentRegisterRef, ...contentRegisterProps } = form.register('content');
+  const setContentRef = useCallback(
+    (element: HTMLTextAreaElement | null) => {
+      contentRef.current = element;
+      contentRegisterRef(element);
+    },
+    [contentRegisterRef]
+  );
 
   const syncToGitHub = async (data: PostFormData, status: Post['status']) => {
     try {
@@ -163,11 +303,20 @@ export function PostForm({ post }: PostFormProps) {
 
         <div>
           <Label htmlFor="category">Category</Label>
-          <Input
+          <Select
             id="category"
-            placeholder="Category"
-            {...form.register('category')}
-          />
+            value={selectedCategory}
+            onChange={(event) =>
+              form.setValue('category', event.target.value, { shouldValidate: true })
+            }
+          >
+            <option value="">Select a category</option>
+            {postCategories.map((category) => (
+              <option key={category.id} value={category.slug}>
+                {category.title}
+              </option>
+            ))}
+          </Select>
           {form.formState.errors.category && (
             <p className="mt-1 text-sm text-red-600">
               {form.formState.errors.category.message}
@@ -185,22 +334,106 @@ export function PostForm({ post }: PostFormProps) {
         </div>
 
         <div className="md:col-span-2">
+          <Label htmlFor="audioUrl">Audio / Music Source URL</Label>
+          <Input
+            id="audioUrl"
+            type="url"
+            placeholder="https://example.com/track.mp3, https://suno.ai/song/..., or YouTube URL"
+            {...form.register('audioUrl')}
+          />
+          {form.formState.errors.audioUrl && (
+            <p className="mt-1 text-sm text-red-600">
+              {form.formState.errors.audioUrl.message}
+            </p>
+          )}
+        </div>
+
+        <div className="md:col-span-2">
+          <Label>Featured Image</Label>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+            onDrop={handleFeaturedDrop}
+            className={`relative mt-2 flex max-h-48 cursor-pointer items-center justify-center overflow-hidden rounded-md border-2 border-dashed border-stone-300 bg-[#fffdf8] transition-colors hover:bg-stone-50 ${
+              form.watch('featuredImageUrl') ? 'border-amber-700' : ''
+            }`}
+          >
+            {form.watch('featuredImageUrl') ? (
+              <img
+                src={form.watch('featuredImageUrl')}
+                alt="Featured preview"
+                className="max-h-48 w-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-2 p-6 text-stone-500">
+                <Upload className="size-8" aria-hidden="true" />
+                <p className="text-sm font-medium">Drop or click to upload image</p>
+              </div>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFeaturedFileSelect}
+          />
+          {form.formState.errors.featuredImageUrl && (
+            <p className="mt-1 text-sm text-red-600">
+              {form.formState.errors.featuredImageUrl.message}
+            </p>
+          )}
+        </div>
+
+        <div className="md:col-span-2">
           <div className="mb-2 flex items-center justify-between">
             <Label htmlFor="content">Content</Label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsAiOpen(true)}
-            >
-              AI Assist
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => contentFileInputRef.current?.click()}
+              >
+                <ImageIcon className="mr-1 size-4" aria-hidden="true" />
+                본문에 이미지 추가
+              </Button>
+              {siteId && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDraftAssistantOpen(true)}
+                >
+                  <Sparkles className="mr-1 size-4" aria-hidden="true" />
+                  AI 초안 도우미
+                </Button>
+              )}
+            </div>
           </div>
           <Textarea
             id="content"
-            placeholder="Write your post in Markdown..."
+            placeholder="Write your post in Markdown... (drag and drop images here)"
             rows={16}
-            {...form.register('content')}
+            {...contentRegisterProps}
+            ref={setContentRef}
+            onDrop={handleContentDrop}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDraggingContent(true);
+            }}
+            onDragLeave={() => setIsDraggingContent(false)}
+            className={isDraggingContent ? 'border-amber-700 bg-amber-50' : ''}
+          />
+          <input
+            ref={contentFileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleContentFileSelect}
           />
           {form.formState.errors.content && (
             <p className="mt-1 text-sm text-red-600">
@@ -210,17 +443,19 @@ export function PostForm({ post }: PostFormProps) {
         </div>
       </div>
 
-      <AIGenerateModal
-        isOpen={isAiOpen}
-        onClose={() => setIsAiOpen(false)}
-        onApply={(text) =>
-          form.setValue('content', text, {
-            shouldValidate: true,
-            shouldDirty: true,
-          })
-        }
-        initialContext={form.getValues('content')}
-      />
+      {siteId && (
+        <AIDraftAssistant
+          siteId={siteId}
+          isOpen={isDraftAssistantOpen}
+          onClose={() => setIsDraftAssistantOpen(false)}
+          onApply={(text: string) =>
+            form.setValue('content', text, {
+              shouldValidate: true,
+              shouldDirty: true,
+            })
+          }
+        />
+      )}
 
       <div className="flex flex-col-reverse items-start justify-between gap-4 border-t border-stone-200 pt-6 sm:flex-row sm:items-center">
         <Button

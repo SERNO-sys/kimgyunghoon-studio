@@ -1,3 +1,4 @@
+import { GoogleGenAI } from '@google/genai';
 import { getEnv } from '@/config/env';
 import { templates } from './templates';
 
@@ -15,6 +16,15 @@ export async function generateText(
     return `[Mock Gemini Generated Text]\n\nTemplate: ${template.label}\nPurpose: ${template.purpose}\nCondition: ${template.condition}\nTone: ${template.tone}\n\nContext:\n${context}\n\nThis is a placeholder response. Once GEMINI_API_KEY is configured, the real Gemini API will generate text using the structured prompt above.`;
   }
 
-  // TODO: call Google Gemini API with template.systemPrompt and template.userPrompt(context).
-  return `Generated ${template.label} content based on: ${context}`;
+  const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.5-flash-lite',
+    contents: template.userPrompt(context),
+    config: {
+      systemInstruction: template.systemPrompt,
+    },
+  });
+  const generated =
+    typeof response.text === 'string' ? response.text : '';
+  return generated || `[No response from Gemini for ${template.label}]`;
 }

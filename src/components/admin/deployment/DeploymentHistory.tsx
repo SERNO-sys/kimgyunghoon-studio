@@ -37,9 +37,9 @@ export function DeploymentHistory({
           <TableHeader>
             <TableRow>
               <TableHead>Time</TableHead>
+              <TableHead>Version</TableHead>
               <TableHead>Commit</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Duration</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -49,6 +49,7 @@ export function DeploymentHistory({
                 <TableCell>
                   {new Date(deployment.startedAt).toLocaleString()}
                 </TableCell>
+                <TableCell>{deployment.version}</TableCell>
                 <TableCell>{deployment.commitHash}</TableCell>
                 <TableCell>{deployment.status}</TableCell>
                 <TableCell>

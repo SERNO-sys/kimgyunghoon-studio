@@ -11,9 +11,9 @@ interface RelatedDiarySectionProps {
 export function RelatedDiarySection({ diaries }: RelatedDiarySectionProps) {
   return (
     <section aria-labelledby="related-diary-heading" className="border-t border-stone-200 pt-12 sm:pt-16">
-      <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">COMPOSITION NOTES</p>
+      <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">JOURNAL NOTES</p>
       <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-stone-950" id="related-diary-heading">
-        Related Diary
+        Related Journal
       </h2>
       {diaries.length > 0 ? (
         <div className="mt-7 grid gap-5 md:grid-cols-2">
@@ -33,13 +33,13 @@ export function RelatedDiarySection({ diaries }: RelatedDiarySectionProps) {
                 className="mt-6 text-sm font-semibold text-stone-900 underline decoration-stone-400 underline-offset-4 transition-colors hover:text-amber-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-700"
                 href={`/diary/${diary.slug}`}
               >
-                일기 읽기
+                자세히 보기
               </Link>
             </Card>
           ))}
         </div>
       ) : (
-        <p className="mt-7 text-stone-600">연결된 작곡 일기가 없습니다.</p>
+        <p className="mt-7 text-stone-600">연결된 글이 없습니다.</p>
       )}
     </section>
   );
