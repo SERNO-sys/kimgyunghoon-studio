@@ -10,30 +10,15 @@ compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
 
 # ---------------------------------------------------------------------------
-# Pages deployment (default)
+# Pages deployment
 # ---------------------------------------------------------------------------
 # `@cloudflare/next-on-pages` builds the app into `.vercel/output/static` plus
-# a `_worker.js` edge function. Deploying to Pages works for the exact custom
-# domain (lucidworker.com) but Pages does NOT support wildcard subdomains.
+# a `_worker.js` edge function. Cloudflare Pages CI/CD reads this file and
+# deploys the output directory. NOTE: Do NOT add Worker-only fields such as
+# `main` or `routes` here — they cause the Pages build to be rejected with
+# "No deployment available". Wildcard subdomains are handled via a proxied
+# wildcard CNAME pointing at the Pages project (see docs/DEPLOYMENT.md).
 pages_build_output_dir = ".vercel/output/static"
-
-# ---------------------------------------------------------------------------
-# Worker deployment (for wildcard subdomains)
-# ---------------------------------------------------------------------------
-# Cloudflare Pages cannot route `*.lucidworker.com` wildcard subdomains. To
-# serve tenant subdomains (e.g. <siteId>.lucidworker.com) we deploy the same
-# `_worker.js` produced by next-on-pages as a Worker and attach a wildcard
-# route. `wrangler deploy` uses `main` + `routes`; `wrangler pages deploy`
-# uses `pages_build_output_dir`. Keep both so either deployment path works.
-main = ".vercel/output/static/_worker.js"
-
-# Route ALL traffic for the apex domain AND every subdomain to this Worker.
-# `*.lucidworker.com/*` matches lucidworker.com and all subdomains on every
-# path. The zone must be active in the same Cloudflare account.
-routes = [
-  { pattern = "lucidworker.com/*", zone_name = "lucidworker.com" },
-  { pattern = "*.lucidworker.com/*", zone_name = "lucidworker.com" },
-]
 
 
 # D1 database binding

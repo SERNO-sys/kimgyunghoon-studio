@@ -8,7 +8,6 @@
     "pages:build": "npx @cloudflare/next-on-pages",
     "pages:deploy": "wrangler pages deploy .vercel/output/static",
     "pages:dev": "wrangler pages dev .vercel/output/static",
-    "worker:deploy": "wrangler deploy",
 
     "d1:local": "wrangler d1 execute DB --local --file=./src/lib/db/schema.sql",
     "start": "next start",
