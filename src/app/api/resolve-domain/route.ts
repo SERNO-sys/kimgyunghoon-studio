@@ -4,6 +4,7 @@ import { getDomainByName } from '@/lib/db/queries';
 
 export const runtime = 'edge';
 
+
 const MAIN_DOMAINS = new Set([
   'localhost',
   '127.0.0.1',
@@ -33,3 +34,4 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ siteId: domain.siteId });
 }
+

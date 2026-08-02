@@ -20,7 +20,7 @@ function isPlatformHost(hostname: string, platformHost: string): boolean {
   // Local development.
   if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
 
-  // Exact configured platform host (e.g. kimgyunghoon-studio.pages.dev).
+  // Exact configured platform host (e.g. lucidworker.com).
   if (hostname === platformHost) return true;
 
   // Subdomains of a dotted platform host.
@@ -35,6 +35,28 @@ function isPlatformHost(hostname: string, platformHost: string): boolean {
   return false;
 }
 
+/**
+ * Extracts the subdomain portion of a hostname relative to the platform host.
+ * For `[subdomain].lucidworker.com` with platform host `lucidworker.com` this
+ * returns `subdomain`. Returns null when the host is the platform host itself
+ * or is not a subdomain of it.
+ */
+function extractSubdomain(hostname: string, platformHost: string): string | null {
+  const normalizedHost = platformHost.startsWith('.')
+    ? platformHost.slice(1)
+    : platformHost;
+
+  if (hostname === normalizedHost) return null;
+
+  const suffix = `.${normalizedHost}`;
+  if (hostname.endsWith(suffix)) {
+    const subdomain = hostname.slice(0, -suffix.length);
+    // Reject empty or nested subdomains (e.g. `a.b.lucidworker.com`).
+    if (subdomain && !subdomain.includes('.')) return subdomain;
+  }
+
+  return null;
+}
 
 const ADMIN_PUBLIC_PATHS = new Set(['/admin/login', '/admin/setup']);
 
@@ -83,6 +105,10 @@ export async function middleware(request: NextRequest) {
       const response = NextResponse.next();
       response.headers.set('x-site-id', site.id);
       response.headers.set('x-site-domain', hostname);
+      const subdomain = extractSubdomain(hostname, platformHost);
+      if (subdomain) {
+        response.headers.set('x-site-subdomain', subdomain);
+      }
       return response;
     }
 
@@ -97,4 +123,3 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-

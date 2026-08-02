@@ -13,8 +13,26 @@ export default async function PublicLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { site, settings } = await getPublicSiteContext();
+  const { site, settings, isMissing } = await getPublicSiteContext();
+
+  // Unpublished or unknown sites render a minimal "not published" notice
+  // instead of leaking draft content.
+  if (isMissing) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#fffdf8] p-8 text-center">
+        <h1 className="font-serif text-3xl font-semibold text-stone-950">
+          Site not published
+        </h1>
+        <p className="mt-3 max-w-md text-stone-600">
+          This site has not been published yet. Please publish it from the
+          dashboard to make it publicly available.
+        </p>
+      </main>
+    );
+  }
+
   const config = resolveSiteConfig(site, settings);
+
 
   const allPages = flattenPages(config.pages)
     .filter((page) => page.visible)

@@ -99,6 +99,19 @@ export async function getPublicSiteContext(): Promise<PublicSiteContext> {
     };
   }
 
+  // Only render sites that have been published. Unpublished sites are treated
+  // as missing so the public subdomain/custom domain does not leak draft data.
+  if (!site.isPublished) {
+    return {
+      site: null,
+      settings: null,
+      posts: [],
+      domain: siteDomain,
+      isMissing: true,
+    };
+  }
+
+
   const settings = await getSettingsBySiteId(db, site.id);
   const posts = await listPostsBySite(db, site.id, 'published');
   const primary = await getPrimaryDomain(db, site.id);
