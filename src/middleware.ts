@@ -7,14 +7,13 @@ import { getSiteByDomain } from '@/lib/db/queries';
 
 export const config = {
   matcher: [
-    '/',
-    '/about',
-    '/contact',
-    '/diary/:path*',
-    '/music/:path*',
-    '/admin/:path*',
+    // Match every path so that subdomain-based multi-tenant resolution runs
+    // for all public routes, including user-created custom pages (e.g.
+    // /portfolio, /notice) and the admin dashboard.
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?)$).*)',
   ],
 };
+
 
 function isPlatformHost(hostname: string, platformHost: string): boolean {
   // Local development.
