@@ -104,21 +104,36 @@ export async function middleware(request: NextRequest) {
   const platformConfigured = platformHost !== 'localhost';
 
   if (platformConfigured && !isPlatformHost(hostname, platformHost)) {
-    const db = getDb();
+    let site = null;
+    let subdomain: string | null = null;
 
-    // 1) Try an exact custom-domain match (e.g. a user's own domain).
-    let site = await getSiteByDomain(db, hostname);
+    try {
+      const db = getDb();
 
-    // 2) Fall back to a platform subdomain match. The subdomain is the first
-    //    segment of the site's UUID (e.g. `e801f11c` for
-    //    `e801f11c.lucidworker.com`), which is not stored verbatim in the
-    //    domains table, so we resolve it against the sites table.
-    const subdomain = extractSubdomain(hostname, platformHost);
-    if (!site && subdomain) {
-      site = await getSiteBySubdomain(db, subdomain);
+      // 1) Try an exact custom-domain match (e.g. a user's own domain).
+      site = await getSiteByDomain(db, hostname);
+
+      // 2) Fall back to a platform subdomain match. The subdomain is the first
+      //    segment of the site's UUID (e.g. `e801f11c` for
+      //    `e801f11c.lucidworker.com`), which is not stored verbatim in the
+      //    domains table, so we resolve it against the sites table.
+      subdomain = extractSubdomain(hostname, platformHost);
+      if (!site && subdomain) {
+        site = await getSiteBySubdomain(db, subdomain);
+      }
+    } catch {
+      // A DB error (e.g. D1 timeout) must never surface as a 522. Treat the
+      // host as unknown so the request falls through to a fast 404 below.
+      site = null;
     }
 
     if (site) {
+      // Unpublished sites are treated as missing so the public subdomain/custom
+      // domain does not leak draft data. Return a fast 404 instead of 522.
+      if (!site.isPublished) {
+        return new NextResponse('Site not found', { status: 404 });
+      }
+
       const response = NextResponse.next();
       response.headers.set('x-site-id', site.id);
       response.headers.set('x-site-domain', hostname);
@@ -129,8 +144,9 @@ export async function middleware(request: NextRequest) {
     }
 
     // Unknown custom domain: return a minimal not-configured response.
-    return new NextResponse('Site not configured', { status: 404 });
+    return new NextResponse('Site not found', { status: 404 });
   }
+
 
 
   // Platform host: rewrite root to platform landing page.

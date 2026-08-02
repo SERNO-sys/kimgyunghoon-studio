@@ -77,6 +77,16 @@ export function createD1Table<T extends { id: string }>(
       return row ? (fromRow(row as Record<string, unknown>) as T) : null;
     },
 
+    findByPrefix: async (prefix) => {
+      const sql = `SELECT * FROM ${tableName} WHERE id LIKE ?`;
+      const { results } = await d1
+        .prepare(sql)
+        .bind(`${prefix}%`)
+        .all();
+      return (results as Record<string, unknown>[]).map(fromRow) as T[];
+    },
+
+
     insert: async (data) => {
       const row = toRow(data as Record<string, unknown>);
       const columns = Object.keys(row);

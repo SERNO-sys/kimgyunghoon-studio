@@ -35,7 +35,8 @@ const envSchema = z.object({
     .string()
     .url()
     .optional()
-    .default('http://localhost:3000/api/auth/callback'),
+    .default('http://localhost:3000/api/auth/callback/google'),
+
   NEXTAUTH_URL: z
     .string()
     .url()

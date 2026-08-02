@@ -91,14 +91,18 @@ export async function getSiteByDomain(db: Db, domain: string): Promise<Site | nu
  * first segment of the site's UUID (e.g. `e801f11c` for a site id of
  * `e801f11c-xxxx-xxxx-xxxx-xxxxxxxxxxxx`), so we match sites whose id starts
  * with the given subdomain.
+ *
+ * Uses an indexed SQL prefix lookup (`id LIKE 'prefix%'`) instead of loading
+ * every site into memory, which avoids D1 timeouts on large datasets.
  */
 export async function getSiteBySubdomain(
   db: Db,
   subdomain: string
 ): Promise<Site | null> {
-  const sites = await db.sites.findMany({});
-  return sites.find((site) => site.id.startsWith(subdomain)) ?? null;
+  const sites = await db.sites.findByPrefix(subdomain);
+  return sites[0] ?? null;
 }
+
 
 
 // ---------- Posts ----------

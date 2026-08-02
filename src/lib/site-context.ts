@@ -84,53 +84,68 @@ export async function getPublicSiteContext(): Promise<PublicSiteContext> {
   const siteDomain = headersList.get('x-site-domain');
   const siteSubdomain = headersList.get('x-site-subdomain');
 
-  const db = getDb();
+  const missing: PublicSiteContext = {
+    site: null,
+    settings: null,
+    posts: [],
+    domain: siteDomain,
+    isMissing: true,
+  };
 
-  const site = siteId
-    ? await getSiteById(db, siteId)
-    : siteDomain
-      ? await getSiteByDomain(db, siteDomain)
-      : siteSubdomain
-        ? await getSiteBySubdomain(db, siteSubdomain)
-        : null;
+  let site = null;
+  try {
+    const db = getDb();
 
+    site = siteId
+      ? await getSiteById(db, siteId)
+      : siteDomain
+        ? await getSiteByDomain(db, siteDomain)
+        : siteSubdomain
+          ? await getSiteBySubdomain(db, siteSubdomain)
+          : null;
+  } catch {
+    // A DB error (e.g. D1 timeout) must never surface as a 522. Treat the site
+    // as missing so the page renders a fast "Site not found" instead.
+    return missing;
+  }
 
   if (!site) {
-    return {
-      site: null,
-      settings: null,
-      posts: [],
-      domain: siteDomain,
-      isMissing: true,
-    };
+    return missing;
   }
 
   // Only render sites that have been published. Unpublished sites are treated
   // as missing so the public subdomain/custom domain does not leak draft data.
   if (!site.isPublished) {
+    return missing;
+  }
+
+  try {
+    const db = getDb();
+    const settings = await getSettingsBySiteId(db, site.id);
+    const posts = await listPostsBySite(db, site.id, 'published');
+    const primary = await getPrimaryDomain(db, site.id);
+    const domain = primary?.domain ?? siteDomain;
+
     return {
-      site: null,
+      site,
+      settings,
+      posts,
+      domain,
+      isMissing: false,
+    };
+  } catch {
+    // If the follow-up queries fail, still render the site shell rather than
+    // surfacing a 522. Missing settings/posts degrade gracefully.
+    return {
+      site,
       settings: null,
       posts: [],
       domain: siteDomain,
-      isMissing: true,
+      isMissing: false,
     };
   }
-
-
-  const settings = await getSettingsBySiteId(db, site.id);
-  const posts = await listPostsBySite(db, site.id, 'published');
-  const primary = await getPrimaryDomain(db, site.id);
-  const domain = primary?.domain ?? siteDomain;
-
-  return {
-    site,
-    settings,
-    posts,
-    domain,
-    isMissing: false,
-  };
 }
+
 
 export interface ResolvedSiteConfig {
   name: string;

@@ -31,7 +31,8 @@ bucket_name = "homepagebuilder-images"
 NODE_ENV = "production"
 PLATFORM_HOST = "lucidworker.com"
 NEXTAUTH_URL = "https://lucidworker.com"
-GOOGLE_REDIRECT_URI = "https://lucidworker.com/api/auth/callback"
+GOOGLE_REDIRECT_URI = "https://lucidworker.com/api/auth/callback/google"
+
 R2_PUBLIC_URL = "https://pub-b1642f7b304b430b9818d0f1370a6a73.r2.dev"
 
 

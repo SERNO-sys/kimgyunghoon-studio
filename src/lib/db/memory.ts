@@ -22,6 +22,10 @@ function createTable<T extends { id: string }>(): Table<T> {
     findById: async (id) => {
       return rows.find((row) => row.id === id) ?? null;
     },
+    findByPrefix: async (prefix) => {
+      return rows.filter((row) => row.id.startsWith(prefix));
+    },
+
     insert: async (data) => {
       rows.push(data);
       return data;

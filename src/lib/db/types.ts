@@ -105,10 +105,16 @@ export interface Table<T extends { id: string }> {
   findMany(filter?: Partial<T>): Promise<T[]>;
   findOne(filter: Partial<T>): Promise<T | null>;
   findById(id: string): Promise<T | null>;
+  /**
+   * Returns rows whose `id` starts with the given prefix. Used for efficient
+   * subdomain resolution (e.g. `e801f11c` -> site id `e801f11c-...`).
+   */
+  findByPrefix(prefix: string): Promise<T[]>;
   insert(data: T): Promise<T>;
   update(id: string, data: Partial<T>): Promise<T | null>;
   delete(id: string): Promise<boolean>;
 }
+
 
 export interface Db {
   users: Table<User>;
