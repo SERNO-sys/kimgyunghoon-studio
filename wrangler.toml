@@ -27,13 +27,15 @@ bucket_name = "homepagebuilder-images"
 NODE_ENV = "production"
 PLATFORM_HOST = "kimgyunghoon-studio.pages.dev"
 NEXTAUTH_URL = "https://kimgyunghoon-studio.pages.dev"
+GOOGLE_CLIENT_ID = "265900674733-jeuuej5ltm15kdc0f8pqutjjp0umhaij.apps.googleusercontent.com"
 GOOGLE_REDIRECT_URI = "https://kimgyunghoon-studio.pages.dev/api/auth/callback"
 R2_PUBLIC_URL = "https://pub-b1642f7b304b430b9818d0f1370a6a73.r2.dev"
 
 
-# Secrets to add with `wrangler pages secret put`:
+# Secrets (set with `wrangler pages secret put <NAME> --project-name kimgyunghoon-studio`):
 # - SESSION_SECRET
-# - AUTH_SECRET
-# - GOOGLE_CLIENT_ID
 # - GOOGLE_CLIENT_SECRET
 # - GEMINI_API_KEY (optional)
+# - GITHUB_TOKEN (optional)
+# - CLOUDFLARE_API_TOKEN (optional)
+
