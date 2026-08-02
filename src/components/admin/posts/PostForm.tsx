@@ -15,6 +15,8 @@ import { postSchema, type Post, type PostFormData } from '@/lib/admin/posts';
 import { slugify } from '@/lib/admin/slug';
 import { AIDraftAssistant } from '@/components/admin/ai/AIDraftAssistant';
 import type { Category } from '@/lib/db/types';
+import { preprocessImage } from '@/lib/client/image-process';
+
 
 interface PostFormProps {
   post?: Post;
@@ -118,9 +120,12 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
   }, [defaultCategory, form]);
 
   const uploadImage = async (file: File): Promise<string | null> => {
+    // 리사이즈 + WebP 변환은 브라우저에서 수행 (Edge 런타임은 DOM API 미지원)
+    const processed = await preprocessImage(file);
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', processed);
     try {
+
       const response = await fetch('/api/admin/media/upload', {
         method: 'POST',
         body: formData,

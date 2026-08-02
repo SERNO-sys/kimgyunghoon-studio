@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { useToast } from '@/hooks/useToast';
+import { preprocessImage } from '@/lib/client/image-process';
 
 interface AboutFormData {
+
   profileImage: string;
   subHeading: string;
   aboutText: string;
@@ -57,9 +59,12 @@ export default function AboutAdminPage() {
 
   const uploadImage = useCallback(
     async (file: File): Promise<string | null> => {
+      // 리사이즈 + WebP 변환은 브라우저에서 수행 (Edge 런타임은 DOM API 미지원)
+      const processed = await preprocessImage(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', processed);
       try {
+
         const response = await fetch('/api/admin/media/upload', {
           method: 'POST',
           body: formData,

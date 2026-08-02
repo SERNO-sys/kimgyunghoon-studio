@@ -9,6 +9,8 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { useToast } from '@/hooks/useToast';
 import type { SettingsFormData } from '@/lib/admin/settings';
+import { preprocessImage } from '@/lib/client/image-process';
+
 
 interface GeneralSettingsProps {
   form: UseFormReturn<SettingsFormData>;
@@ -29,9 +31,12 @@ export function GeneralSettings({ form }: GeneralSettingsProps) {
 
   const uploadImage = useCallback(
     async (file: File): Promise<string | null> => {
+      // 리사이즈 + WebP 변환은 브라우저에서 수행 (Edge 런타임은 DOM API 미지원)
+      const processed = await preprocessImage(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', processed);
       try {
+
         const response = await fetch('/api/admin/media/upload', {
           method: 'POST',
           body: formData,

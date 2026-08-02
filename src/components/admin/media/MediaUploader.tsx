@@ -3,6 +3,8 @@
 import { useCallback, useState } from 'react';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { preprocessImage } from '@/lib/client/image-process';
+
 
 interface MediaUploaderProps {
   onUploadComplete: () => void;
@@ -19,8 +21,10 @@ export function MediaUploader({ onUploadComplete }: MediaUploaderProps) {
       setIsUploading(true);
       try {
         for (const file of Array.from(files)) {
+          // 리사이즈 + WebP 변환은 브라우저에서 수행 (Edge 런타임은 DOM API 미지원)
+          const processed = await preprocessImage(file);
           const formData = new FormData();
-          formData.append('file', file);
+          formData.append('file', processed);
           const response = await fetch('/api/admin/media/upload', {
             method: 'POST',
             body: formData,
@@ -33,6 +37,7 @@ export function MediaUploader({ onUploadComplete }: MediaUploaderProps) {
             );
           }
         }
+
         toast.addToast('Upload complete.', 'success');
         onUploadComplete();
       } catch {
