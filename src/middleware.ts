@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { getEnv } from '@/config/env';
 import { getSessionFromRequest } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
-import { getSiteByDomain } from '@/lib/db/queries';
+import { getSiteByDomain, getSiteBySubdomain } from '@/lib/db/queries';
+
 
 export const config = {
   matcher: [
@@ -98,13 +99,23 @@ export async function middleware(request: NextRequest) {
 
   if (platformConfigured && !isPlatformHost(hostname, platformHost)) {
     const db = getDb();
-    const site = await getSiteByDomain(db, hostname);
+
+    // 1) Try an exact custom-domain match (e.g. a user's own domain).
+    let site = await getSiteByDomain(db, hostname);
+
+    // 2) Fall back to a platform subdomain match. The subdomain is the first
+    //    segment of the site's UUID (e.g. `e801f11c` for
+    //    `e801f11c.lucidworker.com`), which is not stored verbatim in the
+    //    domains table, so we resolve it against the sites table.
+    const subdomain = extractSubdomain(hostname, platformHost);
+    if (!site && subdomain) {
+      site = await getSiteBySubdomain(db, subdomain);
+    }
 
     if (site) {
       const response = NextResponse.next();
       response.headers.set('x-site-id', site.id);
       response.headers.set('x-site-domain', hostname);
-      const subdomain = extractSubdomain(hostname, platformHost);
       if (subdomain) {
         response.headers.set('x-site-subdomain', subdomain);
       }
@@ -114,6 +125,7 @@ export async function middleware(request: NextRequest) {
     // Unknown custom domain: return a minimal not-configured response.
     return new NextResponse('Site not configured', { status: 404 });
   }
+
 
   // Platform host: rewrite root to platform landing page.
   if (pathname === '/') {

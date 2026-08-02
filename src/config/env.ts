@@ -53,8 +53,16 @@ const envSchema = z.object({
   CLOUDFLARE_R2_ACCESS_KEY_ID: z.string().optional(),
   CLOUDFLARE_R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_PUBLIC_URL: z.string().url().optional(),
-  PLATFORM_HOST: z.string().optional().default('localhost'),
+  // Platform host used by the middleware to distinguish the platform itself
+  // from tenant subdomains (e.g. <siteId>.lucidworker.com). Defaults to the
+  // production platform host.
+  PLATFORM_HOST: z.string().optional().default('lucidworker.com'),
+  // Public-facing platform domain used to build tenant subdomain URLs such as
+  // https://<siteId>.lucidworker.com. Defaults to the production platform host.
+  NEXT_PUBLIC_APP_DOMAIN: z.string().optional().default('lucidworker.com'),
 });
+
+
 
 type Env = z.infer<typeof envSchema>;
 

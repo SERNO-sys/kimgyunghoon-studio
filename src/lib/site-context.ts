@@ -5,8 +5,10 @@ import {
   getSettingsBySiteId,
   getSiteByDomain,
   getSiteById,
+  getSiteBySubdomain,
   listPostsBySite,
 } from '@/lib/db/queries';
+
 import { themes } from '@/lib/admin/theme';
 import type { Post, Site, SitePage, SiteSettings } from '@/lib/db/types';
 
@@ -80,6 +82,7 @@ export async function getPublicSiteContext(): Promise<PublicSiteContext> {
   const headersList = await headers();
   const siteId = headersList.get('x-site-id');
   const siteDomain = headersList.get('x-site-domain');
+  const siteSubdomain = headersList.get('x-site-subdomain');
 
   const db = getDb();
 
@@ -87,7 +90,10 @@ export async function getPublicSiteContext(): Promise<PublicSiteContext> {
     ? await getSiteById(db, siteId)
     : siteDomain
       ? await getSiteByDomain(db, siteDomain)
-      : null;
+      : siteSubdomain
+        ? await getSiteBySubdomain(db, siteSubdomain)
+        : null;
+
 
   if (!site) {
     return {

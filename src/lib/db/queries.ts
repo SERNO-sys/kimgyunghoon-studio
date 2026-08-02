@@ -86,6 +86,21 @@ export async function getSiteByDomain(db: Db, domain: string): Promise<Site | nu
   return await getSiteById(db, domainRow.siteId);
 }
 
+/**
+ * Resolves a site by its tenant subdomain identifier. The subdomain is the
+ * first segment of the site's UUID (e.g. `e801f11c` for a site id of
+ * `e801f11c-xxxx-xxxx-xxxx-xxxxxxxxxxxx`), so we match sites whose id starts
+ * with the given subdomain.
+ */
+export async function getSiteBySubdomain(
+  db: Db,
+  subdomain: string
+): Promise<Site | null> {
+  const sites = await db.sites.findMany({});
+  return sites.find((site) => site.id.startsWith(subdomain)) ?? null;
+}
+
+
 // ---------- Posts ----------
 
 export async function listPostsBySite(
