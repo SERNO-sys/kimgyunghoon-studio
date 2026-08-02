@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
+    const body = (await request.json()) as { pages?: SitePage[] };
     const pages = Array.isArray(body.pages) ? body.pages.slice(0, 8) : [];
 
     const db = getDb();

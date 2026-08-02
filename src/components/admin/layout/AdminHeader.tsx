@@ -27,7 +27,7 @@ export function AdminHeader({ onMenuToggle, siteUrl }: AdminHeaderProps) {
     setPublishing(true);
     try {
       const response = await fetch('/api/admin/publish', { method: 'POST' });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         toast.addToast(
           '1초 만에 홈페이지가 실시간 갱신 배포되었습니다!',

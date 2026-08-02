@@ -66,7 +66,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch('/api/admin/settings')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ settings?: SettingsFormData }>)
       .then((data) => {
         if (data.settings) {
           form.reset(data.settings);
@@ -84,7 +84,10 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         toast.addToast('Settings saved successfully.', 'success');
       } else {
@@ -115,7 +118,10 @@ export default function SettingsPage() {
       const response = await fetch('/api/admin/site/reset', {
         method: 'POST',
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         toast.addToast('사이트가 초기화되었습니다.', 'success');
         router.push('/admin/setup');

@@ -40,7 +40,7 @@ export default function FooterAdminPage() {
 
   useEffect(() => {
     fetch('/api/admin/settings')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ settings?: Record<string, unknown> }>)
       .then((data) => {
         if (data?.settings) {
           setBaseSettings(data.settings);
@@ -99,7 +99,10 @@ export default function FooterAdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         toast.addToast('Footer settings saved successfully.', 'success');
       } else {

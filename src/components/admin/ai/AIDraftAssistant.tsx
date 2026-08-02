@@ -48,9 +48,14 @@ export function AIDraftAssistant({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteId, context, type }),
       });
-      const data = await response.json();
+      const data = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+        result?: string;
+        usage?: { remaining?: number };
+      };
       if (response.ok && data.success) {
-        setResult(data.result);
+        setResult(data.result ?? '');
         setRemaining(data.usage?.remaining ?? null);
       } else {
         toast.addToast(data.message || '초안 생성에 실패했습니다.', 'error');

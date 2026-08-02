@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: DiaryDetailPageProps): Promis
   const config = resolveSiteConfig(site, settings);
   const { slug } = await params;
   const db = getDb();
-  const post = site ? getPostBySlug(db, site.id, slug) : null;
+  const post = site ? await getPostBySlug(db, site.id, slug) : null;
 
   if (!post) {
     return { title: `Not Found | ${config.name}` };
@@ -32,7 +32,7 @@ export default async function DiaryDetailPage({ params }: DiaryDetailPageProps) 
   const { site } = await getPublicSiteContext();
   const { slug } = await params;
   const db = getDb();
-  const post = site ? getPostBySlug(db, site.id, slug) : null;
+  const post = site ? await getPostBySlug(db, site.id, slug) : null;
 
   if (!post) {
     notFound();

@@ -26,7 +26,7 @@ export default function PostsPage() {
 
   useEffect(() => {
     fetch('/api/admin/posts')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ success?: boolean; posts?: Post[] }>)
       .then((data) => {
         if (data.success && data.posts) {
           setPosts(data.posts);
@@ -60,7 +60,10 @@ export default function PostsPage() {
       const response = await fetch(`/api/admin/posts/${post.id}`, {
         method: 'DELETE',
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         setPosts((current) => current.filter((p) => p.id !== post.id));
         toast.addToast('Post deleted.', 'success');

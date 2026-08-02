@@ -29,7 +29,7 @@ export function GeneralStep({ form }: GeneralStepProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: aiPrompt.trim() }),
       });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
 
       if (response.ok && result.success && result.siteId) {
         window.location.href = '/admin';

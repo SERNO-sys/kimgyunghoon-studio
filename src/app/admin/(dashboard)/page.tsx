@@ -22,19 +22,19 @@ const quickLinks = [
 export default async function AdminDashboardPage() {
   const session = await getSession();
   const db = getDb();
-  const sites = session ? listSitesByOwner(db, session.userId) : [];
+  const sites = session ? await listSitesByOwner(db, session.userId) : [];
   const site = sites[0];
 
   const stats = site
     ? [
         {
           label: 'Posts',
-          value: String(countPostsBySite(db, site.id)),
+          value: String(await countPostsBySite(db, site.id)),
           icon: FileText,
         },
         {
           label: 'Media',
-          value: String(countMediaBySite(db, site.id)),
+          value: String(await countMediaBySite(db, site.id)),
           icon: ImageIcon,
         },
         {

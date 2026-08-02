@@ -25,11 +25,12 @@ export function ThemeManager() {
 
   useEffect(() => {
     fetch('/api/admin/theme')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ success?: boolean; theme?: { id: string } }>)
       .then((data) => {
         if (data.theme) {
+          const themeId = data.theme.id;
           const theme =
-            themes.find((themeItem) => themeItem.id === data.theme.id) ||
+            themes.find((themeItem) => themeItem.id === themeId) ||
             themes[0];
           setSelectedTheme(theme);
           setValue('id', theme.id);
@@ -52,7 +53,7 @@ export function ThemeManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         toast.addToast('Theme saved successfully.', 'success');
       } else {
@@ -69,7 +70,7 @@ export function ThemeManager() {
   const reset = async () => {
     try {
       const response = await fetch('/api/admin/theme', { method: 'DELETE' });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         setSelectedTheme(themes[0]);
         setValue('id', themes[0].id);

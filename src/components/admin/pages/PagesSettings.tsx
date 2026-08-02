@@ -37,7 +37,7 @@ export function PagesSettings() {
 
   useEffect(() => {
     fetch('/api/admin/pages')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ success?: boolean; [key: string]: unknown }>)
       .then((data) => {
         if (data.success && Array.isArray(data.pages)) {
           setPages(data.pages);
@@ -89,7 +89,7 @@ export function PagesSettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pages }),
       });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         toast.addToast('Navigation saved successfully.', 'success');
       } else {

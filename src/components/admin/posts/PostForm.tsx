@@ -93,7 +93,7 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
     const loadCategories = async () => {
       try {
         const response = await fetch('/api/admin/categories');
-        const data = await response.json();
+        const data = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
         if (data.success && Array.isArray(data.categories)) {
           setCategories(data.categories);
           if (defaultCategory) {
@@ -125,7 +125,11 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
         method: 'POST',
         body: formData,
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+        media?: { url: string };
+      };
       if (!response.ok || !result.success) {
         toast.addToast(result.message || 'Image upload failed.', 'error');
         return null;
@@ -226,7 +230,7 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
           commitMessage: `${status === 'published' ? 'Publish' : 'Update'}: ${data.title}`,
         }),
       });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         toast.addToast('GitHub sync completed.', 'success');
         toast.addToast('Deployment started.', 'success');
@@ -255,7 +259,7 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         toast.addToast(
           status === 'published' ? 'Post published.' : 'Draft saved.',

@@ -27,7 +27,7 @@ export default function UsersAdminPage() {
 
   useEffect(() => {
     fetch('/api/admin/users')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ success?: boolean; users?: AdminUser[] }>)
       .then((data) => {
         if (data.success && Array.isArray(data.users)) {
           setUsers(data.users);

@@ -14,7 +14,7 @@ export default function MediaPage() {
 
   useEffect(() => {
     fetch('/api/admin/media')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ success?: boolean; media?: MediaItem[] }>)
       .then((data) => {
         if (data.success && data.media) {
           setMedia(data.media);
@@ -39,7 +39,10 @@ export default function MediaPage() {
       const response = await fetch(`/api/admin/media?id=${item.id}`, {
         method: 'DELETE',
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         setMedia((current) => current.filter((m) => m.id !== item.id));
         toast.addToast('Media deleted.', 'success');

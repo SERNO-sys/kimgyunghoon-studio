@@ -16,7 +16,7 @@ export default function DeploymentPage() {
 
   useEffect(() => {
     fetch('/api/admin/deployment')
-      .then((response) => response.json())
+      .then((response) => response.json() as Promise<{ success?: boolean; deployments?: DeploymentRecord[] }>)
       .then((data) => {
         if (data.success && data.deployments) {
           setDeployments(data.deployments);
@@ -43,9 +43,13 @@ export default function DeploymentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitHash: 'manual' }),
       });
-      const data = await response.json();
+      const data = (await response.json()) as {
+        success?: boolean;
+        deployment?: DeploymentRecord;
+        message?: string;
+      };
       if (response.ok && data.success) {
-        setDeployments((prev) => [data.deployment, ...prev]);
+        setDeployments((prev) => [data.deployment!, ...prev]);
         setTimeout(() => {
           toast.addToast('Deployment completed.', 'success');
           load();

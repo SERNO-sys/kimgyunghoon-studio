@@ -17,14 +17,14 @@ export default async function AdminDashboardLayout({
   }
 
   const db = getDb();
-  const sites = listSitesByOwner(db, session.userId);
+  const sites = await listSitesByOwner(db, session.userId);
 
   if (sites.length === 0) {
     redirect('/admin/setup');
   }
 
   const site = sites[0];
-  const primaryDomain = getPrimaryDomain(db, site.id);
+  const primaryDomain = await getPrimaryDomain(db, site.id);
   // Local dev fallback: avoid *.localhost subdomain routing issues.
   const siteUrl =
     primaryDomain?.domain && !primaryDomain.domain.includes('.localhost')

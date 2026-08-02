@@ -53,7 +53,7 @@ export async function middleware(request: NextRequest) {
 
   if (!isPlatformHost(hostname, platformHost)) {
     const db = getDb();
-    const site = getSiteByDomain(db, hostname);
+    const site = await getSiteByDomain(db, hostname);
 
     if (site) {
       const response = NextResponse.next();

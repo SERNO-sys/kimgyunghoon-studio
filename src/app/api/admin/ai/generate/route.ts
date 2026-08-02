@@ -16,7 +16,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
+    const body = (await request.json()) as {
+      templateKey?: string;
+      context?: string;
+    };
     const { templateKey, context } = body;
 
     if (!templateKey || typeof context !== 'string') {

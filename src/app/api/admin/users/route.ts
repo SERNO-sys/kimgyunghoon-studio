@@ -16,7 +16,8 @@ export async function GET() {
 
   try {
     const db = getDb();
-    const users = await listUsers(db).map((user) => ({
+    const allUsers = await listUsers(db);
+    const users = allUsers.map((user) => ({
       id: user.id,
       name: user.name,
       email: user.email,

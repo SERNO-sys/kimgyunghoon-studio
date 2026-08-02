@@ -1,24 +1,5 @@
 import type { Table } from './types';
 
-// Local D1 stubs; these merge with @cloudflare/workers-types after `npm install`.
-declare global {
-  interface D1Result<T = unknown> {
-    results: T[];
-    meta?: { changes?: number };
-  }
-
-  interface D1PreparedStatement {
-    bind(...values: unknown[]): D1PreparedStatement;
-    first<T = unknown>(): Promise<T | null>;
-    all<T = unknown>(): Promise<D1Result<T>>;
-    run(): Promise<{ meta?: { changes?: number } }>;
-  }
-
-  interface D1Database {
-    prepare(sql: string): D1PreparedStatement;
-  }
-}
-
 function toSnakeCase(key: string): string {
   return key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
 }

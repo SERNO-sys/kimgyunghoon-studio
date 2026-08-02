@@ -29,7 +29,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     fetch('/api/admin/account')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ account?: AccountFormData }>)
       .then((data) => {
         if (data.account) {
           form.reset(data.account);
@@ -47,7 +47,10 @@ export default function AccountPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         toast.addToast('Account settings saved.', 'success');
       } else {

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import dns from 'dns/promises';
 import { getSession } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
 import { getDomainByName, listSitesByOwner, updateDomain } from '@/lib/db/queries';
@@ -50,9 +49,21 @@ export async function GET(request: Request) {
   }
 
   try {
-    const records = await dns.resolveCname(domainName);
-    const verified = records.some((record) =>
-      record.toLowerCase().endsWith(TARGET.toLowerCase())
+    // Edge-runtime compatible DNS lookup via Cloudflare DNS-over-HTTPS (JSON API)
+    const dnsUrl = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(
+      domainName
+    )}&type=CNAME`;
+    const dnsRes = await fetch(dnsUrl, {
+      headers: { accept: 'application/dns-json' },
+    });
+    const dnsData = (await dnsRes.json()) as {
+      Answer?: { type: number; data: string }[];
+    };
+    const cnameRecords = (dnsData.Answer ?? [])
+      .filter((a) => a.type === 5)
+      .map((a) => a.data.replace(/\.$/, '').toLowerCase());
+    const verified = cnameRecords.some((record) =>
+      record.endsWith(TARGET.toLowerCase())
     );
 
     await updateDomain(db, domainRow.id, {

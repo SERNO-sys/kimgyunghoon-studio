@@ -36,7 +36,11 @@ export function GeneralSettings({ form }: GeneralSettingsProps) {
           method: 'POST',
           body: formData,
         });
-        const result = await response.json();
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          media?: { url: string };
+        };
         if (!response.ok || !result.success) {
           toast.addToast(result.message || 'Image upload failed.', 'error');
           return null;

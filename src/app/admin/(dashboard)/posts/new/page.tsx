@@ -14,7 +14,8 @@ export default async function NewPostPage({
   const { category } = await searchParams;
 
   const session = await getSession();
-  const site = session ? listSitesByOwner(getDb(), session.userId)[0] : null;
+  const sites = session ? await listSitesByOwner(getDb(), session.userId) : [];
+  const site = sites[0] ?? null;
 
   return (
     <div className="space-y-6">

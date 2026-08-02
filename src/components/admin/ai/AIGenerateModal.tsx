@@ -39,9 +39,13 @@ export function AIGenerateModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ templateKey, context }),
       });
-      const data = await response.json();
+      const data = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+        result?: string;
+      };
       if (response.ok && data.success) {
-        setResult(data.result);
+        setResult(data.result ?? '');
       } else {
         toast.addToast(data.message || 'Generation failed.', 'error');
       }

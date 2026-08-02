@@ -48,7 +48,7 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
 
   useEffect(() => {
     fetch('/api/admin/categories', { credentials: 'same-origin' })
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ success?: boolean; [key: string]: unknown }>)
       .then((data) => {
         if (data.success && Array.isArray(data.categories)) {
           setCategories(data.categories);

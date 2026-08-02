@@ -20,7 +20,7 @@ export default function EditPostPage() {
   useEffect(() => {
     if (!id) return;
     fetch(`/api/admin/posts/${id}`)
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ success?: boolean; post?: Post }>)
       .then((data) => {
         if (data.success && data.post) {
           setPost(data.post);

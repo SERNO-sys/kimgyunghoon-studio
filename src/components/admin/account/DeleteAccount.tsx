@@ -18,7 +18,10 @@ export function DeleteAccount() {
     }
     try {
       const response = await fetch('/api/admin/account', { method: 'DELETE' });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         toast.addToast('Account deleted successfully.', 'success');
         window.location.href = '/admin/login';

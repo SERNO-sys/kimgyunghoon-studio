@@ -10,12 +10,12 @@ export default function AdminLoginPage() {
         <p className="mt-2 text-sm text-stone-600">
           Sign in with your Google account to continue.
         </p>
-        <a
+        <Link
           href="/api/auth/google"
           className="mt-6 inline-flex w-full min-h-11 items-center justify-center rounded-sm bg-stone-950 px-5 py-2.5 text-sm font-semibold tracking-wide text-stone-50 transition-colors hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
         >
           Sign in with Google
-        </a>
+        </Link>
         <Link
           href="/"
           className="mt-4 block text-center text-sm text-stone-500 hover:text-stone-950"

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { getPublicSiteContext } from '@/lib/site-context';
@@ -115,12 +116,12 @@ export default async function MusicDetailPage({ params }: MusicDetailPageProps) 
       />
 
       <div className="pt-8">
-        <a
+        <Link
           href="/music"
           className="text-sm font-bold text-amber-800 hover:underline"
         >
           ← Blog 목록으로
-        </a>
+        </Link>
       </div>
     </article>
   );

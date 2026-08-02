@@ -13,8 +13,8 @@ export default async function SitePostPage({ params }: SitePostPageProps) {
   const { siteId, slug } = await params;
   const decodedSlug = decodeURIComponent(slug);
   const db = getDb();
-  const site = getSiteById(db, siteId);
-  const post = site ? getPostBySlug(db, site.id, decodedSlug) : null;
+  const site = await getSiteById(db, siteId);
+  const post = site ? await getPostBySlug(db, site.id, decodedSlug) : null;
 
   if (!site || !post || post.siteId !== siteId) {
     notFound();

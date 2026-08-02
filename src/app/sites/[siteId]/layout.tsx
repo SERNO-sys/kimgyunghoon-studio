@@ -19,12 +19,12 @@ export default async function SiteLayout({
 }: SiteLayoutProps) {
   const { siteId } = await params;
   const db = getDb();
-  const site = getSiteById(db, siteId);
+  const site = await getSiteById(db, siteId);
   if (!site) {
     notFound();
   }
 
-  const settings = getSettingsBySiteId(db, site.id);
+  const settings = await getSettingsBySiteId(db, site.id);
   const config = resolveSiteConfig(site, settings);
 
   const allPages = flattenPages(config.pages)

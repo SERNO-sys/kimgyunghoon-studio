@@ -96,7 +96,7 @@ export function SetupWizard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const result = await response.json();
+      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         toast.addToast('Site configuration saved successfully.', 'success');
         setTimeout(() => {

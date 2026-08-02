@@ -13,8 +13,8 @@ export default async function DiarySlugPage({
 }: DiarySlugPageProps) {
   const { siteId, slug } = await params;
   const db = getDb();
-  const site = getSiteById(db, siteId);
-  const post = getPostBySlug(db, siteId, slug);
+  const site = await getSiteById(db, siteId);
+  const post = await getPostBySlug(db, siteId, slug);
 
   if (!site || !post || post.siteId !== siteId) {
     notFound();

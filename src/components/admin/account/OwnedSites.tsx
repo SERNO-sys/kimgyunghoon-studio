@@ -19,7 +19,7 @@ export function OwnedSites() {
 
   useEffect(() => {
     fetch('/api/admin/account')
-      .then((response) => response.json())
+      .then((response) => response.json() as Promise<{ success?: boolean; sites?: Site[] }>)
       .then((data) => {
         if (data.success && Array.isArray(data.sites)) {
           setSites(data.sites);

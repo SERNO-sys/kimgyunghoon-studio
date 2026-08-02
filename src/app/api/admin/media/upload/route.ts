@@ -7,9 +7,7 @@ import { getCurrentUserTier, TIER_LIMITS } from '@/lib/config/tiers';
 import type { Media } from '@/lib/db/types';
 import {
   validateImage,
-  resizeImage,
-  compressImage,
-  convertToWebP,
+  processImage,
   uploadToR2,
 } from '@/server/media/pipeline';
 
@@ -81,19 +79,18 @@ export async function POST(request: Request) {
 
     await validateImage(file);
 
-    let buffer = await file.arrayBuffer();
-    buffer = await resizeImage(buffer);
-    buffer = await compressImage(buffer);
-    buffer = await convertToWebP(buffer);
-
-    const url = await uploadToR2(buffer, file.name, file.type);
+    // 리사이즈 + 압축 + WebP 변환을 한 번에 처리
+    const processed = await processImage(await file.arrayBuffer(), file.type);
+    const url = await uploadToR2(processed.buffer, file.name, processed.contentType);
 
     const mediaItem: Media = {
       id: crypto.randomUUID(),
       siteId,
-      name: file.name,
-      size: file.size,
-      type: file.type,
+      name: file.name.endsWith('.webp')
+        ? file.name
+        : `${file.name.replace(/\.[^.]+$/, '')}.webp`,
+      size: processed.buffer.byteLength,
+      type: processed.contentType,
       url,
       createdAt: new Date().toISOString(),
     };

@@ -23,7 +23,11 @@ export function SyncStatus() {
           commitMessage: 'Manual sync',
         }),
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+        syncedAt?: string;
+      };
       if (response.ok && result.success) {
         setLastSync(result.syncedAt ?? new Date().toISOString());
         toast.addToast(result.message || 'GitHub sync complete.', 'success');

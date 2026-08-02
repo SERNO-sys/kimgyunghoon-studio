@@ -32,7 +32,7 @@ export default function AboutAdminPage() {
 
   useEffect(() => {
     fetch('/api/admin/settings')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<{ settings?: Record<string, unknown> }>)
       .then((data) => {
         if (data?.settings) {
           setBaseSettings(data.settings);
@@ -64,7 +64,11 @@ export default function AboutAdminPage() {
           method: 'POST',
           body: formData,
         });
-        const result = await response.json();
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+          media?: { url?: string };
+        };
         if (!response.ok || !result.success) {
           toast.addToast(result.message || 'Image upload failed.', 'error');
           return null;
@@ -130,7 +134,10 @@ export default function AboutAdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success?: boolean;
+        message?: string;
+      };
       if (response.ok && result.success) {
         toast.addToast('About page saved successfully.', 'success');
       } else {

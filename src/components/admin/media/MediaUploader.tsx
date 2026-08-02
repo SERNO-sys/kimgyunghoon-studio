@@ -25,7 +25,7 @@ export function MediaUploader({ onUploadComplete }: MediaUploaderProps) {
             method: 'POST',
             body: formData,
           });
-          const result = await response.json();
+          const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
           if (!response.ok) {
             toast.addToast(
               result.message || `Failed to upload ${file.name}`,
