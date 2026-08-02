@@ -1,9 +1,12 @@
 import { notFound } from 'next/navigation';
 import {
+
   findPageByPath,
   getPublicSiteContext,
   resolveSiteConfig,
 } from '@/lib/site-context';
+
+export const runtime = 'edge';
 
 interface DynamicPageProps {
   params: Promise<{ slug: string[] }>;

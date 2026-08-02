@@ -9,6 +9,9 @@ import { PostTable } from '@/components/admin/posts/PostTable';
 import { useToast } from '@/hooks/useToast';
 import type { Post } from '@/lib/admin/posts';
 
+export const runtime = 'edge';
+
+
 const MUSIC_CATEGORY = 'Music';
 
 export default function MusicAdminPage() {

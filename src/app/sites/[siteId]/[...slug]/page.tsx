@@ -2,6 +2,9 @@ import { notFound } from 'next/navigation';
 import { getSiteData } from '@/lib/site-data';
 import { findPageByPath, resolveSiteConfig } from '@/lib/site-context';
 
+export const runtime = 'edge';
+
+
 interface SiteDynamicPageProps {
   params: Promise<{ siteId: string; slug: string[] }>;
 }

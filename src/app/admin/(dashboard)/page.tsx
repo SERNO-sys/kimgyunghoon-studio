@@ -12,6 +12,9 @@ import {
 import { SyncStatus } from '@/components/admin/dashboard/SyncStatus';
 import { AIQuickGenerate } from '@/components/admin/dashboard/AIQuickGenerate';
 
+export const runtime = 'edge';
+
+
 const quickLinks = [
   { label: 'Create Post', href: '/admin/posts/new' },
   { label: 'Upload Media', href: '/admin/media' },

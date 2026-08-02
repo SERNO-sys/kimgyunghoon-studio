@@ -12,6 +12,9 @@ import {
 } from '@/components/ui/Table';
 import { useToast } from '@/hooks/useToast';
 
+export const runtime = 'edge';
+
+
 interface AdminUser {
   id: string;
   name: string;

@@ -1,6 +1,9 @@
 import { findPageByPath, parseSettings, resolvePages } from '@/lib/site-context';
 import { getSiteData, getSettingValue } from '@/lib/site-data';
 
+export const runtime = 'edge';
+
+
 interface AboutPageProps {
   params: Promise<{ siteId: string }>;
 }

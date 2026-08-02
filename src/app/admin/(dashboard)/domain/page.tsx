@@ -1,5 +1,8 @@
 import { DomainManager } from '@/components/admin/domain/DomainManager';
 
+export const runtime = 'edge';
+
+
 export default function DomainPage() {
   return (
     <div className="space-y-6">

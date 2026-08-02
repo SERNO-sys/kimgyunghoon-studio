@@ -1,5 +1,8 @@
 import { AIQuickGenerate } from '@/components/admin/dashboard/AIQuickGenerate';
 
+export const runtime = 'edge';
+
+
 export default function AIPage() {
   return (
     <div className="space-y-6">

@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/Label';
 import { Textarea } from '@/components/ui/Textarea';
 import { useToast } from '@/hooks/useToast';
 
+export const runtime = 'edge';
+
+
 interface AboutFormData {
   profileImage: string;
   subHeading: string;

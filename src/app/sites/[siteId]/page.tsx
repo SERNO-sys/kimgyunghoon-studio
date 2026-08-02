@@ -4,6 +4,9 @@ import { Philosophy } from '@/components/sections/Philosophy';
 import { getSiteData } from '@/lib/site-data';
 import { parseSettings, resolveSiteConfig } from '@/lib/site-context';
 
+export const runtime = 'edge';
+
+
 interface SitePageProps {
   params: Promise<{ siteId: string }>;
 }

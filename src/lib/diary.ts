@@ -1,7 +1,8 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 
-import { getMarkdownSlugs, getNumber, getString, getStringArray, parseMarkdownFile } from './markdown';
+import { getNumber, getString, getStringArray } from './markdown';
+import { getMarkdownSlugs, parseMarkdownFile } from './markdown-fs';
 import type { Frontmatter } from '../types/common';
 import type { DiaryFrontmatter, DiaryItem } from '../types/diary';
 

@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { useToast } from '@/hooks/useToast';
 
+export const runtime = 'edge';
+
+
 interface ContactFormData {
   email: string;
   phone: string;

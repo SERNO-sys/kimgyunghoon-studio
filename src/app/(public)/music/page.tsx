@@ -1,6 +1,9 @@
 import { PostCard } from '@/components/posts/PostCard';
 import { getPublicSiteContext } from '@/lib/site-context';
 
+export const runtime = 'edge';
+
+
 function getPostDescription(content: string): string {
   return content.slice(0, 160).replace(/[#*`_\[\]]/g, '').trim();
 }

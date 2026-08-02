@@ -2,6 +2,9 @@ import { PostCard } from '@/components/posts/PostCard';
 import { findPageByPath, parseSettings, resolvePages } from '@/lib/site-context';
 import { getSiteData } from '@/lib/site-data';
 
+export const runtime = 'edge';
+
+
 interface DiaryPageProps {
   params: Promise<{ siteId: string }>;
 }

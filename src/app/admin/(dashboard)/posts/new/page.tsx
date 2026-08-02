@@ -4,6 +4,9 @@ import { getSession } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
 import { listSitesByOwner } from '@/lib/db/queries';
 
+export const runtime = 'edge';
+
+
 interface NewPostPageProps {
   searchParams: Promise<{ category?: string }>;
 }

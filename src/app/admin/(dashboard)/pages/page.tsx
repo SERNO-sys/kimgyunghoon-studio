@@ -1,6 +1,9 @@
 import { Card } from '@/components/ui/Card';
 import { PagesSettings } from '@/components/admin/pages/PagesSettings';
 
+export const runtime = 'edge';
+
+
 export default function AdminPagesPage() {
   return (
     <div className="space-y-6">

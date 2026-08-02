@@ -2,9 +2,12 @@ import { Hero } from '@/components/sections/Hero';
 import { LatestPosts } from '@/components/sections/LatestPosts';
 import { Philosophy } from '@/components/sections/Philosophy';
 import {
+
   getPublicSiteContext,
   resolveSiteConfig,
 } from '@/lib/site-context';
+
+export const runtime = 'edge';
 
 export default async function Home() {
   const { site, settings, posts } = await getPublicSiteContext();

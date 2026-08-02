@@ -1,5 +1,8 @@
 import { getPublicSiteContext, resolveSiteConfig } from '@/lib/site-context';
 
+export const runtime = 'edge';
+
+
 export default async function AboutPage() {
   const { site, settings } = await getPublicSiteContext();
   const config = resolveSiteConfig(site, settings);

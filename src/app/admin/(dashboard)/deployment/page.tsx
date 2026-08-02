@@ -8,6 +8,9 @@ import { DeploymentStatus } from '@/components/admin/deployment/DeploymentStatus
 import { useToast } from '@/hooks/useToast';
 import type { DeploymentRecord } from '@/lib/cloudflare/types';
 
+export const runtime = 'edge';
+
+
 export default function DeploymentPage() {
   const toast = useToast();
   const [deployments, setDeployments] = useState<DeploymentRecord[]>([]);

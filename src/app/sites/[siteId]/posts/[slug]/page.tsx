@@ -5,6 +5,9 @@ import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { getDb } from '@/lib/db/client';
 import { getPostBySlug, getSiteById } from '@/lib/db/queries';
 
+export const runtime = 'edge';
+
+
 interface SitePostPageProps {
   params: Promise<{ siteId: string; slug: string }>;
 }

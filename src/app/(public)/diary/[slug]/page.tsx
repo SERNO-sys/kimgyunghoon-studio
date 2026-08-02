@@ -6,6 +6,9 @@ import { getPostBySlug } from '@/lib/db/queries';
 import { getPublicSiteContext, resolveSiteConfig } from '@/lib/site-context';
 import { renderPostContent } from '@/lib/markdown';
 
+export const runtime = 'edge';
+
+
 interface DiaryDetailPageProps {
   params: Promise<{ slug: string }>;
 }

@@ -1,6 +1,9 @@
 import { PostCard } from '@/components/posts/PostCard';
 import { getPublicSiteContext, resolveSiteConfig } from '@/lib/site-context';
 
+export const runtime = 'edge';
+
+
 interface CategoryPageProps {
   params: Promise<{ category: string }>;
 }

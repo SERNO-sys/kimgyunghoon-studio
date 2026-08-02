@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 import { getPublicSiteContext } from '@/lib/site-context';
 import { renderPostContent } from '@/lib/markdown';
 
+export const runtime = 'edge';
+
+
 interface MusicDetailPageProps {
   params: Promise<{ slug: string }>;
 }

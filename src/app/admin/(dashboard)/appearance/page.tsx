@@ -1,5 +1,8 @@
 import { ThemeManager } from '@/components/admin/appearance/ThemeManager';
 
+export const runtime = 'edge';
+
+
 export default function AppearancePage() {
   return (
     <div className="space-y-6">

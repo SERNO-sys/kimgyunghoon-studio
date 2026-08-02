@@ -1,13 +1,8 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 
-import {
-  getBoolean,
-  getMarkdownSlugs,
-  getString,
-  getStringArray,
-  parseMarkdownFile,
-} from './markdown';
+import { getBoolean, getString, getStringArray } from './markdown';
+import { getMarkdownSlugs, parseMarkdownFile } from './markdown-fs';
 import type { Frontmatter } from '../types/common';
 import type { MusicFrontmatter, MusicItem } from '../types/music';
 

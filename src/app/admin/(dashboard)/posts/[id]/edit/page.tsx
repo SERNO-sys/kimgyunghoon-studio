@@ -8,6 +8,9 @@ import { PostForm } from '@/components/admin/posts/PostForm';
 import { useToast } from '@/hooks/useToast';
 import type { Post } from '@/lib/admin/posts';
 
+export const runtime = 'edge';
+
+
 export default function EditPostPage() {
   const params = useParams();
   const router = useRouter();

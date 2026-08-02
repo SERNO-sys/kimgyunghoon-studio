@@ -6,6 +6,9 @@ import { MediaGrid } from '@/components/admin/media/MediaGrid';
 import { useToast } from '@/hooks/useToast';
 import type { MediaItem } from '@/lib/admin/media';
 
+export const runtime = 'edge';
+
+
 export default function MediaPage() {
   const toast = useToast();
   const [media, setMedia] = useState<MediaItem[]>([]);

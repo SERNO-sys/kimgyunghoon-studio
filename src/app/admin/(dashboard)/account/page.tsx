@@ -14,6 +14,9 @@ import { OwnedSites } from '@/components/admin/account/OwnedSites';
 import { ExportAccountData } from '@/components/admin/account/ExportAccountData';
 import { DeleteAccount } from '@/components/admin/account/DeleteAccount';
 
+export const runtime = 'edge';
+
+
 const defaultValues: AccountFormData = {
   displayName: '',
   newsletter: true,

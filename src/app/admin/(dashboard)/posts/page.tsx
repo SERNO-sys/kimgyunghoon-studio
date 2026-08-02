@@ -10,6 +10,9 @@ import { PostTable } from '@/components/admin/posts/PostTable';
 import { useToast } from '@/hooks/useToast';
 import type { Post } from '@/lib/admin/posts';
 
+export const runtime = 'edge';
+
+
 export default function PostsPage() {
   const toast = useToast();
   const searchParams = useSearchParams();

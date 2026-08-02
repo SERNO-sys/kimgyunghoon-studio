@@ -3,6 +3,9 @@ import { Mail, Phone, Send } from 'lucide-react';
 import { findPageByPath, parseSettings, resolvePages } from '@/lib/site-context';
 import { getSiteData, getSettingValue } from '@/lib/site-data';
 
+export const runtime = 'edge';
+
+
 interface ContactPageProps {
   params: Promise<{ siteId: string }>;
 }

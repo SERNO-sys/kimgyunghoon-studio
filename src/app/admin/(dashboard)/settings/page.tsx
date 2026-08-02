@@ -19,6 +19,9 @@ import { AnalyticsSettings } from '@/components/admin/settings/AnalyticsSettings
 import { ContactSocialSettings } from '@/components/admin/settings/ContactSocialSettings';
 import { GeneralSettings } from '@/components/admin/settings/GeneralSettings';
 
+export const runtime = 'edge';
+
+
 const defaultValues: SettingsFormData = {
   general: {
     name: '',

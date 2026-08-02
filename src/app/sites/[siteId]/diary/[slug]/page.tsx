@@ -4,6 +4,9 @@ import { getDb } from '@/lib/db/client';
 import { getPostBySlug, getSiteById } from '@/lib/db/queries';
 import { renderPostContent } from '@/lib/markdown';
 
+export const runtime = 'edge';
+
+
 interface DiarySlugPageProps {
   params: Promise<{ siteId: string; slug: string }>;
 }

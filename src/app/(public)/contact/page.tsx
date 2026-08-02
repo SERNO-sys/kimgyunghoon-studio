@@ -2,6 +2,9 @@ import { Mail, MessageSquare, Send } from 'lucide-react';
 
 import { getPublicSiteContext, resolveSiteConfig } from '@/lib/site-context';
 
+export const runtime = 'edge';
+
+
 export default async function ContactPage() {
   const { site, settings } = await getPublicSiteContext();
   const config = resolveSiteConfig(site, settings);
