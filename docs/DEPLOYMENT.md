@@ -21,23 +21,27 @@ Update the channel URLs in `src/app/contact/page.tsx` and `src/components/layout
 
 ```bash
 npm install
-npm run lint
-npm run build
+npm run pages:build
 ```
 
-The project uses Next.js static export. A successful build produces deployable static files in `out/`.
+This project uses `@cloudflare/next-on-pages` to build an **edge application** (dynamic routes, API routes, middleware, D1/R2 bindings). The build produces the deployable output in `.vercel/output/static` plus a `_worker.js` edge function.
+
+> **Windows note:** `@cloudflare/next-on-pages` internally invokes the Vercel CLI, which requires WSL on Windows. If you are on Windows, run the build inside WSL or rely on Cloudflare's Linux build servers (git integration). The Cloudflare Pages build itself runs on Linux and works fine.
 
 ## Cloudflare Pages
 
 1. In Cloudflare Dashboard, open **Workers & Pages** and select **Create application**.
 2. Select **Pages** and connect the repository.
-3. Use the following build settings:
-   - Framework preset: `Next.js (Static HTML Export)` or `None`
-   - Build command: `npm run build`
-   - Build output directory: `out`
+3. Use the following build settings (this is critical — using the wrong build command/output directory will deploy only static files and no edge functions):
+   - Framework preset: `None`
+   - Build command: `npm run pages:build`
+   - Build output directory: `.vercel/output/static`
    - Node.js version: `20` or later
 4. Save and deploy.
 5. Open the generated `*.pages.dev` URL and verify the home, music, diary, about, contact, sitemap, and robots routes.
+
+> **Important:** The build output directory **must** be `.vercel/output/static` (not `out`). This is where `@cloudflare/next-on-pages` writes the static assets alongside the generated `_worker.js` edge function. If the output directory is wrong, Cloudflare Pages will upload only static files and no Functions/Workers will appear in **Deployment Details → Functions**, causing 500 errors on dynamic routes.
+
 
 ## Custom Domain
 
