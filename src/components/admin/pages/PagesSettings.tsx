@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { useToast } from '@/hooks/useToast';
 import type { SitePage } from '@/lib/db/types';
 
@@ -176,15 +176,13 @@ export function PagesSettings() {
                 ×
               </button>
             </div>
-            <div className="sm:col-span-12 space-y-2">
-              <Label htmlFor={`content-${page.id}`}>Page Content (Markdown / HTML)</Label>
-              <Textarea
-                id={`content-${page.id}`}
-                value={page.content ?? ''}
-                onChange={(e) => updatePage(page.id, { content: e.target.value })}
-                placeholder="Enter content for this page. It can be rendered on public custom pages."
-                rows={5}
-              />
+            <div className="flex items-end justify-end gap-2 sm:col-span-12 pb-1">
+              <Link
+                href={`/admin/pages/${encodeURIComponent(page.id)}`}
+                className="inline-flex items-center rounded-sm border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-900 transition-colors hover:border-stone-950 hover:bg-stone-950 hover:text-stone-50"
+              >
+                Edit content
+              </Link>
             </div>
           </div>
         ))}

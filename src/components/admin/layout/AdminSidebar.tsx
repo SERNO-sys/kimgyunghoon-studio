@@ -143,7 +143,7 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                           ? '/admin/about'
                           : page.type === 'contact'
                             ? '/admin/contact'
-                            : `/admin/pages?page=${encodeURIComponent(page.path)}`;
+                            : `/admin/pages/${encodeURIComponent(page.id)}`;
                 const active = isActive(pathname, href);
                 return (
                   <li key={page.id}>

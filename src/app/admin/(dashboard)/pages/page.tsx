@@ -12,7 +12,8 @@ export default function AdminPagesPage() {
           Pages & Navigation
         </h1>
         <p className="mt-2 text-stone-600">
-          Customize the public site menu and page structure.
+          Manage menu order, add, or remove pages. Click "Edit content"
+          on a page to open its dedicated editor.
         </p>
       </div>
       <Card className="p-6">
