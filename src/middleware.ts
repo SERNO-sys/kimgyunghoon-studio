@@ -37,8 +37,13 @@ function isPlatformHost(hostname: string, platformHost: string): boolean {
   // of "Site not configured".
   if (hostname.endsWith('.pages.dev')) return true;
 
+  // A tenant subdomain of the platform host (e.g. <siteId>.lucidworker.com) is
+  // NOT the platform host. It must be resolved to a tenant site below.
+  if (extractSubdomain(hostname, platformHost) !== null) return false;
+
   return false;
 }
+
 
 
 /**
@@ -91,17 +96,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public tenant routes: resolve site by custom domain and attach headers.
-  let platformHost = 'localhost';
+  // PLATFORM_HOST defaults to the production platform host (lucidworker.com) in
+  // env.ts, so even if the env var is missing in the Pages dashboard we still
+  // resolve tenant subdomains instead of treating every request as the platform.
+  let platformHost = 'lucidworker.com';
   try {
-    platformHost = getEnv().PLATFORM_HOST || 'localhost';
+    platformHost = getEnv().PLATFORM_HOST || 'lucidworker.com';
   } catch {
-    // If env resolution fails, fall back to treating this request as the
-    // platform host so the public site still renders instead of 500/404.
+    // If env resolution fails, keep the production platform host so tenant
+    // subdomains are still resolved (never fall back to 'localhost').
   }
 
-  // If PLATFORM_HOST is still the unconfigured default, treat every request
-  // as the platform host (no custom-domain resolution) so the site boots.
+  // The platform host is always configured in production. Treat every request
+  // as the platform host only when the host is actually the platform itself.
   const platformConfigured = platformHost !== 'localhost';
+
 
   if (platformConfigured && !isPlatformHost(hostname, platformHost)) {
     let site = null;
