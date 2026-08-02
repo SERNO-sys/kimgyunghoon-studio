@@ -51,6 +51,63 @@ This project uses `@cloudflare/next-on-pages` to build an **edge application** (
 4. Update `src/lib/site.ts` with that exact HTTPS domain and deploy again.
 5. Confirm the canonical URL, OpenGraph URL, `https://<domain>/sitemap.xml`, and `https://<domain>/robots.txt`.
 
+## Wildcard Subdomains (`*.lucidworker.com`)
+
+Cloudflare **Pages does not support wildcard subdomains** as custom domains. To
+serve tenant subdomains such as `<siteId>.lucidworker.com`, deploy the same
+`_worker.js` produced by `@cloudflare/next-on-pages` as a **Worker** and attach
+a wildcard route.
+
+### 1. DNS
+
+In the Cloudflare DNS dashboard for `lucidworker.com`, add a wildcard CNAME:
+
+| Type  | Name | Target | Proxy |
+|-------|------|--------|-------|
+| CNAME | `*`  | `kimgyunghoon-studio.pages.dev` | Proxied (orange cloud) |
+
+The `*.lucidworker.com` CNAME must be **proxied** so Cloudflare can route the
+request to the Worker. If it is DNS-only (grey cloud), the request bypasses
+Cloudflare and returns `NXDOMAIN`/connection errors.
+
+### 2. Worker routes (already configured in `wrangler.toml`)
+
+`wrangler.toml` declares two routes so the apex domain and every subdomain are
+handled by the Worker:
+
+```toml
+main = ".vercel/output/static/_worker.js"
+routes = [
+  { pattern = "lucidworker.com/*", zone_name = "lucidworker.com" },
+  { pattern = "*.lucidworker.com/*", zone_name = "lucidworker.com" },
+]
+```
+
+### 3. Deploy as a Worker
+
+```bash
+npm run pages:build   # produces .vercel/output/static/_worker.js
+npm run worker:deploy # wrangler deploy (uses main + routes above)
+```
+
+> **Note:** `wrangler deploy` deploys the Worker with the wildcard routes. The
+> D1 and R2 bindings and `[vars]` in `wrangler.toml` are shared by both the
+> Pages and Worker deployments. Secrets (`SESSION_SECRET`, `GOOGLE_CLIENT_ID`,
+> etc.) must be set on the Worker as well:
+> `wrangler secret put SESSION_SECRET --name kimgyunghoon-studio`.
+
+### 4. Verify
+
+```bash
+curl -I https://31ad616a.lucidworker.com
+```
+
+The middleware reads the `Host` header (`31ad616a.lucidworker.com`), extracts
+the subdomain (`31ad616a`), resolves the site via D1, and renders the tenant
+page. A non-existent/unpublished subdomain returns a fast `404 Site not found`
+instead of `NXDOMAIN` or `522`.
+
+
 ## Deployment Verification
 
 - Confirm all navigation links work on mobile and desktop.
