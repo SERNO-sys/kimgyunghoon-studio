@@ -12,11 +12,13 @@
 -- 1. Drop application tables (children first to satisfy FK constraints).
 DROP TABLE IF EXISTS deploy_versions;
 DROP TABLE IF EXISTS media;
+DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS posts;
 DROP TABLE IF EXISTS domains;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS sites;
 DROP TABLE IF EXISTS users;
+
 
 -- 2. Recreate the schema from scratch.
 CREATE TABLE IF NOT EXISTS users (
@@ -89,7 +91,19 @@ CREATE TABLE IF NOT EXISTS media (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  site_id TEXT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  parent_id TEXT,
+  "order" INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS deploy_versions (
+
   id TEXT PRIMARY KEY,
   site_id TEXT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   version TEXT NOT NULL,

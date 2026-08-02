@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getSession, clearSession } from '@/lib/admin/session';
+import { getSession, clearSessionOnResponse } from '@/lib/admin/session';
+
 import { accountSchema } from '@/lib/admin/account';
 import { getDb } from '@/lib/db/client';
 import {
@@ -129,11 +130,17 @@ export async function DELETE() {
     }
 
     await deleteUser(db, session.userId);
-    await clearSession();
-    return NextResponse.json({
+
+    // Clear the session cookie on the response object. In the Edge runtime the
+    // `cookies()` API is read-only, so `clearSession()` would be silently
+    // ignored and the browser would keep the (now-invalid) session cookie.
+    const response = NextResponse.json({
       success: true,
       message: 'Account and all sites deleted successfully',
     });
+    clearSessionOnResponse(response);
+    return response;
+
   } catch {
     return NextResponse.json(
       { success: false, message: 'Failed to delete account' },

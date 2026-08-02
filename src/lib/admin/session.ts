@@ -115,3 +115,22 @@ export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
 }
+
+/**
+ * Clears the session cookie directly on a NextResponse object.
+ *
+ * Like `setSessionOnResponse`, this is required in the Edge runtime where the
+ * `cookies()` API from `next/headers` is read-only and mutations are silently
+ * ignored. Setting the cookie with an empty value and a past expiry on the
+ * response object guarantees the browser drops the `admin_session` cookie.
+ */
+export function clearSessionOnResponse(response: NextResponse): void {
+  response.cookies.set(SESSION_COOKIE, '', {
+    httpOnly: true,
+    secure: getEnv().NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  });
+}
+

@@ -24,8 +24,9 @@ export function DeleteAccount() {
       };
       if (response.ok && result.success) {
         toast.addToast('Account deleted successfully.', 'success');
-        window.location.href = '/admin/login';
+        window.location.href = '/';
       } else {
+
         toast.addToast(
           result.message || 'Failed to delete account.',
           'error'
