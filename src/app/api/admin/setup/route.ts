@@ -58,12 +58,18 @@ export async function POST(request: Request) {
     const data = result.data;
     const siteId = crypto.randomUUID();
 
+    // The tenant subdomain is the first segment of the site UUID (e.g.
+    // `e801f11c` for `e801f11c-xxxx-xxxx-xxxx-xxxxxxxxxxxx`), so the canonical
+    // public URL is `https://e801f11c.lucidworker.com`.
+    const subdomain = siteId.split('-')[0] || siteId;
+
     const hostname = new URL(request.url).hostname;
     const customDomain = data.domain?.trim();
     const defaultDomain = hostname === 'localhost'
-      ? `${siteId}.localhost`
-      : `${siteId}.${hostname}`;
+      ? `${subdomain}.localhost`
+      : `${subdomain}.${hostname}`;
     const primaryDomain = customDomain || defaultDomain;
+
 
     if (customDomain && await getSiteByDomain(db, customDomain)) {
       return NextResponse.json(
