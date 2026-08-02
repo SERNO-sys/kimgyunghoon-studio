@@ -5,7 +5,10 @@ import { getDb } from '@/lib/db/client';
 import { getPrimaryDomain, listSitesByOwner } from '@/lib/db/queries';
 import { AdminShell } from '@/components/admin/layout/AdminShell';
 
+export const runtime = 'edge';
+
 export default async function AdminDashboardLayout({
+
   children,
 }: Readonly<{
   children: React.ReactNode;
