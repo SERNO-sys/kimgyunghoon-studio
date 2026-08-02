@@ -22,20 +22,26 @@ database_id = "7b30413f-4e8d-4be9-9eb1-94e7bfd7ec6d"
 binding = "MEDIA"
 bucket_name = "homepagebuilder-images"
 
-# Plain environment variables (non-secrets)
+# Plain environment variables (non-secrets).
+# NOTE: Do NOT put OAuth secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+# SESSION_SECRET, etc.) here. They are managed as encrypted Secrets/Variables
+# in the Cloudflare Pages dashboard to avoid binding-name conflicts and to
+# keep secrets out of the repository.
 [vars]
 NODE_ENV = "production"
 PLATFORM_HOST = "kimgyunghoon-studio.pages.dev"
 NEXTAUTH_URL = "https://kimgyunghoon-studio.pages.dev"
-GOOGLE_CLIENT_ID = "265900674733-jeuuej5ltm15kdc0f8pqutjjp0umhaij.apps.googleusercontent.com"
 GOOGLE_REDIRECT_URI = "https://kimgyunghoon-studio.pages.dev/api/auth/callback"
 R2_PUBLIC_URL = "https://pub-b1642f7b304b430b9818d0f1370a6a73.r2.dev"
 
 
-# Secrets (set with `wrangler pages secret put <NAME> --project-name kimgyunghoon-studio`):
+# Secrets (set in the Cloudflare Pages dashboard -> Settings -> Environment
+# variables, or with `wrangler pages secret put <NAME> --project-name kimgyunghoon-studio`):
 # - SESSION_SECRET
+# - GOOGLE_CLIENT_ID
 # - GOOGLE_CLIENT_SECRET
 # - GEMINI_API_KEY (optional)
 # - GITHUB_TOKEN (optional)
 # - CLOUDFLARE_API_TOKEN (optional)
+
 
