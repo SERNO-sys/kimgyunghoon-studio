@@ -12,9 +12,10 @@ export default function AdminPagesPage() {
           Pages & Navigation
         </h1>
         <p className="mt-2 text-stone-600">
-          Manage menu order, add, or remove pages. Click "Edit content"
-          on a page to open its dedicated editor.
+          Manage menu order, add, or remove pages. Click &ldquo;Edit
+          content&rdquo; on a page to open its dedicated editor.
         </p>
+
       </div>
       <Card className="p-6">
         <PagesSettings />

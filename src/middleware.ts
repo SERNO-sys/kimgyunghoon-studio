@@ -23,6 +23,11 @@ function isPlatformHost(hostname: string, platformHost: string): boolean {
   // Exact configured platform host (e.g. lucidworker.com).
   if (hostname === platformHost) return true;
 
+  // The `www` alias of the platform host (e.g. www.lucidworker.com) is treated
+  // as the platform host itself so it renders the main landing page instead of
+  // "Site not configured".
+  if (hostname === `www.${platformHost}`) return true;
+
   // Subdomains of a dotted platform host.
   if (platformHost.startsWith('.') && hostname.endsWith(platformHost)) return true;
 
@@ -34,6 +39,7 @@ function isPlatformHost(hostname: string, platformHost: string): boolean {
 
   return false;
 }
+
 
 /**
  * Extracts the subdomain portion of a hostname relative to the platform host.
