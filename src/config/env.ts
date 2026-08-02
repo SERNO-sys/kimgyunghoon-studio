@@ -19,6 +19,9 @@ function getRuntimeEnv(): Record<string, unknown> {
   }
 }
 
+// All optional so that the public site can boot even when optional
+// integrations (Google OAuth, GitHub, Gemini, Cloudflare API) are not
+// configured yet. Individual features validate their own required vars.
 const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
@@ -26,8 +29,8 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(32).optional(),
   AUTH_SECRET: z.string().min(32).optional(),
   NEXTAUTH_SECRET: z.string().min(32).optional(),
-  GOOGLE_CLIENT_ID: z.string().min(1),
-  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   GOOGLE_REDIRECT_URI: z
     .string()
     .url()
@@ -53,12 +56,18 @@ const envSchema = z.object({
   PLATFORM_HOST: z.string().optional().default('localhost'),
 });
 
-type Env = z.infer<typeof envSchema> & {
-  SESSION_SECRET: string;
-};
+type Env = z.infer<typeof envSchema>;
 
 let cachedEnv: Env | null = null;
 
+/**
+ * Returns the merged runtime environment.
+ *
+ * This function never throws for missing optional integration secrets so that
+ * the public site and middleware can boot even when Google/GitHub/Gemini are
+ * not configured. Callers that genuinely require a secret (e.g. session
+ * signing, OAuth) should validate it themselves and fail gracefully.
+ */
 export function getEnv(): Env {
   if (cachedEnv) {
     return cachedEnv;
@@ -66,22 +75,27 @@ export function getEnv(): Env {
 
   const result = envSchema.safeParse(getRuntimeEnv());
   if (!result.success) {
-    const missing = result.error.issues
-      .map((issue) => issue.path.join('.'))
-      .join(', ');
-    throw new Error(`Missing or invalid environment variables: ${missing}`);
+    // Never crash the whole site because of a misconfigured optional var.
+    // Fall back to defaults so the public routes still render.
+    cachedEnv = envSchema.parse({});
+    return cachedEnv;
   }
 
-  const secret =
-    result.data.SESSION_SECRET ||
-    result.data.AUTH_SECRET ||
-    result.data.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error(
-      'Missing session secret: set SESSION_SECRET, AUTH_SECRET, or NEXTAUTH_SECRET (min 32 chars).'
-    );
-  }
-
-  cachedEnv = { ...result.data, SESSION_SECRET: secret } as Env;
+  cachedEnv = result.data;
   return cachedEnv;
 }
+
+/**
+ * Returns the session signing secret, or null if none is configured.
+ * Callers should handle the null case (e.g. treat as "no valid session").
+ */
+export function getSessionSecret(): string | null {
+  const env = getEnv();
+  return (
+    env.SESSION_SECRET ||
+    env.AUTH_SECRET ||
+    env.NEXTAUTH_SECRET ||
+    null
+  );
+}
+

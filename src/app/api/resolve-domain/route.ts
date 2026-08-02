@@ -9,10 +9,13 @@ const MAIN_DOMAINS = new Set([
   '127.0.0.1',
 ]);
 
-if (process.env.MAIN_DOMAIN) {
-  MAIN_DOMAINS.add(process.env.MAIN_DOMAIN);
-  MAIN_DOMAINS.add(`www.${process.env.MAIN_DOMAIN}`);
+const mainDomain =
+  typeof process !== 'undefined' && process.env ? process.env.MAIN_DOMAIN : undefined;
+if (mainDomain) {
+  MAIN_DOMAINS.add(mainDomain);
+  MAIN_DOMAINS.add(`www.${mainDomain}`);
 }
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

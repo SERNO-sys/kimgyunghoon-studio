@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
-import { getEnv } from '@/config/env';
+import { getEnv, getSessionSecret } from '@/config/env';
 import type { AdminSession } from '@/types/admin';
 
 const SESSION_COOKIE = 'admin_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
+
 
 function toBase64(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -25,7 +26,12 @@ function fromBase64(base64: string): string {
 }
 
 async function sign(value: string): Promise<string> {
-  const { SESSION_SECRET: secret } = getEnv();
+  const secret = getSessionSecret();
+  // If no session secret is configured, produce a signature that can never
+  // match a real one so verification simply fails instead of crashing.
+  if (!secret) {
+    return 'unconfigured';
+  }
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
@@ -37,6 +43,7 @@ async function sign(value: string): Promise<string> {
   const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
   return toBase64(String.fromCharCode(...new Uint8Array(signature)));
 }
+
 
 async function verifySession(value: string): Promise<AdminSession | null> {
   const [payload, signature] = value.split('.');

@@ -25,9 +25,11 @@ bucket_name = "homepagebuilder-images"
 # Plain environment variables (non-secrets)
 [vars]
 NODE_ENV = "production"
+PLATFORM_HOST = "kimgyunghoon-studio.pages.dev"
 NEXTAUTH_URL = "https://kimgyunghoon-studio.pages.dev"
 GOOGLE_REDIRECT_URI = "https://kimgyunghoon-studio.pages.dev/api/auth/callback"
 R2_PUBLIC_URL = "https://pub-b1642f7b304b430b9818d0f1370a6a73.r2.dev"
+
 
 # Secrets to add with `wrangler pages secret put`:
 # - SESSION_SECRET

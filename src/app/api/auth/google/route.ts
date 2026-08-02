@@ -7,7 +7,15 @@ export async function GET() {
   const { GOOGLE_CLIENT_ID: clientId, GOOGLE_REDIRECT_URI: redirectUri } =
     getEnv();
 
+  if (!clientId) {
+    return NextResponse.json(
+      { success: false, message: 'Google OAuth is not configured' },
+      { status: 503 }
+    );
+  }
+
   const state = crypto.randomUUID();
+
   const scope = encodeURIComponent('openid email profile');
   const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${state}&access_type=offline&prompt=consent`;
 

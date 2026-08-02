@@ -49,9 +49,19 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public tenant routes: resolve site by custom domain and attach headers.
-  const platformHost = getEnv().PLATFORM_HOST;
+  let platformHost = 'localhost';
+  try {
+    platformHost = getEnv().PLATFORM_HOST || 'localhost';
+  } catch {
+    // If env resolution fails, fall back to treating this request as the
+    // platform host so the public site still renders instead of 500/404.
+  }
 
-  if (!isPlatformHost(hostname, platformHost)) {
+  // If PLATFORM_HOST is still the unconfigured default, treat every request
+  // as the platform host (no custom-domain resolution) so the site boots.
+  const platformConfigured = platformHost !== 'localhost';
+
+  if (platformConfigured && !isPlatformHost(hostname, platformHost)) {
     const db = getDb();
     const site = await getSiteByDomain(db, hostname);
 
@@ -73,3 +83,4 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+

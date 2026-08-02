@@ -9,8 +9,10 @@ import { checkAiUsage, incrementAiUsage } from '@/lib/ai/usage';
 
 export const runtime = 'edge';
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey =
+  typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : undefined;
 const genAI = apiKey ? new GoogleGenAI({ apiKey, apiVersion: 'v1beta' }) : null;
+
 
 const requestSchema = z.object({
   siteId: z.string().min(1),
