@@ -38,8 +38,12 @@ CREATE TABLE IF NOT EXISTS domains (
 );
 
 -- Site-level settings (serialized JSON for extensibility).
+-- NOTE: `id` is the primary key (equal to the owning site's id) so it matches
+-- the generic Table<T> abstraction used by the D1 client. `site_id` is kept as
+-- a column for the foreign-key relationship.
 CREATE TABLE IF NOT EXISTS settings (
-  site_id TEXT PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+  id TEXT PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+  site_id TEXT NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   general TEXT NOT NULL DEFAULT '{}',
   contact TEXT NOT NULL DEFAULT '{}',
   analytics TEXT NOT NULL DEFAULT '{}',
@@ -47,6 +51,7 @@ CREATE TABLE IF NOT EXISTS settings (
   pages TEXT NOT NULL DEFAULT '[]',
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
 
 -- Tenant posts.
 CREATE TABLE IF NOT EXISTS posts (

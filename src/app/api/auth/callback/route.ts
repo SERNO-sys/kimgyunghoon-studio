@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getEnv } from '@/config/env';
-import { setSession } from '@/lib/admin/session';
+import { setSessionOnResponse } from '@/lib/admin/session';
 import { findOrCreateUserFromGoogle } from '@/server/auth/user';
 
 export const runtime = 'edge';
@@ -46,7 +46,6 @@ export async function GET(request: Request) {
   }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -74,7 +73,13 @@ export async function GET(request: Request) {
   const googleUser = (await userRes.json()) as GoogleUserInfo;
   const user = await findOrCreateUserFromGoogle(googleUser);
 
-  await setSession({
+  const response = NextResponse.redirect(new URL('/admin', request.url));
+
+  // Set the session cookie directly on the response object. In the Edge
+  // runtime the `cookies()` API from `next/headers` is read-only, so using
+  // `setSession()` here would silently drop the cookie and the user would be
+  // bounced back to the login page.
+  await setSessionOnResponse(response, {
     userId: user.id,
     email: user.email,
     name: user.name,
@@ -82,7 +87,6 @@ export async function GET(request: Request) {
     expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 7,
   });
 
-  const response = NextResponse.redirect(new URL('/admin', request.url));
   response.cookies.delete('oauth_state');
   return response;
 }

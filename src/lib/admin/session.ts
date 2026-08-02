@@ -1,11 +1,10 @@
 import { cookies } from 'next/headers';
-import type { NextRequest } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import { getEnv, getSessionSecret } from '@/config/env';
 import type { AdminSession } from '@/types/admin';
 
 const SESSION_COOKIE = 'admin_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
-
 
 function toBase64(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -44,7 +43,6 @@ async function sign(value: string): Promise<string> {
   return toBase64(String.fromCharCode(...new Uint8Array(signature)));
 }
 
-
 async function verifySession(value: string): Promise<AdminSession | null> {
   const [payload, signature] = value.split('.');
   if (!payload || !signature) return null;
@@ -82,6 +80,29 @@ export async function setSession(session: AdminSession): Promise<void> {
   const cookieStore = await cookies();
   const signed = await signSession(session);
   cookieStore.set(SESSION_COOKIE, signed, {
+    httpOnly: true,
+    secure: getEnv().NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: SESSION_MAX_AGE,
+    path: '/',
+  });
+}
+
+/**
+ * Signs the session and sets the cookie directly on a NextResponse object.
+ *
+ * This is the correct way to set the session cookie from an Edge-runtime Route
+ * Handler (e.g. the OAuth callback). In the Edge runtime the `cookies()` API
+ * from `next/headers` is read-only, so mutations via `setSession()` are
+ * silently ignored and the cookie never reaches the browser. Setting it on the
+ * response object guarantees the `Set-Cookie` header is attached.
+ */
+export async function setSessionOnResponse(
+  response: NextResponse,
+  session: AdminSession
+): Promise<void> {
+  const signed = await signSession(session);
+  response.cookies.set(SESSION_COOKIE, signed, {
     httpOnly: true,
     secure: getEnv().NODE_ENV === 'production',
     sameSite: 'lax',
