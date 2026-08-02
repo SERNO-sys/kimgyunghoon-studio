@@ -9,8 +9,8 @@
 --
 -- SQLite cannot alter a primary key in place, so we rebuild the table.
 -- Run with: wrangler d1 execute DB --file=./migrations/0001_settings_id_primary_key.sql
-
-BEGIN;
+-- NOTE: D1 does not support SQL BEGIN/COMMIT transaction statements, so this
+-- file contains only plain DDL/DML statements (each is executed atomically).
 
 -- 1. Create the new table with `id` as the primary key.
 CREATE TABLE IF NOT EXISTS settings_new (
@@ -32,5 +32,3 @@ FROM settings;
 -- 3. Swap the tables.
 DROP TABLE settings;
 ALTER TABLE settings_new RENAME TO settings;
-
-COMMIT;
