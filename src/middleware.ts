@@ -17,10 +17,24 @@ export const config = {
 };
 
 function isPlatformHost(hostname: string, platformHost: string): boolean {
+  // Local development.
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+
+  // Exact configured platform host (e.g. kimgyunghoon-studio.pages.dev).
   if (hostname === platformHost) return true;
+
+  // Subdomains of a dotted platform host.
   if (platformHost.startsWith('.') && hostname.endsWith(platformHost)) return true;
+
+  // Any Cloudflare Pages domain (base + preview deployments like
+  // <hash>.kimgyunghoon-studio.pages.dev) is treated as the platform host so
+  // preview URLs and the default pages.dev domain render the main site instead
+  // of "Site not configured".
+  if (hostname.endsWith('.pages.dev')) return true;
+
   return false;
 }
+
 
 const ADMIN_PUBLIC_PATHS = new Set(['/admin/login', '/admin/setup']);
 
