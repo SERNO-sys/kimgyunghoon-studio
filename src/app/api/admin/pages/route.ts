@@ -6,7 +6,9 @@ import {
   listSitesByOwner,
   upsertSettings,
 } from '@/lib/db/queries';
+import { getDefaultPages, resolvePages } from '@/lib/site-context';
 import type { SitePage, SiteSettings } from '@/lib/db/types';
+
 
 export const runtime = 'edge';
 
@@ -35,9 +37,11 @@ export async function GET() {
 
   const db = getDb();
   const settings = await getSettingsBySiteId(db, siteId);
-  const pages: SitePage[] = settings?.pages ? JSON.parse(settings.pages) : [];
+  const parsedPages = settings?.pages ? JSON.parse(settings.pages) : [];
+  const pages: SitePage[] = resolvePages(parsedPages, '');
 
   return NextResponse.json({ success: true, pages });
+
 }
 
 export async function POST(request: Request) {

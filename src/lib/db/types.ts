@@ -17,9 +17,12 @@ export interface Site {
   timezone: string;
   theme: 'default' | 'dark' | 'warm' | 'minimal';
   maintenance: boolean;
+  isPublished: boolean;
+  deployVersion: string;
   createdAt: string;
   updatedAt: string;
 }
+
 
 export interface Domain {
   id: string;

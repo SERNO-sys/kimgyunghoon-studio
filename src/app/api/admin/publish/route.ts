@@ -38,7 +38,15 @@ export async function POST() {
     const db = getDb();
     const now = new Date().toISOString();
 
-    await updateSite(db, siteId, { updatedAt: now });
+    // Create a deployment snapshot first so we can persist its version.
+    const deployment = await createDeploymentSnapshot(db, siteId, 'manual');
+
+    // Mark the site as published and record the latest deploy version.
+    await updateSite(db, siteId, {
+      updatedAt: now,
+      isPublished: true,
+      deployVersion: deployment.version,
+    });
 
     const settings = await getSettingsBySiteId(db, siteId);
     if (settings) {
@@ -56,8 +64,6 @@ export async function POST() {
       }
     }
 
-    const deployment = await createDeploymentSnapshot(db, siteId, 'manual');
-
     return NextResponse.json({
       success: true,
       message: '1초 만에 홈페이지가 실시간 갱신 배포되었습니다!',
@@ -71,3 +77,4 @@ export async function POST() {
     );
   }
 }
+

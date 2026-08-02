@@ -88,9 +88,12 @@ export async function POST(request: Request) {
       timezone: 'Asia/Seoul',
       theme: data.theme,
       maintenance: false,
+      isPublished: false,
+      deployVersion: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
     await createSite(db, site);
 
     await createDomain(db, {

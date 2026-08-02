@@ -16,13 +16,14 @@ import {
   User,
   X,
 } from 'lucide-react';
-import type { Category } from '@/lib/db/types';
+import type { SitePage } from '@/lib/db/types';
 
 interface AdminSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   siteName?: string;
 }
+
 
 const managementItems = [
   { href: '/admin/pages', label: 'Pages', icon: Globe },
@@ -43,15 +44,15 @@ function isActive(pathname: string, href: string): boolean {
 
 export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [pages, setPages] = useState<SitePage[]>([]);
   const [isManagementOpen, setIsManagementOpen] = useState(false);
 
   useEffect(() => {
-    fetch('/api/admin/categories', { credentials: 'same-origin' })
-      .then((res) => res.json() as Promise<{ success?: boolean; [key: string]: unknown }>)
+    fetch('/api/admin/pages', { credentials: 'same-origin' })
+      .then((res) => res.json() as Promise<{ success?: boolean; pages?: SitePage[] }>)
       .then((data) => {
-        if (data.success && Array.isArray(data.categories)) {
-          setCategories(data.categories);
+        if (data.success && Array.isArray(data.pages)) {
+          setPages(data.pages);
         }
       })
       .catch(() => {
@@ -60,6 +61,10 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
   }, []);
 
   const postsActive = isActive(pathname, '/admin/posts');
+  const visiblePages = pages
+    .filter((page) => page.visible !== false)
+    .sort((a, b) => a.order - b.order);
+
 
   return (
     <>
@@ -126,18 +131,38 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                 </Link>
               </li>
 
-              {categories.map((category) => (
-                <li key={category.id}>
-                  <Link
-                    href={`/admin/posts?category=${encodeURIComponent(category.slug)}`}
-                    className="flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-stone-300 transition-colors hover:bg-stone-800 hover:text-stone-50"
-                    onClick={onToggle}
-                    title={category.title}
-                  >
-                    {category.title}
-                  </Link>
-                </li>
-              ))}
+              {visiblePages.map((page) => {
+                const href =
+                  page.type === 'home'
+                    ? '/admin'
+                    : page.type === 'diary'
+                      ? '/admin/posts?category=diary'
+                      : page.type === 'music'
+                        ? '/admin/posts?category=music'
+                        : page.type === 'about'
+                          ? '/admin/about'
+                          : page.type === 'contact'
+                            ? '/admin/contact'
+                            : `/admin/pages?page=${encodeURIComponent(page.path)}`;
+                const active = isActive(pathname, href);
+                return (
+                  <li key={page.id}>
+                    <Link
+                      href={href}
+                      className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-amber-900/30 text-amber-100'
+                          : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+                      }`}
+                      onClick={onToggle}
+                      title={page.label}
+                    >
+                      {page.label}
+                    </Link>
+                  </li>
+                );
+              })}
+
 
               <li>
                 <Link

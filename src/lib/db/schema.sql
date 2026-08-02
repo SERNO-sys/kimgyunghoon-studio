@@ -22,9 +22,12 @@ CREATE TABLE IF NOT EXISTS sites (
   timezone TEXT NOT NULL DEFAULT 'Asia/Seoul',
   theme TEXT NOT NULL DEFAULT 'default' CHECK (theme IN ('default', 'dark', 'warm')),
   maintenance BOOLEAN NOT NULL DEFAULT 0,
+  is_published BOOLEAN NOT NULL DEFAULT 0,
+  deploy_version TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
 
 -- Domains can be attached to a site. The first verified domain becomes canonical.
 CREATE TABLE IF NOT EXISTS domains (
