@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getRequestContext } from '@cloudflare/next-on-pages';
 import { getEnv } from '@/config/env';
 import { getSessionFromRequest } from '@/lib/admin/session';
-import { createD1Table } from '@/lib/db/d1-table';
-import type { Db } from '@/lib/db/types';
+import { getDb } from '@/lib/db/client';
 import { getSiteByDomain, getSiteBySubdomain } from '@/lib/db/queries';
-
 
 
 export const config = {
@@ -115,42 +112,7 @@ function mapTenantPath(pathname: string, siteId: string): string {
 
 const ADMIN_PUBLIC_PATHS = new Set(['/admin/login', '/admin/setup']);
 
-/**
- * Returns a D1-backed database client for the middleware.
- *
- * The middleware runs on the Edge runtime and MUST resolve the tenant site from
- * the real D1 database. We build the client directly from the request context's
- * D1 binding instead of reusing `getDb()` from `@/lib/db/client`, because that
- * helper silently falls back to an empty in-memory store when the Cloudflare
- * request context is unavailable — which would make every tenant subdomain
- * resolve to "Site not found".
- *
- * Returns null when the D1 binding is not available (e.g. local `next dev`
- * without the dev platform), so callers can fall back gracefully.
- */
-function getMiddlewareDb(): Db | null {
-  try {
-    const env = getRequestContext().env as { DB?: D1Database };
-    if (env.DB) {
-      return {
-        users: createD1Table(env.DB, 'users'),
-        sites: createD1Table(env.DB, 'sites'),
-        domains: createD1Table(env.DB, 'domains'),
-        posts: createD1Table(env.DB, 'posts'),
-        media: createD1Table(env.DB, 'media'),
-        categories: createD1Table(env.DB, 'categories'),
-        settings: createD1Table(env.DB, 'settings'),
-        deployVersions: createD1Table(env.DB, 'deploy_versions'),
-      };
-    }
-  } catch {
-    // No Cloudflare request context (e.g. local dev). Fall through to null.
-  }
-  return null;
-}
-
 export async function middleware(request: NextRequest) {
-
   const { pathname } = request.nextUrl;
 
   // [Middleware Request Host] Log the exact Host values seen by the middleware
@@ -236,18 +198,10 @@ export async function middleware(request: NextRequest) {
     let subdomain: string | null = null;
 
     try {
-      const db = getMiddlewareDb();
-      if (!db) {
-        // No D1 binding available (e.g. local dev without the dev platform).
-        // Fall through to the 404 below rather than resolving against an empty
-        // in-memory store.
-        console.log('[Middleware Log] D1 binding unavailable, returning 404');
-        return new NextResponse('Site not found', { status: 404 });
-      }
+      const db = getDb();
 
       // 1) Try an exact custom-domain match (e.g. a user's own domain).
       site = await getSiteByDomain(db, hostname);
-
 
       // 2) Fall back to a platform subdomain match. The subdomain is the first
       //    segment of the site's UUID (e.g. `e801f11c` for
