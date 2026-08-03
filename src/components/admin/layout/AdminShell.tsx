@@ -21,8 +21,10 @@ export function AdminShell({ children, siteName, siteUrl, siteId }: AdminShellPr
         <AdminSidebar
           isOpen={isSidebarOpen}
           siteName={siteName}
+          siteId={siteId}
           onToggle={() => setIsSidebarOpen((current) => !current)}
         />
+
         <AdminHeader
           siteUrl={siteUrl}
           siteId={siteId}

@@ -1,5 +1,11 @@
 import Link from 'next/link';
-import { FileText, Image as ImageIcon, Settings } from 'lucide-react';
+import {
+  Eye,
+  FileText,
+  Image as ImageIcon,
+  Rocket,
+  Settings,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { getSession } from '@/lib/admin/session';
@@ -11,6 +17,7 @@ import {
 } from '@/lib/db/queries';
 import { SyncStatus } from '@/components/admin/dashboard/SyncStatus';
 import { AIQuickGenerate } from '@/components/admin/dashboard/AIQuickGenerate';
+
 
 export const runtime = 'edge';
 
@@ -64,7 +71,35 @@ export default async function AdminDashboardPage() {
             : 'Manage your site content and configuration.'}
         </p>
       </div>
+
+      {/* V2 Phase 4: prominent entry point to the preview-centric site view */}
+      {site ? (
+        <Card className="flex flex-col gap-4 border-amber-900/20 bg-gradient-to-r from-amber-50 to-[#fffdf8] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="inline-flex size-12 shrink-0 items-center justify-center rounded-sm bg-amber-900 text-[#fffdf8]">
+              <Eye aria-hidden="true" size={24} />
+            </div>
+            <div>
+              <h2 className="font-serif text-lg font-semibold text-stone-950">
+                내 사이트 미리보기
+              </h2>
+              <p className="text-sm text-stone-600">
+                결과물을 확인하고 바로 발행하세요.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/admin/sites/${site.id}`}
+            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-sm bg-amber-900 px-6 py-3 text-base font-bold text-[#fffdf8] shadow-lg shadow-amber-900/20 transition-all hover:bg-amber-800 hover:shadow-xl"
+          >
+            <Rocket aria-hidden="true" size={18} />
+            미리보기 & 발행
+          </Link>
+        </Card>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (

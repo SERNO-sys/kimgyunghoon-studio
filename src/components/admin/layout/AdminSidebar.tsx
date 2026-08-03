@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   BookOpen,
   ChevronDown,
+  Eye,
   Globe,
   Image as ImageIcon,
   LayoutDashboard,
@@ -18,13 +19,16 @@ import {
   X,
 } from 'lucide-react';
 
+
 import type { SitePage } from '@/lib/db/types';
 
 interface AdminSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   siteName?: string;
+  siteId?: string;
 }
+
 
 
 const managementItems = [
@@ -44,7 +48,13 @@ function isActive(pathname: string, href: string): boolean {
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) {
+export function AdminSidebar({
+  isOpen,
+  onToggle,
+  siteName,
+  siteId,
+}: AdminSidebarProps) {
+
   const pathname = usePathname();
   const [pages, setPages] = useState<SitePage[]>([]);
   const [isManagementOpen, setIsManagementOpen] = useState(false);
@@ -135,9 +145,27 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                 </Link>
               </li>
 
+              {siteId ? (
+                <li>
+                  <Link
+                    href={`/admin/sites/${siteId}`}
+                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive(pathname, `/admin/sites/${siteId}`)
+                        ? 'bg-amber-900/30 text-amber-100'
+                        : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+                    }`}
+                    onClick={onToggle}
+                  >
+                    <Eye aria-hidden="true" size={18} />
+                    Site Preview
+                  </Link>
+                </li>
+              ) : null}
+
               <li>
                 <Link
                   href="/admin/posts"
+
                   className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
                     postsActive
                       ? 'bg-amber-900/30 text-amber-100'
