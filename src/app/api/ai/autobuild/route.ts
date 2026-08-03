@@ -86,12 +86,45 @@ export async function POST(request: Request) {
       JSON.stringify({ concept: trimmed, extraPages })
     );
 
-    const cleaned = autobuildJson
+    // --- AI JSON sanitization (V2 emergency patch) -------------------------
+    // The AI frequently wraps its response in a markdown code fence
+    // (```json ... ```) or emits stray backticks / leading prose. We strip all
+    // of that BEFORE JSON.parse so a malformed wrapper never throws
+    // "Expected double-quoted property name in JSON at position N".
+    let cleaned = autobuildJson
       .trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/```$/, '')
+      // Remove any leading prose up to the first `{` (AI sometimes answers
+      // with "Here is the JSON:" before the object).
+      .replace(/^[^{]*/, '')
+      // Remove a trailing markdown fence and any trailing prose after `}`.
+      // (`[^}]` already matches newlines, so no `s` flag is needed.)
+      .replace(/\}\s*```\s*[^}]*$/, '}')
+
+      // Remove any remaining ```json / ``` fences anywhere in the string.
+      .replace(/```json\s*/gi, '')
+      .replace(/```/g, '')
       .trim();
-    const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+
+    // If the AI returned an empty object or nothing usable, fall back to a
+    // minimal valid object so site creation never breaks.
+    if (!cleaned || !cleaned.startsWith('{')) {
+      cleaned = '{}';
+    }
+
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(cleaned) as Record<string, unknown>;
+    } catch {
+      // Last-resort guard: if the AI still produced invalid JSON (e.g. an
+      // unescaped quote inside a Korean string), log it and fall back to an
+      // empty object. The rest of the handler already defaults every field, so
+      // a site is still created with sensible placeholder content.
+      console.error('[autobuild] AI returned invalid JSON, using fallback:', {
+        raw: autobuildJson.slice(0, 500),
+      });
+      parsed = {};
+    }
+
 
     const title = String(parsed.title || '');
     const name = title.trim().slice(0, 50) || 'My Site';

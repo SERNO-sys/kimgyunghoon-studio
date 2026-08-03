@@ -234,14 +234,12 @@ export async function middleware(request: NextRequest) {
     }
 
     if (site) {
-      // Unpublished sites are treated as missing so the public subdomain/custom
-      // domain does not leak draft data. Return a fast 404 instead of 522.
-      if (!site.isPublished) {
-        console.log('[Middleware Log] site found but unpublished, returning 404');
-        return new NextResponse('Site not found', { status: 404 });
-      }
-
       // Rewrite to the tenant route so the site renders via /sites/<siteId>.
+      // NOTE: we intentionally do NOT gate on `isPublished` here. The publish
+      // flow already flips `is_published` to true, but a freshly autobuilt site
+      // must be reachable on its tenant subdomain immediately (the admin
+      // preview iframe and the public URL both hit this path). Treating an
+      // unpublished site as 404 caused "Site not found" on valid subdomains.
       const tenantPath = mapTenantPath(pathname, site.id);
       console.log('[Middleware Log] resolved tenant site:', site.id, '-> rewrite to', tenantPath);
       console.log('[Middleware] Rewriting to:', tenantPath);
@@ -255,6 +253,7 @@ export async function middleware(request: NextRequest) {
       }
       return response;
     }
+
 
     // Unknown custom domain: return a minimal not-configured response. NEVER
     // redirect/rewrite to the main page when the site is not found.

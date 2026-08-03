@@ -139,7 +139,10 @@ Rules:
 - Do not invent concrete facts like dates, awards, or names that are not in the context, but you may gently expand the mood or atmosphere.
 - Keep the tone friendly, warm, and inviting.
 - Prefer short, breathing sentences over long, ornate paragraphs.
-- You MUST reason about the user's intent and choose a constrained Skin + Skeleton combination. Never invent values outside the allowed enums.`,
+- You MUST reason about the user's intent and choose a constrained Skin + Skeleton combination. Never invent values outside the allowed enums.
+- You MUST return ONLY a valid, raw JSON object. Do NOT wrap it in a markdown code block (no \`\`\`json or \`\`\`). Do NOT add any prose, explanation, or text before or after the JSON.
+- Escape all internal double quotes inside string values (e.g. use \\" for a quote within a Korean sentence). Every property name and string value MUST use double quotes.`,
+
     userPrompt: (context) => {
       let concept = context;
       let extraPages = 1;
