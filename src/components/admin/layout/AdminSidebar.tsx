@@ -110,38 +110,15 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
           </div>
           <nav className="flex-1 overflow-y-auto px-3 py-4">
             <ul className="space-y-1">
-              {/* AI-generated custom pages are shown first (top of the sidebar)
-                  so newly created menus are the most prominent. The fixed admin
-                  menus (Dashboard, All Posts, DIARY, ABOUT, CONTACT) follow
-                  below. */}
-              {customPages.map((page) => {
-                const href = `/admin/pages/${encodeURIComponent(page.id)}`;
-                const active = isActive(pathname, href);
-                return (
-                  <li key={page.id}>
-                    <Link
-                      href={href}
-                      className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-amber-900/30 text-amber-100'
-                          : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                      }`}
-                      onClick={onToggle}
-                      title={page.label}
-                    >
-                      {page.label}
-                    </Link>
-                  </li>
-                );
-              })}
-
-              {customPages.length > 0 ? (
-                <li className="pt-2">
-                  <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
-                    기본 메뉴
-                  </div>
-                </li>
-              ) : null}
+              {/* Fixed admin menus (Dashboard, All Posts, DIARY, ABOUT, CONTACT)
+                  are shown first (top of the sidebar) to match the public
+                  homepage header order [기본 메뉴 -> 커스텀 메뉴]. AI-generated
+                  custom pages follow below. */}
+              <li>
+                <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
+                  기본 메뉴
+                </div>
+              </li>
 
               <li>
                 <Link
@@ -218,6 +195,36 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                   CONTACT
                 </Link>
               </li>
+
+              {customPages.length > 0 ? (
+                <li className="pt-2">
+                  <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
+                    커스텀 메뉴
+                  </div>
+                </li>
+              ) : null}
+
+              {customPages.map((page) => {
+                const href = `/admin/pages/${encodeURIComponent(page.id)}`;
+                const active = isActive(pathname, href);
+                return (
+                  <li key={page.id}>
+                    <Link
+                      href={href}
+                      className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-amber-900/30 text-amber-100'
+                          : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+                      }`}
+                      onClick={onToggle}
+                      title={page.label}
+                    >
+                      {page.label}
+                    </Link>
+                  </li>
+                );
+              })}
+
 
 
               <li className="pt-2">

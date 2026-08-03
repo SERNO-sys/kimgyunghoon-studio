@@ -27,9 +27,19 @@ export default async function SiteLayout({
   const settings = await getSettingsBySiteId(db, site.id);
   const config = resolveSiteConfig(site, settings);
 
+  // Fixed/basic menu types (home, diary, about, contact) are always shown
+  // before AI-generated custom pages, matching the admin sidebar order
+  // [기본 메뉴 -> 커스텀 메뉴]. Within each group the stored `order` is kept.
+  const fixedTypes = new Set(['home', 'diary', 'about', 'contact']);
   const allPages = flattenPages(config.pages)
     .filter((page) => page.visible)
-    .sort((a, b) => a.order - b.order);
+    .sort((a, b) => {
+      const aFixed = fixedTypes.has(a.type) ? 0 : 1;
+      const bFixed = fixedTypes.has(b.type) ? 0 : 1;
+      if (aFixed !== bFixed) return aFixed - bFixed;
+      return a.order - b.order;
+    });
+
 
   // The tenant site is served on its own subdomain (e.g.
   // `50bd00da.lucidworker.com`), so all navigation links must be clean relative
