@@ -167,6 +167,13 @@ Fields:
   * contact: path "/contact", label "CONTACT"
   Allowed page types: home, diary, about, contact, custom. Use English uppercase labels for the four base pages. Give custom pages natural Korean labels and unique paths such as "/gallery" or "/schedule". Do not add any additional home, diary, about, or contact pages, and do not duplicate base paths or types.
 - "custom_page_intros": object mapping each custom page path to a short Korean subheading (2-4 words).
+- "themeConfig": object with a single required field "presetId". Choose exactly one preset that best matches the mood and personality of the concept. The available presets are:
+  * "default": clean, neutral, timeless editorial look with a warm stone palette.
+  * "modern": sleek, minimal, high-contrast look with a bold black-and-white palette.
+  * "warm": cozy, inviting, soft cream and amber tones for a warm, personal feel.
+  * "luxury": elegant, refined, deep charcoal and gold accents for a premium feel.
+  * "minimal": ultra-clean, airy, lots of whitespace with a light neutral palette.
+  Return it as: "themeConfig": { "presetId": "warm" } (replace "warm" with your chosen preset id).
 
 Do not use the raw concept sentence as-is. All text should be warm, natural Korean. Return only valid JSON.
 

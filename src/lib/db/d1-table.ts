@@ -10,13 +10,37 @@ function toCamelCase(key: string): string {
 
 function toDbValue(value: unknown): unknown {
   if (typeof value === 'boolean') return value ? 1 : 0;
+  // Serialize nested objects/arrays (e.g. the site `theme_config` JSON column)
+  // so they can be stored in a TEXT column and read back as structured data.
+  if (value !== null && typeof value === 'object') {
+    return JSON.stringify(value);
+  }
   return value;
 }
 
 function fromDbValue(value: unknown): unknown {
   if (value === 1 || value === 0) return value === 1;
+  // Attempt to parse JSON-encoded columns (e.g. `theme_config`) back into
+  // structured data. Plain strings that are not valid JSON are returned as-is.
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (
+      trimmed.startsWith('{') ||
+      trimmed.startsWith('[') ||
+      trimmed === 'null' ||
+      trimmed === 'true' ||
+      trimmed === 'false'
+    ) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        // Not valid JSON; fall through and return the raw string.
+      }
+    }
+  }
   return value;
 }
+
 
 function toRow(data: object): Record<string, unknown> {
   const row: Record<string, unknown> = {};

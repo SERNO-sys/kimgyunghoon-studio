@@ -21,7 +21,11 @@ CREATE TABLE IF NOT EXISTS sites (
   language TEXT NOT NULL DEFAULT 'ko' CHECK (language IN ('ko', 'en')),
   timezone TEXT NOT NULL DEFAULT 'Asia/Seoul',
   theme TEXT NOT NULL DEFAULT 'default' CHECK (theme IN ('default', 'dark', 'warm')),
+  -- V2 Theme System: optional design-system config (JSON). When NULL, consumers
+  -- fall back to the DEFAULT_PRESET so existing sites render exactly as before.
+  theme_config TEXT,
   maintenance BOOLEAN NOT NULL DEFAULT 0,
+
   is_published BOOLEAN NOT NULL DEFAULT 0,
   deploy_version TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

@@ -13,7 +13,10 @@ import {
 import { generateText } from '@/lib/ai/client';
 import { getCurrentUserTier, TIER_LIMITS } from '@/lib/config/tiers';
 import { getDefaultPages } from '@/lib/site-context';
+import { PRESETS } from '@/constants/presets';
+import type { ThemePresetId } from '@/types/site';
 import type { Site, SiteSettings, User, Post, SitePage } from '@/lib/db/types';
+
 
 export const runtime = 'edge';
 
@@ -102,6 +105,16 @@ export async function POST(request: Request) {
     const contactSubheading = String(parsed.contact_subheading || '');
     const customPageIntros = (parsed.custom_page_intros || {}) as Record<string, string>;
 
+    // V2 Theme System - Phase 3: curate a preset from the AI response.
+    // The AI returns a `themeConfig.presetId` string. Validate it against the
+    // known preset registry and fall back to 'default' if it is missing or
+    // invalid, so a bad AI response never breaks site creation.
+    const rawThemeConfig = (parsed.themeConfig || {}) as Record<string, unknown>;
+    const rawPresetId = String(rawThemeConfig.presetId || '');
+    const presetId: ThemePresetId = PRESETS[rawPresetId as ThemePresetId]
+      ? (rawPresetId as ThemePresetId)
+      : 'default';
+
     const site: Site = {
       id: siteId,
       ownerId: session.userId,
@@ -110,12 +123,14 @@ export async function POST(request: Request) {
       language: 'ko',
       timezone: 'Asia/Seoul',
       theme: 'default',
+      themeConfig: { presetId },
       maintenance: false,
       isPublished: false,
       deployVersion: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
 
     await createSite(db, site);
 
