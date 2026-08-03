@@ -1,8 +1,18 @@
+import type { ThemeConfig } from '@/types/site';
+
 interface ThemeColors {
   background: string;
   foreground: string;
   primary: string;
   card: string;
+}
+
+interface ThemeStylesProps {
+  themeColors: ThemeColors;
+  /** V2 Theme System - Phase 2. Active preset config used to drive styling. */
+  themeConfig?: ThemeConfig;
+  /** Tailwind font classes (heading/body) derived from the active preset. */
+  fontPairing?: { heading: string; body: string };
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -13,7 +23,11 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function ThemeStyles({ themeColors }: { themeColors: ThemeColors }) {
+export function ThemeStyles({
+  themeColors,
+  themeConfig,
+  fontPairing,
+}: ThemeStylesProps) {
   const { background, foreground, primary, card } = themeColors;
   const muted70 = hexToRgba(foreground, 0.7);
   const muted50 = hexToRgba(foreground, 0.5);
@@ -21,7 +35,23 @@ export function ThemeStyles({ themeColors }: { themeColors: ThemeColors }) {
   const border20 = hexToRgba(foreground, 0.2);
   const primary10 = hexToRgba(primary, 0.1);
 
+  // V2 Theme System - Phase 2: expose the active preset as CSS variables so
+  // any component can opt into theme-driven styling without hardcoding.
+  const presetId = themeConfig?.presetId ?? 'default';
+  const headingFont = fontPairing?.heading ?? 'font-serif';
+  const bodyFont = fontPairing?.body ?? 'font-sans';
+
   const css = `
+    :root {
+      --theme-preset: ${presetId};
+      --theme-background: ${background};
+      --theme-foreground: ${foreground};
+      --theme-primary: ${primary};
+      --theme-card: ${card};
+      --theme-heading-font: ${headingFont};
+      --theme-body-font: ${bodyFont};
+    }
+
     .theme-content .prose,
     .theme-content .prose h1,
     .theme-content .prose h2,

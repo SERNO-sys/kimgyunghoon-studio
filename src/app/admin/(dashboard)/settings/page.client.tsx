@@ -18,6 +18,8 @@ import { settingsSchema, type SettingsFormData } from '@/lib/admin/settings';
 import { AnalyticsSettings } from '@/components/admin/settings/AnalyticsSettings';
 import { ContactSocialSettings } from '@/components/admin/settings/ContactSocialSettings';
 import { GeneralSettings } from '@/components/admin/settings/GeneralSettings';
+import { PresetManager } from '@/components/admin/appearance/PresetManager';
+
 
 const defaultValues: SettingsFormData = {
   general: {
@@ -170,7 +172,12 @@ export default function SettingsPage() {
         </Card>
       </form>
 
+      <Card className="p-6">
+        <PresetManager />
+      </Card>
+
       <Card className="border-red-200 bg-red-50/50 p-6">
+
         <div className="flex items-start gap-4">
           <div className="rounded-full bg-red-100 p-2 text-red-600">
             <AlertTriangle className="size-5" aria-hidden="true" />

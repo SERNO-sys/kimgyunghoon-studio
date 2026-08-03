@@ -1,6 +1,12 @@
 import Link from 'next/link';
 
+// Force dynamic rendering so @cloudflare/next-on-pages creates a lambda for
+// this route. Without this, the page is prerendered as static content and
+// next-on-pages fails with "Unable to find lambda for route: /admin/login".
+export const dynamic = 'force-dynamic';
+
 export default function AdminLoginPage() {
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#f8f5ed] p-4">
       <div className="w-full max-w-sm rounded-sm border border-stone-200 bg-[#fffdf8] p-8 shadow-sm">

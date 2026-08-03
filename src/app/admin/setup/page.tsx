@@ -1,6 +1,11 @@
 import { SetupWizard } from '@/components/admin/setup/SetupWizard';
 
+// Force dynamic rendering so @cloudflare/next-on-pages creates a lambda for
+// this route (same reason as /admin/login).
+export const dynamic = 'force-dynamic';
+
 export default function AdminSetupPage() {
+
   return (
     <div className="space-y-6">
       <div className="text-center">

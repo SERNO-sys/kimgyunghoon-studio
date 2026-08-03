@@ -1,0 +1,24 @@
+# Cloudflare Worker config for the wildcard subdomain proxy.
+#
+# Cloudflare Pages cannot serve wildcard subdomains (`*.lucidworker.com`), so
+# tenant subdomains (e.g. <siteId>.lucidworker.com) return 522 because no route
+# matches them. This Worker is attached to the `*.lucidworker.com/*` route and
+# forwards every request to the Pages project (preserving the Host header so the
+# app's middleware can resolve the tenant subdomain via D1).
+#
+# Deploy with:  wrangler deploy --config wrangler.wildcard.toml
+#
+# NOTE: This file is intentionally separate from wrangler.toml so the Pages
+# CI/CD build (which reads wrangler.toml) stays compatible and does not reject
+# the deployment because of Worker-only `main`/`routes` fields.
+
+name = "kimgyunghoon-wildcard-proxy"
+main = "workers/wildcard-proxy.js"
+compatibility_date = "2025-04-01"
+
+# Route ALL traffic for every subdomain of lucidworker.com to this proxy Worker.
+# The apex domain (lucidworker.com) is served directly by the Pages project, so
+# we only route the wildcard subdomains here.
+routes = [
+  { pattern = "*.lucidworker.com/*", zone_name = "lucidworker.com" },
+]

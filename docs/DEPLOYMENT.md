@@ -53,10 +53,12 @@ This project uses `@cloudflare/next-on-pages` to build an **edge application** (
 
 ## Wildcard Subdomains (`*.lucidworker.com`)
 
-Cloudflare **Pages does not support wildcard subdomains** as custom domains. To
-serve tenant subdomains such as `<siteId>.lucidworker.com`, the Pages project
-handles them via a proxied wildcard CNAME (below) that routes all subdomains to
-the same Pages deployment.
+Cloudflare **Pages does not support wildcard subdomains** as custom domains. A
+proxied wildcard CNAME alone is **not enough** — without a matching Worker route
+Cloudflare returns `522 Connection timed out` for every tenant subdomain. To
+serve tenant subdomains such as `<siteId>.lucidworker.com` we deploy a small
+**wildcard proxy Worker** that forwards `*.lucidworker.com` to the Pages project
+while preserving the original `Host` header.
 
 ### 1. DNS
 
@@ -66,19 +68,35 @@ In the Cloudflare DNS dashboard for `lucidworker.com`, add a wildcard CNAME:
 |-------|------|--------|-------|
 | CNAME | `*`  | `kimgyunghoon-studio.pages.dev` | Proxied (orange cloud) |
 
-The `*.lucidworker.com` CNAME must be **proxied** so Cloudflare can route the
-request to the Worker. If it is DNS-only (grey cloud), the request bypasses
-Cloudflare and returns `NXDOMAIN`/connection errors.
+The `*.lucidworker.com` CNAME must be **proxied** (orange cloud) so Cloudflare
+can route the request to the Worker. If it is DNS-only (grey cloud), the request
+bypasses Cloudflare and returns `NXDOMAIN`/connection errors.
 
-### 2. Pages handles the wildcard via DNS
+### 2. Deploy the wildcard proxy Worker
 
 `wrangler.toml` is configured for **Cloudflare Pages only** and must NOT contain
 Worker-only fields such as `main` or `routes` — those cause the Pages CI/CD
-build to be rejected with "No deployment available". The wildcard subdomain is
-routed to the Pages project purely through the proxied wildcard CNAME above.
+build to be rejected with "No deployment available". The wildcard routing is
+handled by a **separate** Worker config, `wrangler.wildcard.toml`, which deploys
+`workers/wildcard-proxy.js` and attaches the `*.lucidworker.com/*` route.
+
+Deploy it once (and after any change to the proxy script):
+
+```bash
+npm run worker:wildcard:deploy
+# equivalent: wrangler deploy --config wrangler.wildcard.toml
+```
+
+The proxy Worker forwards every `*.lucidworker.com` request to
+`kimgyunghoon-studio.pages.dev`, preserving the original `Host` header so the
+app's middleware can resolve the tenant subdomain via D1. The Pages project
+keeps all D1/R2 bindings and does the rendering.
+
+> **Important:** This Worker is deployed independently of the Pages CI/CD build.
+> If you ever delete the `kimgyunghoon-wildcard-proxy` Worker or its
+> `*.lucidworker.com/*` route, tenant subdomains will return `522` again.
 
 ### 3. Verify
-
 
 ```bash
 curl -I https://31ad616a.lucidworker.com
@@ -88,6 +106,7 @@ The middleware reads the `Host` header (`31ad616a.lucidworker.com`), extracts
 the subdomain (`31ad616a`), resolves the site via D1, and renders the tenant
 page. A non-existent/unpublished subdomain returns a fast `404 Site not found`
 instead of `NXDOMAIN` or `522`.
+
 
 
 ## Deployment Verification

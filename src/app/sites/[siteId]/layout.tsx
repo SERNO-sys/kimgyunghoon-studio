@@ -62,7 +62,12 @@ export default async function SiteLayout({
 
   return (
     <>
-      <ThemeStyles themeColors={config.themeColors} />
+      <ThemeStyles
+        themeColors={config.themeColors}
+        themeConfig={config.themeConfig}
+        fontPairing={config.fontPairing}
+      />
+
       <Header
         siteName={config.name}
         homeHref={homeHref}

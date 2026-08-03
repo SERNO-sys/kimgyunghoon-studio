@@ -10,9 +10,10 @@ import {
 } from '@/lib/db/queries';
 
 import { themes } from '@/lib/admin/theme';
-import { resolveThemeConfig } from '@/constants/presets';
+import { getFontPairing, resolveThemeConfig } from '@/constants/presets';
 import type { ThemeConfig } from '@/types/site';
 import type { Post, Site, SitePage, SiteSettings } from '@/lib/db/types';
+
 
 
 export interface PublicSiteContext {
@@ -176,7 +177,13 @@ export interface ResolvedSiteConfig {
    * has no explicit theme config, so existing sites render unchanged.
    */
   themeConfig: ThemeConfig;
+  /**
+   * V2 Theme System - Phase 2.
+   * Tailwind font classes (heading/body) derived from the active preset.
+   */
+  fontPairing: { heading: string; body: string };
   pages: SitePage[];
+
 
   bannerTitle: string;
   bannerDescription: string;
@@ -251,7 +258,11 @@ export function resolveSiteConfig(
       return (selected ?? themes[0]).colors;
     })(),
     themeConfig: resolveThemeConfig(site?.themeConfig),
+    fontPairing: getFontPairing(
+      resolveThemeConfig(site?.themeConfig).presetId
+    ),
     pages: resolvePages(parsed.pages, site?.name ?? ''),
+
 
     bannerTitle: String(
       parsed.general?.banner_title ??
