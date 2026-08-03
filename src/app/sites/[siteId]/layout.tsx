@@ -6,8 +6,8 @@ import { Header } from '@/components/layout/Header';
 import { ThemeStyles } from '@/components/layout/ThemeStyles';
 import { getDb } from '@/lib/db/client';
 import { getSettingsBySiteId, getSiteById } from '@/lib/db/queries';
-import { getSession } from '@/lib/admin/session';
 import { flattenPages, resolveSiteConfig } from '@/lib/site-context';
+
 
 interface SiteLayoutProps {
   children: React.ReactNode;
@@ -71,13 +71,8 @@ export default async function SiteLayout({
     });
 
 
-  const session = await getSession();
-  if (session) {
-    navItems.push({ href: '/admin', label: 'Dashboard' });
-  }
-
-
   return (
+
     <>
       <ThemeStyles
         themeColors={config.themeColors}

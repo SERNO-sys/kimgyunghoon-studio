@@ -206,14 +206,24 @@ export function SitePreviewPage({
           <p className="text-sm font-medium text-stone-600">미리보기 (Preview)</p>
           <span className="text-xs text-stone-400">최신 초안 상태를 반영합니다</span>
         </div>
-        <iframe
-          key={previewKey}
-          src={previewUrl}
-          title={`${siteName} 미리보기`}
-          className="h-[70vh] w-full border-0 bg-white"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        />
+        {/* Read-only preview. A transparent shield sits on top of the iframe so
+            clicks can never navigate the iframe away (the "frame-in-frame"
+            bug). The preview is strictly eyes-only. */}
+        <div className="relative">
+          <iframe
+            key={previewKey}
+            src={previewUrl}
+            title={`${siteName} 미리보기`}
+            className="h-[70vh] w-full border-0 bg-white"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-50 bg-transparent"
+          />
+        </div>
       </Card>
+
 
 
       <AdvancedEditorDrawer

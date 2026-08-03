@@ -5,6 +5,8 @@ import { getDb } from '@/lib/db/client';
 import { listSitesByOwner, updateSite } from '@/lib/db/queries';
 import { PRESETS } from '@/constants/presets';
 import {
+  intentTypeSchema,
+  sectionSchema,
   skinSchema,
   skeletonSchema,
 } from '@/lib/ai/awie-schema';
@@ -16,9 +18,10 @@ export const runtime = 'edge';
  * V2 Theme System - Phase 2 (AWIE-aligned).
  *
  * Accepts a partial theme payload from the admin UI. The payload may carry the
- * legacy `presetId` and/or the new AWIE decision-engine fields (`skin`,
- * `skeleton`). Every field is optional so a partial update can be layered on
- * top of the site's existing `themeConfig` (merge, not replace).
+ * legacy `presetId` and/or the full AWIE decision-engine fields (`intent_type`,
+ * `skin`, `skeleton`, `sections`). Every field is optional so a partial update
+ * can be layered on top of the site's existing `themeConfig` (merge, not
+ * replace).
  *
  * The Zod schema mirrors the AWIE blueprint enums so a malformed payload can
  * never corrupt the stored theme config.
@@ -27,9 +30,12 @@ const presetSchema = z.object({
   presetId: z
     .enum(['default', 'modern', 'warm', 'luxury', 'minimal'])
     .optional(),
+  intent_type: intentTypeSchema.optional(),
   skin: skinSchema.optional(),
   skeleton: skeletonSchema.optional(),
+  sections: z.array(sectionSchema).min(1).optional(),
 });
+
 
 export async function GET() {
   const session = await getSession();
@@ -110,12 +116,19 @@ export async function POST(request: Request) {
       themeConfig.presetId = result.data.presetId;
     }
 
+    if (result.data.intent_type !== undefined) {
+      themeConfig.intentType = result.data.intent_type;
+    }
     if (result.data.skin !== undefined) {
       themeConfig.skin = result.data.skin;
     }
     if (result.data.skeleton !== undefined) {
       themeConfig.skeleton = result.data.skeleton;
     }
+    if (result.data.sections !== undefined) {
+      themeConfig.sections = result.data.sections;
+    }
+
 
     await updateSite(db, site.id, { themeConfig });
     return NextResponse.json({
