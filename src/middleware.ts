@@ -21,15 +21,21 @@ export const config = {
  *
  * In Cloudflare Pages / Worker environments the `host` header may be
  * overwritten to the Pages project domain (e.g. kimgyunghoon-studio.pages.dev)
- * while `x-forwarded-host` carries the original tenant subdomain. Prefer
- * `x-forwarded-host` first, then `host`, and finally `nextUrl.hostname`.
+ * while the original tenant subdomain is carried in a proxy/CDN header. We
+ * check, in order:
+ *   1. `x-original-host`  (set by some proxies/CDNs)
+ *   2. `x-forwarded-host` (set by CDNs/proxies)
+ *   3. `host`             (the Host header)
+ *   4. `nextUrl.hostname` (fallback)
  * The port is stripped (e.g. `localhost:3000` -> `localhost`).
  */
 function resolveHostname(request: NextRequest): string {
+  const originalHost = request.headers.get('x-original-host');
   const forwardedHost = request.headers.get('x-forwarded-host');
   const hostHeader = request.headers.get('host');
 
-  const candidate = forwardedHost || hostHeader || request.nextUrl.hostname;
+  const candidate =
+    originalHost || forwardedHost || hostHeader || request.nextUrl.hostname;
 
   // Strip any port (e.g. `localhost:3000` -> `localhost`) and lowercase.
   return candidate.split(':')[0].toLowerCase();
@@ -107,6 +113,7 @@ export async function middleware(request: NextRequest) {
   console.log('[Middleware Request Host]', {
     host: request.headers.get('host'),
     xForwardedHost: request.headers.get('x-forwarded-host'),
+    xOriginalHost: request.headers.get('x-original-host'),
     url: request.url,
   });
 
@@ -156,38 +163,80 @@ export async function middleware(request: NextRequest) {
   console.log('[Middleware Log] platformHost:', platformHost);
   console.log('[Middleware Log] process.env.PLATFORM_HOST:', process.env.PLATFORM_HOST);
 
+  // The Cloudflare Pages project domain is treated as a platform/development
+  // host so the default pages.dev URL and preview deployments render the main
+  // platform page instead of "Site not found".
+  const pagesProjectHost = 'kimgyunghoon-studio.pages.dev';
+
   // STRICT main-domain detection. Only the exact platform host, its `www`
-  // alias, and localhost are treated as the main platform. Tenant subdomains
-  // (*.lucidworker.com) and user custom domains are NEVER the main domain.
+  // alias, the Pages project domain, and localhost are treated as the main
+  // platform. Tenant subdomains (*.lucidworker.com) and user custom domains are
+  // NEVER the main domain.
   const isMainDomain =
     hostname === platformHost ||
     hostname === `www.${platformHost}` ||
+    hostname === pagesProjectHost ||
+    hostname.endsWith(`.${pagesProjectHost}`) ||
     hostname === 'localhost' ||
     hostname === '127.0.0.1';
 
   console.log('[Middleware] Is Main Domain:', isMainDomain);
 
-  // =========================================================================
-  // KILL SWITCH / DIAGNOSTIC
-  // -------------------------------------------------------------------------
-  // Confirms the middleware actually runs and detects the tenant subdomain
-  // BEFORE any D1 lookup. If you visit a tenant subdomain and see the text
-  // below in the browser, the middleware runs and host detection works, and
-  // the remaining issue is in the D1 lookup / rewrite. If you still see the
-  // main platform page, the middleware is not running for that host.
-  // =========================================================================
+  // Non-main-domain host: a tenant subdomain (*.lucidworker.com) or a user's
+  // custom domain. NEVER send these to the platform landing page. Resolve the
+  // site via D1 and rewrite to the tenant route (/sites/<siteId>).
   if (!isMainDomain) {
-    console.log('=== SUBDOMAIN DETECTED ===', hostname);
-    return new NextResponse(
-      `[Middleware Kill-Switch] SUBDOMAIN DETECTED: ${hostname}\n` +
-        `pathname: ${pathname}\n` +
-        `isMainDomain: ${isMainDomain}\n` +
-        `platformHost: ${platformHost}\n` +
-        `nextUrl.hostname: ${request.nextUrl.hostname}\n` +
-        `host header: ${request.headers.get('host')}\n` +
-        `x-forwarded-host: ${request.headers.get('x-forwarded-host')}`,
-      { status: 200, headers: { 'content-type': 'text/plain' } }
-    );
+    let site = null;
+    let subdomain: string | null = null;
+
+    try {
+      const db = getDb();
+
+      // 1) Try an exact custom-domain match (e.g. a user's own domain).
+      site = await getSiteByDomain(db, hostname);
+
+      // 2) Fall back to a platform subdomain match. The subdomain is the first
+      //    segment of the site's UUID (e.g. `e801f11c` for
+      //    `e801f11c.lucidworker.com`), which is not stored verbatim in the
+      //    domains table, so we resolve it against the sites table.
+      subdomain = extractSubdomain(hostname, platformHost);
+      console.log('[Middleware Log] extractSubdomain:', subdomain);
+      if (!site && subdomain) {
+        site = await getSiteBySubdomain(db, subdomain);
+      }
+    } catch {
+      // A DB error (e.g. D1 timeout) must never surface as a 522. Treat the
+      // host as unknown so the request falls through to a fast 404 below.
+      site = null;
+    }
+
+    if (site) {
+      // Unpublished sites are treated as missing so the public subdomain/custom
+      // domain does not leak draft data. Return a fast 404 instead of 522.
+      if (!site.isPublished) {
+        console.log('[Middleware Log] site found but unpublished, returning 404');
+        return new NextResponse('Site not found', { status: 404 });
+      }
+
+      // Rewrite to the tenant route so the site renders via /sites/<siteId>.
+      const tenantPath = mapTenantPath(pathname, site.id);
+      console.log('[Middleware Log] resolved tenant site:', site.id, '-> rewrite to', tenantPath);
+      console.log('[Middleware] Rewriting to:', tenantPath);
+
+      const response = NextResponse.rewrite(new URL(tenantPath, request.url));
+
+      response.headers.set('x-site-id', site.id);
+      response.headers.set('x-site-domain', hostname);
+      if (subdomain) {
+        response.headers.set('x-site-subdomain', subdomain);
+      }
+      return response;
+    }
+
+    // Unknown custom domain: return a minimal not-configured response. NEVER
+    // redirect/rewrite to the main page when the site is not found.
+    console.log('[Middleware Log] no site resolved, returning 404');
+    return new NextResponse('Site not found', { status: 404 });
   }
 
   // Main domain: rewrite root to platform landing page.
