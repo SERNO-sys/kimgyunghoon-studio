@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
 import { AdvancedEditorDrawer } from '@/components/admin/sites/AdvancedEditorDrawer';
+import { AIVibeChange } from '@/components/admin/sites/AIVibeChange';
+
 
 interface SitePreviewPageProps {
   siteId: string;
@@ -45,6 +47,9 @@ export function SitePreviewPage({
   const toast = useToast();
   const [publishing, setPublishing] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  // Bumped after an AI redesign so the preview iframe reloads with the new theme.
+  const [previewKey, setPreviewKey] = useState(0);
+
 
   const handlePublish = async () => {
     if (publishing) return;
@@ -150,6 +155,22 @@ export function SitePreviewPage({
         </div>
       </Card>
 
+      {/* AI vibe change */}
+      <Card className="border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50">
+        <div className="mb-3">
+          <h2 className="font-serif text-lg font-semibold text-stone-950">
+            ✨ AI로 분위기 바꾸기
+          </h2>
+          <p className="mt-0.5 text-sm text-stone-600">
+            원하는 느낌을 적으면 AI가 홈페이지 전체 디자인 프리셋을 즉시 바꿔드려요.
+          </p>
+        </div>
+        <AIVibeChange
+          siteId={siteId}
+          onApplied={() => setPreviewKey((key) => key + 1)}
+        />
+      </Card>
+
       {/* Live preview */}
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-2.5">
@@ -157,12 +178,14 @@ export function SitePreviewPage({
           <span className="text-xs text-stone-400">최신 초안 상태를 반영합니다</span>
         </div>
         <iframe
+          key={previewKey}
           src={previewUrl}
           title={`${siteName} 미리보기`}
           className="h-[70vh] w-full border-0 bg-white"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         />
       </Card>
+
 
       <AdvancedEditorDrawer
         open={editorOpen}
