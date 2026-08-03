@@ -44,9 +44,10 @@ export default async function DiarySlugPage({
       />
       <div className="pt-8">
         <a
-          href={`/sites/${siteId}/diary`}
+          href="/diary"
           className="text-sm font-bold text-amber-800 hover:underline"
         >
+
           ← Diary 목록으로
         </a>
       </div>

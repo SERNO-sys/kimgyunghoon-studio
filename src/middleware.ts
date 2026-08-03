@@ -74,10 +74,18 @@ function extractSubdomain(hostname: string, platformHost: string): string | null
 function mapTenantPath(pathname: string, siteId: string): string {
   const base = `/sites/${siteId}`;
 
+  // Safety guard: if the incoming path already carries the `/sites/<siteId>`
+  // prefix (e.g. a stale link or a direct navigation to the internal route),
+  // do NOT double-prefix it. This prevents `/sites/<id>/sites/<id>/...` 404s.
+  if (pathname === base || pathname.startsWith(`${base}/`)) {
+    return pathname;
+  }
+
   // Root -> tenant home.
   if (pathname === '/' || pathname === '') {
     return base;
   }
+
 
   // Static tenant pages that have dedicated routes.
   const staticPages = ['/about', '/contact', '/diary', '/music'];

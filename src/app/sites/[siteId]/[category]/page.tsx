@@ -60,9 +60,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           {filteredPosts.map((post) => (
             <PostCard
               key={post.id}
-              href={`/sites/${siteId}/posts/${post.slug}`}
+              href={`/posts/${post.slug}`}
               post={post}
             />
+
           ))}
         </div>
       ) : (

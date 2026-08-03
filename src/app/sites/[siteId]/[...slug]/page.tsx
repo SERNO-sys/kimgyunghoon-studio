@@ -40,8 +40,9 @@ export default async function SiteDynamicPage({ params }: SiteDynamicPageProps) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {page.children.map((child) => {
             const basePath = child.path === '/' ? '' : child.path;
-            const href = `/sites/${siteId}${basePath}`;
+            const href = basePath;
             return (
+
               <a
                 key={child.id}
                 className="block p-6 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 transition"

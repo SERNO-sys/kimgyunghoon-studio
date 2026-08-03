@@ -30,15 +30,20 @@ export default async function SiteLayout({
   const allPages = flattenPages(config.pages)
     .filter((page) => page.visible)
     .sort((a, b) => a.order - b.order);
-  const homePage = allPages.find((page) => page.path === '/');
-  const homeHref = homePage ? `/sites/${siteId}` : `/sites/${siteId}`;
+
+  // The tenant site is served on its own subdomain (e.g.
+  // `50bd00da.lucidworker.com`), so all navigation links must be clean relative
+  // paths (e.g. `/`, `/notes`, `/gallery`) WITHOUT the `/sites/<siteId>` prefix.
+  // The middleware maps these clean paths to the internal `/sites/<siteId>`
+  // routes. Prefixing them here would cause a double-prefix 404.
+  const homeHref = '/';
   const navItems = allPages
     .filter((page) => page.path !== '/')
     .map((page) => {
       const basePath = page.path === '/' ? '' : page.path;
-      const href = `/sites/${siteId}${basePath}`;
-      return { href, label: page.label };
+      return { href: basePath, label: page.label };
     });
+
 
   const session = await getSession();
   if (session) {

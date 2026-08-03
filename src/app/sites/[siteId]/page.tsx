@@ -45,9 +45,9 @@ export default async function SitePage({ params }: SitePageProps) {
       <LatestPosts
         posts={posts}
         emptyText=""
-        basePath={`/sites/${siteId}`}
         themeColors={config.themeColors}
       />
+
       <Philosophy label={heroTitle} title={heroSubtitle} content={philosophyText} />
     </main>
   );

@@ -40,9 +40,10 @@ export default async function MusicPage({ params }: MusicPageProps) {
           {musicPosts.map((post) => (
             <PostCard
               key={post.id}
-              href={`/sites/${siteId}/posts/${post.id}`}
+              href={`/posts/${post.id}`}
               post={post}
             />
+
           ))}
         </div>
       ) : (

@@ -56,9 +56,10 @@ export default async function SitePostPage({ params }: SitePostPageProps) {
         </div>
         <div className="pt-8">
           <a
-            href={`/sites/${siteId}`}
+            href="/"
             className="text-sm font-bold text-amber-800 hover:underline"
           >
+
             ← 목록으로
           </a>
         </div>

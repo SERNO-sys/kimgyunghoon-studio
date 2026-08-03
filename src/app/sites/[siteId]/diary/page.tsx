@@ -39,9 +39,10 @@ export default async function DiaryPage({ params }: DiaryPageProps) {
           {posts.map((post) => (
             <PostCard
               key={post.id}
-              href={`/sites/${siteId}/diary/${post.slug}`}
+              href={`/diary/${post.slug}`}
               post={post}
             />
+
           ))}
         </div>
       ) : (
