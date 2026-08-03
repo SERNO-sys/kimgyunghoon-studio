@@ -114,4 +114,23 @@ export interface ThemeConfig {
   aiDesignReport?: AiDesignReport;
   /** Ordered list of section identifiers composing the page layout. */
   sections?: string[];
+
+  // ---- AWIE Content (V2) ----
+  /**
+   * AI-written copy for the site. Stored on the theme config so the modular
+   * frontend renderer can display the AI's copy without depending on the
+   * legacy settings JSON shape.
+   */
+  content?: {
+    hero_title: string;
+    hero_subtitle: string;
+    about_bio: string;
+  };
+  /**
+   * AI-generated navigation pages. When present, the tenant header renders
+   * these dynamic menu items instead of the hardcoded DIARY/ABOUT/CONTACT set.
+   */
+  pages?: import('@/lib/db/types').SitePage[];
 }
+
+

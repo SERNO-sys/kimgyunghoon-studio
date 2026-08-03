@@ -42,11 +42,18 @@ export default async function SiteLayout({
   const settings = await getSettingsBySiteId(db, site.id);
   const config = resolveSiteConfig(site, settings);
 
+  // V2 modular navigation: when the AI generated a `themeConfig.pages` array
+  // (Home, Portfolio, etc.), render those dynamic menu items. Otherwise fall
+  // back to the legacy settings pages (which default to DIARY/ABOUT/CONTACT).
   // Fixed/basic menu types (home, diary, about, contact) are always shown
   // before AI-generated custom pages, matching the admin sidebar order
   // [기본 메뉴 -> 커스텀 메뉴]. Within each group the stored `order` is kept.
   const fixedTypes = new Set(['home', 'diary', 'about', 'contact']);
-  const allPages = flattenPages(config.pages)
+  const sourcePages =
+    config.themeConfig.pages && config.themeConfig.pages.length > 0
+      ? config.themeConfig.pages
+      : config.pages;
+  const allPages = flattenPages(sourcePages)
     .filter((page) => page.visible)
     .sort((a, b) => {
       const aFixed = fixedTypes.has(a.type) ? 0 : 1;
@@ -54,6 +61,7 @@ export default async function SiteLayout({
       if (aFixed !== bFixed) return aFixed - bFixed;
       return a.order - b.order;
     });
+
 
 
   // On the tenant subdomain all navigation links must be clean relative paths

@@ -34,12 +34,17 @@ function resolveHostname(request: NextRequest): string {
   const forwardedHost = request.headers.get('x-forwarded-host');
   const hostHeader = request.headers.get('host');
 
+  // `x-forwarded-host` may contain a comma-separated list of hosts (e.g.
+  // `a.lucidworker.com, b.lucidworker.com`). Take the first entry only.
+  const firstForwarded = forwardedHost?.split(',')[0]?.trim();
+
   const candidate =
-    originalHost || forwardedHost || hostHeader || request.nextUrl.hostname;
+    originalHost || firstForwarded || hostHeader || request.nextUrl.hostname;
 
   // Strip any port (e.g. `localhost:3000` -> `localhost`) and lowercase.
   return candidate.split(':')[0].toLowerCase();
 }
+
 
 
 /**

@@ -71,6 +71,18 @@ export const sectionSchema = z.enum([
 ]);
 
 /**
+ * AI-written copy for the site. This is the content layer of the AWIE
+ * blueprint: the AI writes real Korean copy (hero title/subtitle, about bio)
+ * that the modular frontend renderer displays. All fields are optional so a
+ * partial AI response never breaks site creation.
+ */
+export const contentSchema = z.object({
+  hero_title: z.string().optional(),
+  hero_subtitle: z.string().optional(),
+  about_bio: z.string().optional(),
+});
+
+/**
  * The subset of the autobuild response that the AWIE decision engine owns.
  * Validated strictly so the AI cannot return out-of-spec values.
  */
@@ -80,7 +92,9 @@ export const awieDecisionSchema = z.object({
   skeleton: skeletonSchema,
   sections: z.array(sectionSchema).min(1),
   ai_design_report: aiDesignReportSchema,
+  content: contentSchema.optional(),
 });
+
 
 export type AwieDecision = z.infer<typeof awieDecisionSchema>;
 
@@ -107,6 +121,7 @@ export function toThemeConfigDecision(
   skeleton: Skeleton;
   sections: string[];
   aiDesignReport: AiDesignReport;
+  content?: { hero_title: string; hero_subtitle: string; about_bio: string };
 } {
   return {
     intentType: decision.intent_type,
@@ -114,5 +129,16 @@ export function toThemeConfigDecision(
     skeleton: decision.skeleton,
     sections: decision.sections,
     aiDesignReport: decision.ai_design_report,
+    ...(decision.content
+      ? {
+          content: {
+            hero_title: decision.content.hero_title ?? '',
+            hero_subtitle: decision.content.hero_subtitle ?? '',
+            about_bio: decision.content.about_bio ?? '',
+          },
+        }
+      : {}),
   };
 }
+
+

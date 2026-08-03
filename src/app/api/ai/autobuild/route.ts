@@ -128,6 +128,19 @@ export async function POST(request: Request) {
         }
       : { presetId };
 
+    // AWIE Content (V2): persist the AI-written copy on the theme config so the
+    // modular frontend renderer can display it. If the AI did not return a
+    // `content` object (or it failed validation), fall back to the per-page
+    // copy fields so the site still has real text.
+    if (!themeConfig.content) {
+      themeConfig.content = {
+        hero_title: String(parsed.home_hero_title || name),
+        hero_subtitle: String(parsed.home_hero_subtitle || ''),
+        about_bio: String(parsed.about_text || ''),
+      };
+    }
+
+
     const site: Site = {
       id: siteId,
       ownerId: session.userId,
@@ -218,10 +231,16 @@ export async function POST(request: Request) {
       });
     }
 
+    // AWIE Pages (V2): persist the AI-generated navigation on the theme config
+    // so the tenant header renders these dynamic menu items (Home, Portfolio,
+    // etc.) instead of the hardcoded DIARY/ABOUT/CONTACT set.
+    themeConfig.pages = generatedPages;
+
     const settings: SiteSettings = {
       id: siteId,
       siteId,
       general: JSON.stringify({
+
         name,
         description,
         language: 'ko',

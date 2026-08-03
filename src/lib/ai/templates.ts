@@ -189,9 +189,18 @@ AWIE Decision Engine — you MUST include these fields:
   * "header_type": one of "logo-left" | "logo-center" | "sidebar"
   * "hero_type": one of "cover" | "split" | "minimal"
 - "sections": an ordered array of section identifiers for the homepage, e.g. ["hero", "about", "gallery", "menu", "contact"]. Choose from: hero, about, gallery, menu, services, testimonials, contact, map, faq, blog, products, team, partners, cta.
-- "ai_design_report": an object with EXACTLY these two keys:
+ - "ai_design_report": an object with EXACTLY these two keys:
   * "analyzed_industry": the industry you inferred from the concept (e.g. "브런치 카페")
   * "reasoning": a short Korean sentence explaining WHY you chose this design (e.g. "예약 전환율을 높이기 위해 우측에 CTA를 노출하고 따뜻한 베이지 톤을 적용했습니다.")
+
+AWIE Content — you MUST write real Korean copy for the site and include a "content" object with EXACTLY these three keys:
+- "content": {
+    "hero_title": a short, warm main headline for the homepage hero (2-6 Korean words),
+    "hero_subtitle": a one-line supporting subtitle for the hero (under 20 Korean characters),
+    "about_bio": a warm 2-3 sentence introduction about the business/artist
+  }
+Write this copy based on the concept and industry. Do not use the raw concept sentence as-is.
+
 
 Intent → design mapping (follow this logic):
 - "authority"     → color_palette "trust" or "minimal", header_type "logo-left", hero_type "minimal" or "split"
