@@ -4,12 +4,31 @@ import { getSession } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
 import { listSitesByOwner, updateSite } from '@/lib/db/queries';
 import { PRESETS } from '@/constants/presets';
+import {
+  skinSchema,
+  skeletonSchema,
+} from '@/lib/ai/awie-schema';
 import type { ThemeConfig } from '@/types/site';
 
 export const runtime = 'edge';
 
+/**
+ * V2 Theme System - Phase 2 (AWIE-aligned).
+ *
+ * Accepts a partial theme payload from the admin UI. The payload may carry the
+ * legacy `presetId` and/or the new AWIE decision-engine fields (`skin`,
+ * `skeleton`). Every field is optional so a partial update can be layered on
+ * top of the site's existing `themeConfig` (merge, not replace).
+ *
+ * The Zod schema mirrors the AWIE blueprint enums so a malformed payload can
+ * never corrupt the stored theme config.
+ */
 const presetSchema = z.object({
-  presetId: z.enum(['default', 'modern', 'warm', 'luxury', 'minimal']),
+  presetId: z
+    .enum(['default', 'modern', 'warm', 'luxury', 'minimal'])
+    .optional(),
+  skin: skinSchema.optional(),
+  skeleton: skeletonSchema.optional(),
 });
 
 export async function GET() {
@@ -36,6 +55,8 @@ export async function GET() {
   return NextResponse.json({
     success: true,
     presetId,
+    skin: site.themeConfig?.skin ?? null,
+    skeleton: site.themeConfig?.skeleton ?? null,
     presets: Object.values(PRESETS).map((preset) => ({
       id: preset.presetId,
       name: preset.name,
@@ -79,12 +100,29 @@ export async function POST(request: Request) {
 
     const site = sites[0];
     const themeConfig: ThemeConfig = {
+      presetId: site.themeConfig?.presetId ?? 'default',
       ...(site.themeConfig ?? {}),
-      presetId: result.data.presetId,
     };
 
+    // Merge only the fields that were actually provided so a partial update
+    // never wipes out unrelated theme settings.
+    if (result.data.presetId !== undefined) {
+      themeConfig.presetId = result.data.presetId;
+    }
+
+    if (result.data.skin !== undefined) {
+      themeConfig.skin = result.data.skin;
+    }
+    if (result.data.skeleton !== undefined) {
+      themeConfig.skeleton = result.data.skeleton;
+    }
+
     await updateSite(db, site.id, { themeConfig });
-    return NextResponse.json({ success: true, message: 'Preset saved' });
+    return NextResponse.json({
+      success: true,
+      message: 'Preset saved',
+      themeConfig,
+    });
   } catch {
     return NextResponse.json(
       { success: false, message: 'Failed to process request' },

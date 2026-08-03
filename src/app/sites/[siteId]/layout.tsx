@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
@@ -24,6 +25,20 @@ export default async function SiteLayout({
     notFound();
   }
 
+  // Detect whether this tenant site is being served through the admin preview
+  // iframe (main domain, `/sites/<siteId>`) or on its own tenant subdomain.
+  // The middleware sets `x-site-id` ONLY when it rewrites a tenant subdomain /
+  // custom-domain request. A direct `/sites/<siteId>` request (the preview
+  // iframe src) passes through WITHOUT that header, so its absence tells us we
+  // are inside the preview. In preview mode every internal link must be
+  // prefixed with `/sites/<siteId>` so clicking a nav item stays inside the
+  // tenant site instead of navigating the iframe to a clean path on the main
+  // domain (the "frame-in-frame" bug).
+  const headersList = await headers();
+  const isPreview = !headersList.get('x-site-id');
+  const linkPrefix = isPreview ? `/sites/${site.id}` : '';
+
+
   const settings = await getSettingsBySiteId(db, site.id);
   const config = resolveSiteConfig(site, settings);
 
@@ -41,17 +56,18 @@ export default async function SiteLayout({
     });
 
 
-  // The tenant site is served on its own subdomain (e.g.
-  // `50bd00da.lucidworker.com`), so all navigation links must be clean relative
-  // paths (e.g. `/`, `/notes`, `/gallery`) WITHOUT the `/sites/<siteId>` prefix.
-  // The middleware maps these clean paths to the internal `/sites/<siteId>`
-  // routes. Prefixing them here would cause a double-prefix 404.
-  const homeHref = '/';
+  // On the tenant subdomain all navigation links must be clean relative paths
+  // (e.g. `/`, `/notes`, `/gallery`) WITHOUT the `/sites/<siteId>` prefix; the
+  // middleware maps those clean paths to the internal `/sites/<siteId>` routes.
+  // Inside the admin preview iframe (main domain) we instead prefix every link
+  // with `/sites/<siteId>` so navigation stays within the tenant site and never
+  // escapes to a clean path on the main domain.
+  const homeHref = `${linkPrefix}/`;
   const navItems = allPages
     .filter((page) => page.path !== '/')
     .map((page) => {
       const basePath = page.path === '/' ? '' : page.path;
-      return { href: basePath, label: page.label };
+      return { href: `${linkPrefix}${basePath}`, label: page.label };
     });
 
 
@@ -59,6 +75,7 @@ export default async function SiteLayout({
   if (session) {
     navItems.push({ href: '/admin', label: 'Dashboard' });
   }
+
 
   return (
     <>

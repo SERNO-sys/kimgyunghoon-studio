@@ -7,10 +7,9 @@ import {
   BookOpen,
   Eye,
   LayoutDashboard,
-  Mail,
-  User,
   X,
 } from 'lucide-react';
+
 
 
 
@@ -178,37 +177,8 @@ export function AdminSidebar({
                 </Link>
               </li>
 
-              <li>
-                <Link
-                  href="/admin/about"
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive(pathname, '/admin/about')
-                      ? 'bg-amber-900/30 text-amber-100'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                  }`}
-                  onClick={onToggle}
-                >
-                  <User aria-hidden="true" size={18} />
-                  ABOUT
-                </Link>
-              </li>
-
-              <li>
-                <Link
-                  href="/admin/contact"
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive(pathname, '/admin/contact')
-                      ? 'bg-amber-900/30 text-amber-100'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                  }`}
-                  onClick={onToggle}
-                >
-                  <Mail aria-hidden="true" size={18} />
-                  CONTACT
-                </Link>
-              </li>
-
               {customPages.length > 0 ? (
+
                 <li className="pt-2">
                   <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
                     커스텀 메뉴

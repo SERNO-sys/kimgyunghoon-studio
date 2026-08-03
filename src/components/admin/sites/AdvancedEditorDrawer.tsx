@@ -43,13 +43,8 @@ const editorLinks: EditorLink[] = [
     icon: Globe,
   },
   {
-    href: '/admin/footer',
-    label: '푸터',
-    description: '하단 영역의 링크와 정보',
-    icon: LinkIcon,
-  },
-  {
     href: '/admin/media',
+
     label: '미디어',
     description: '이미지·파일 업로드 관리',
     icon: ImageIcon,

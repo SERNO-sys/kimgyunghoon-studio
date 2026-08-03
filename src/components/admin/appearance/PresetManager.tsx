@@ -5,6 +5,7 @@ import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
+import type { ColorPaletteId, FontPairingId, HeaderType, HeroType } from '@/types/site';
 
 interface PresetOption {
   id: string;
@@ -17,6 +18,38 @@ interface PresetOption {
     card: string;
   };
 }
+
+/**
+ * Maps a legacy design preset id to the AWIE decision-engine `skin` module
+ * (Color Palette + Font Pairing). Kept in sync with the AWIE blueprint enums so
+ * the payload the admin sends always passes the API's Zod schema.
+ */
+const PRESET_TO_SKIN: Record<
+  string,
+  { color_palette: ColorPaletteId; font_pairing: FontPairingId }
+> = {
+  default: { color_palette: 'warm', font_pairing: 'serif' },
+  modern: { color_palette: 'minimal', font_pairing: 'sans' },
+  warm: { color_palette: 'warm', font_pairing: 'serif' },
+  luxury: { color_palette: 'luxury', font_pairing: 'serif' },
+  minimal: { color_palette: 'minimal', font_pairing: 'sans' },
+};
+
+/**
+ * Maps a legacy design preset id to the AWIE decision-engine `skeleton` module
+ * (Header Type + Hero Type).
+ */
+const PRESET_TO_SKELETON: Record<
+  string,
+  { header_type: HeaderType; hero_type: HeroType }
+> = {
+  default: { header_type: 'logo-left', hero_type: 'cover' },
+  modern: { header_type: 'logo-center', hero_type: 'split' },
+  warm: { header_type: 'logo-left', hero_type: 'cover' },
+  luxury: { header_type: 'logo-center', hero_type: 'cover' },
+  minimal: { header_type: 'logo-left', hero_type: 'minimal' },
+};
+
 
 /**
  * V2 Theme System - Phase 2.
@@ -52,11 +85,20 @@ export function PresetManager() {
 
   const save = async () => {
     try {
+      // Send the full AWIE-aligned payload: the legacy presetId plus the
+      // derived skin/skeleton modules so the API can merge them into the
+      // site's themeConfig in one atomic update.
       const response = await fetch('/api/admin/theme/preset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ presetId: selectedId }),
+        body: JSON.stringify({
+          presetId: selectedId,
+          skin: PRESET_TO_SKIN[selectedId] ?? PRESET_TO_SKIN.default,
+          skeleton:
+            PRESET_TO_SKELETON[selectedId] ?? PRESET_TO_SKELETON.default,
+        }),
       });
+
       const result = (await response.json()) as {
         success?: boolean;
         message?: string;
