@@ -41,6 +41,14 @@ function resolveHostname(request: NextRequest): string {
 }
 
 
+/**
+ * Determines whether a hostname is the main platform host.
+ *
+ * STRICT rule: only the exact platform domain (lucidworker.com), its `www`
+ * alias, localhost (dev), and Cloudflare Pages preview domains are treated as
+ * the platform. Any tenant subdomain (*.lucidworker.com) or a user's custom
+ * domain is NEVER the platform host and must be resolved to a tenant site.
+ */
 function isPlatformHost(hostname: string, platformHost: string): boolean {
   // Local development.
   if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
@@ -53,9 +61,6 @@ function isPlatformHost(hostname: string, platformHost: string): boolean {
   // "Site not configured".
   if (hostname === `www.${platformHost}`) return true;
 
-  // Subdomains of a dotted platform host.
-  if (platformHost.startsWith('.') && hostname.endsWith(platformHost)) return true;
-
   // Any Cloudflare Pages domain (base + preview deployments like
   // <hash>.kimgyunghoon-studio.pages.dev) is treated as the platform host so
   // preview URLs and the default pages.dev domain render the main site instead
@@ -66,6 +71,8 @@ function isPlatformHost(hostname: string, platformHost: string): boolean {
   // NOT the platform host. It must be resolved to a tenant site below.
   if (extractSubdomain(hostname, platformHost) !== null) return false;
 
+  // Any other host (e.g. a user's custom domain mycompany.com) is NOT the
+  // platform host. It must be resolved to a tenant site below.
   return false;
 }
 
@@ -94,10 +101,56 @@ function extractSubdomain(hostname: string, platformHost: string): string | null
   return null;
 }
 
+
+/**
+ * Maps an incoming tenant path (e.g. `/`, `/about`, `/posts/hello`) to the
+ * corresponding `/sites/<siteId>` route so the tenant site renders through the
+ * dedicated tenant routes regardless of the incoming host.
+ */
+function mapTenantPath(pathname: string, siteId: string): string {
+  const base = `/sites/${siteId}`;
+
+  // Root -> tenant home.
+  if (pathname === '/' || pathname === '') {
+    return base;
+  }
+
+  // Static tenant pages that have dedicated routes.
+  const staticPages = ['/about', '/contact', '/diary', '/music'];
+  for (const page of staticPages) {
+    if (pathname === page) {
+      return `${base}${page}`;
+    }
+  }
+
+  // Nested static pages (e.g. /diary/<slug>, /music/<slug>, /posts/<slug>).
+  const nestedPrefixes = ['/diary/', '/music/', '/posts/'];
+  for (const prefix of nestedPrefixes) {
+    if (pathname.startsWith(prefix)) {
+      return `${base}${pathname}`;
+    }
+  }
+
+  // Any other path (custom page, category, etc.) maps under the tenant base.
+  // The `/sites/[siteId]/[...slug]` catch-all route handles custom pages and
+  // `/sites/[siteId]/[category]` handles category listings.
+  return `${base}${pathname}`;
+}
+
+
 const ADMIN_PUBLIC_PATHS = new Set(['/admin/login', '/admin/setup']);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // [Middleware Request Host] Log the exact Host values seen by the middleware
+  // so we can confirm which header carries the original tenant subdomain in the
+  // Cloudflare Pages / wildcard Worker environment.
+  console.log('[Middleware Request Host]', {
+    host: request.headers.get('host'),
+    xForwardedHost: request.headers.get('x-forwarded-host'),
+    url: request.url,
+  });
 
   // Resolve the effective hostname from the original Host header (preserved by
   // the wildcard proxy Worker) rather than request.nextUrl.hostname, which can
@@ -105,8 +158,6 @@ export async function middleware(request: NextRequest) {
   const hostname = resolveHostname(request);
 
   // [Middleware Log] Debug the host/subdomain detection at request time.
-  console.log('[Middleware Log] host header:', request.headers.get('host'));
-  console.log('[Middleware Log] x-forwarded-host:', request.headers.get('x-forwarded-host'));
   console.log('[Middleware Log] nextUrl.hostname:', request.nextUrl.hostname);
   console.log('[Middleware Log] resolved hostname:', hostname);
 
@@ -153,6 +204,9 @@ export async function middleware(request: NextRequest) {
   const isPlatform = isPlatformHost(hostname, platformHost);
   console.log('[Middleware Log] isPlatformHost:', isPlatform);
 
+  // Non-platform host: a tenant subdomain (*.lucidworker.com) or a user's
+  // custom domain. NEVER send these to the platform landing page. Resolve the
+  // site via D1 and rewrite to the tenant route (/sites/<siteId>).
   if (platformConfigured && !isPlatform) {
     let site = null;
     let subdomain: string | null = null;
@@ -186,8 +240,11 @@ export async function middleware(request: NextRequest) {
         return new NextResponse('Site not found', { status: 404 });
       }
 
-      console.log('[Middleware Log] resolved tenant site:', site.id, '-> next()');
-      const response = NextResponse.next();
+      // Rewrite to the tenant route so the site renders via /sites/<siteId>.
+      const tenantPath = mapTenantPath(pathname, site.id);
+      console.log('[Middleware Log] resolved tenant site:', site.id, '-> rewrite to', tenantPath);
+
+      const response = NextResponse.rewrite(new URL(tenantPath, request.url));
       response.headers.set('x-site-id', site.id);
       response.headers.set('x-site-domain', hostname);
       if (subdomain) {
