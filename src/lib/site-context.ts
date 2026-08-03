@@ -10,7 +10,10 @@ import {
 } from '@/lib/db/queries';
 
 import { themes } from '@/lib/admin/theme';
+import { resolveThemeConfig } from '@/constants/presets';
+import type { ThemeConfig } from '@/types/site';
 import type { Post, Site, SitePage, SiteSettings } from '@/lib/db/types';
+
 
 export interface PublicSiteContext {
   site: Site | null;
@@ -167,7 +170,14 @@ export interface ResolvedSiteConfig {
     primary: string;
     card: string;
   };
+  /**
+   * V2 Theme System - Phase 1.
+   * Resolved design-system config. Falls back to DEFAULT_PRESET when the site
+   * has no explicit theme config, so existing sites render unchanged.
+   */
+  themeConfig: ThemeConfig;
   pages: SitePage[];
+
   bannerTitle: string;
   bannerDescription: string;
   heroTitle: string;
@@ -240,7 +250,9 @@ export function resolveSiteConfig(
       const selected = themes.find((t) => t.id === (site?.theme ?? 'default'));
       return (selected ?? themes[0]).colors;
     })(),
+    themeConfig: resolveThemeConfig(site?.themeConfig),
     pages: resolvePages(parsed.pages, site?.name ?? ''),
+
     bannerTitle: String(
       parsed.general?.banner_title ??
         parsed.general?.hero_title ??

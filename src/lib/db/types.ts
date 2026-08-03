@@ -1,3 +1,5 @@
+import type { ThemeConfig } from '@/types/site';
+
 export interface User {
   id: string;
   email: string;
@@ -16,12 +18,19 @@ export interface Site {
   language: 'ko' | 'en';
   timezone: string;
   theme: 'default' | 'dark' | 'warm' | 'minimal';
+  /**
+   * V2 Theme System - Phase 1.
+   * Optional design-system config. When absent, consumers fall back to the
+   * DEFAULT_PRESET so existing sites render exactly as before (non-breaking).
+   */
+  themeConfig?: ThemeConfig;
   maintenance: boolean;
   isPublished: boolean;
   deployVersion: string;
   createdAt: string;
   updatedAt: string;
 }
+
 
 
 export interface Domain {
