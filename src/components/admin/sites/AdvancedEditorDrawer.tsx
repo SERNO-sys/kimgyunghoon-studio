@@ -5,12 +5,11 @@ import Link from 'next/link';
 import {
   Globe,
   Image as ImageIcon,
-  Link as LinkIcon,
   Palette,
-  Rocket,
   Settings,
   X,
 } from 'lucide-react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { PresetManager } from '@/components/admin/appearance/PresetManager';
 import { DeleteSiteButton } from '@/components/admin/sites/DeleteSiteButton';
@@ -49,19 +48,8 @@ const editorLinks: EditorLink[] = [
     description: '이미지·파일 업로드 관리',
     icon: ImageIcon,
   },
-  {
-    href: '/admin/domain',
-    label: '도메인',
-    description: '나만의 도메인 연결',
-    icon: LinkIcon,
-  },
-  {
-    href: '/admin/deployment',
-    label: '배포 관리',
-    description: '배포 버전과 상태 확인',
-    icon: Rocket,
-  },
 ];
+
 
 /**
  * V2 Theme System - Phase 4.

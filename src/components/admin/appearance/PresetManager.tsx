@@ -85,19 +85,22 @@ export function PresetManager() {
 
   const save = async () => {
     try {
-      // Send the full AWIE-aligned payload: the legacy presetId plus the
-      // derived skin/skeleton modules so the API can merge them into the
-      // site's themeConfig in one atomic update.
+      // Send an AWIE-aligned PARTIAL payload wrapped in `themeConfig`. The API
+      // schema is `.partial()`, so only the fields we send are deep-merged into
+      // the site's stored themeConfig — the rest is preserved untouched.
       const response = await fetch('/api/admin/theme/preset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          presetId: selectedId,
-          skin: PRESET_TO_SKIN[selectedId] ?? PRESET_TO_SKIN.default,
-          skeleton:
-            PRESET_TO_SKELETON[selectedId] ?? PRESET_TO_SKELETON.default,
+          themeConfig: {
+            presetId: selectedId,
+            skin: PRESET_TO_SKIN[selectedId] ?? PRESET_TO_SKIN.default,
+            skeleton:
+              PRESET_TO_SKELETON[selectedId] ?? PRESET_TO_SKELETON.default,
+          },
         }),
       });
+
 
       const result = (await response.json()) as {
         success?: boolean;

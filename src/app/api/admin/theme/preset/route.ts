@@ -17,24 +17,31 @@ export const runtime = 'edge';
 /**
  * V2 Theme System - Phase 2 (AWIE-aligned).
  *
- * Accepts a partial theme payload from the admin UI. The payload may carry the
- * legacy `presetId` and/or the full AWIE decision-engine fields (`intent_type`,
- * `skin`, `skeleton`, `sections`). Every field is optional so a partial update
- * can be layered on top of the site's existing `themeConfig` (merge, not
- * replace).
+ * Accepts a PARTIAL theme payload from the admin UI. The payload is wrapped in
+ * a `themeConfig` object and every field is optional (`.partial()`), so a
+ * partial update can be deep-merged on top of the site's existing
+ * `themeConfig` without ever wiping out unrelated settings.
  *
  * The Zod schema mirrors the AWIE blueprint enums so a malformed payload can
  * never corrupt the stored theme config.
  */
-const presetSchema = z.object({
+const themeConfigSchema = z.object({
   presetId: z
     .enum(['default', 'modern', 'warm', 'luxury', 'minimal'])
     .optional(),
-  intent_type: intentTypeSchema.optional(),
+  intentType: intentTypeSchema.optional(),
   skin: skinSchema.optional(),
   skeleton: skeletonSchema.optional(),
   sections: z.array(sectionSchema).min(1).optional(),
 });
+
+// The whole payload is partial: only the fields the frontend actually sends
+// are validated and merged. `themeConfig` itself is optional so a caller can
+// send just `{ themeConfig: { skin: {...} } }` and nothing else.
+const presetSchema = z.object({
+  themeConfig: themeConfigSchema.partial().optional(),
+});
+
 
 
 export async function GET() {
@@ -105,29 +112,35 @@ export async function POST(request: Request) {
     }
 
     const site = sites[0];
+    // Start from the site's existing themeConfig so a partial update deep-merges
+    // on top of it instead of replacing it.
     const themeConfig: ThemeConfig = {
       presetId: site.themeConfig?.presetId ?? 'default',
       ...(site.themeConfig ?? {}),
     };
 
-    // Merge only the fields that were actually provided so a partial update
-    // never wipes out unrelated theme settings.
-    if (result.data.presetId !== undefined) {
-      themeConfig.presetId = result.data.presetId;
+    // Deep-merge only the fields that were actually provided. Because the
+    // schema is `.partial()`, a caller may send just `{ themeConfig: { skin:
+    // {...} } }` and the rest of the stored config is preserved untouched.
+    const patch = result.data.themeConfig;
+    if (patch) {
+      if (patch.presetId !== undefined) {
+        themeConfig.presetId = patch.presetId;
+      }
+      if (patch.intentType !== undefined) {
+        themeConfig.intentType = patch.intentType;
+      }
+      if (patch.skin !== undefined) {
+        themeConfig.skin = patch.skin;
+      }
+      if (patch.skeleton !== undefined) {
+        themeConfig.skeleton = patch.skeleton;
+      }
+      if (patch.sections !== undefined) {
+        themeConfig.sections = patch.sections;
+      }
     }
 
-    if (result.data.intent_type !== undefined) {
-      themeConfig.intentType = result.data.intent_type;
-    }
-    if (result.data.skin !== undefined) {
-      themeConfig.skin = result.data.skin;
-    }
-    if (result.data.skeleton !== undefined) {
-      themeConfig.skeleton = result.data.skeleton;
-    }
-    if (result.data.sections !== undefined) {
-      themeConfig.sections = result.data.sections;
-    }
 
 
     await updateSite(db, site.id, { themeConfig });

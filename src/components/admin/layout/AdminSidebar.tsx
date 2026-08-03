@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
-  BookOpen,
   Eye,
+  Globe,
   LayoutDashboard,
+  Rocket,
   X,
 } from 'lucide-react';
+
 
 
 
@@ -56,12 +58,12 @@ export function AdminSidebar({
   }, []);
 
   const postsActive = isActive(pathname, '/admin/posts');
-  const diaryActive = isActive(pathname, '/admin/posts?category=diary');
 
   // Fixed admin menu types are rendered as dedicated, always-visible items
-  // (Dashboard, All Posts, DIARY, ABOUT, CONTACT). Exclude them from the
-  // dynamic custom pages list to avoid duplicate menu entries.
+  // (Dashboard, All Posts, ABOUT, CONTACT). Exclude them from the dynamic
+  // custom pages list to avoid duplicate menu entries.
   const fixedTypes = new Set(['home', 'diary', 'about', 'contact']);
+
   const customPages = pages
     .filter((page) => page.visible !== false && !fixedTypes.has(page.type))
     .sort((a, b) => a.order - b.order);
@@ -145,6 +147,39 @@ export function AdminSidebar({
                 </li>
               ) : null}
 
+              {/* Infrastructure menus (Domain, Deployment) live in the sidebar,
+                  not inside the Advanced Edit drawer, because they manage the
+                  site's infra rather than its content/design. */}
+              <li>
+                <Link
+                  href="/admin/domain"
+                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive(pathname, '/admin/domain')
+                      ? 'bg-amber-900/30 text-amber-100'
+                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+                  }`}
+                  onClick={onToggle}
+                >
+                  <Globe aria-hidden="true" size={18} />
+                  Domain
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/deployment"
+                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive(pathname, '/admin/deployment')
+                      ? 'bg-amber-900/30 text-amber-100'
+                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+                  }`}
+                  onClick={onToggle}
+                >
+                  <Rocket aria-hidden="true" size={18} />
+                  Deployment
+                </Link>
+              </li>
+
               <li>
                 <Link
                   href="/admin/posts"
@@ -162,20 +197,6 @@ export function AdminSidebar({
                 </Link>
               </li>
 
-              <li>
-                <Link
-                  href="/admin/posts?category=diary"
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                    diaryActive
-                      ? 'bg-amber-900/30 text-amber-100'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                  }`}
-                  onClick={onToggle}
-                >
-                  <BookOpen aria-hidden="true" size={18} />
-                  DIARY
-                </Link>
-              </li>
 
               {customPages.length > 0 ? (
 
