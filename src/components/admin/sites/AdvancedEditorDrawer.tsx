@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { PresetManager } from '@/components/admin/appearance/PresetManager';
-import { ThemeManager } from '@/components/admin/appearance/ThemeManager';
+
 
 interface AdvancedEditorDrawerProps {
   open: boolean;
@@ -128,13 +128,13 @@ export function AdvancedEditorDrawer({
               <TabsTrigger value="design">
                 <span className="inline-flex items-center gap-1.5">
                   <Palette aria-hidden="true" size={16} />
-                  디자인
+                  🎨 디자인 변경
                 </span>
               </TabsTrigger>
               <TabsTrigger value="settings">
                 <span className="inline-flex items-center gap-1.5">
                   <Settings aria-hidden="true" size={16} />
-                  설정
+                  ⚙️ 상세 설정
                 </span>
               </TabsTrigger>
             </TabsList>
@@ -144,11 +144,9 @@ export function AdvancedEditorDrawer({
                 <section className="rounded-sm border border-stone-200 bg-[#fffdf8] p-5">
                   <PresetManager />
                 </section>
-                <section className="rounded-sm border border-stone-200 bg-[#fffdf8] p-5">
-                  <ThemeManager />
-                </section>
               </div>
             </TabsContent>
+
 
             <TabsContent value="settings">
               <div className="grid gap-3 sm:grid-cols-2">

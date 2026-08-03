@@ -5,19 +5,13 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   BookOpen,
-  ChevronDown,
   Eye,
-  Globe,
-  Image as ImageIcon,
   LayoutDashboard,
-  Link as LinkIcon,
   Mail,
-  Palette,
-  Rocket,
-  Settings,
   User,
   X,
 } from 'lucide-react';
+
 
 
 import type { SitePage } from '@/lib/db/types';
@@ -31,18 +25,8 @@ interface AdminSidebarProps {
 
 
 
-const managementItems = [
-  { href: '/admin/pages', label: 'Pages', icon: Globe },
-  { href: '/admin/footer', label: 'Footer', icon: LinkIcon },
-  { href: '/admin/media', label: 'Media', icon: ImageIcon },
-  { href: '/admin/appearance', label: 'Appearance', icon: Palette },
-  { href: '/admin/domain', label: 'Domain', icon: LinkIcon },
-  { href: '/admin/deployment', label: 'Deployment', icon: Rocket },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
-  { href: '/admin/account', label: 'Account', icon: User },
-];
-
 function isActive(pathname: string, href: string): boolean {
+
   return href === '/admin'
     ? pathname === '/admin'
     : pathname === href || pathname.startsWith(`${href}/`);
@@ -57,9 +41,9 @@ export function AdminSidebar({
 
   const pathname = usePathname();
   const [pages, setPages] = useState<SitePage[]>([]);
-  const [isManagementOpen, setIsManagementOpen] = useState(false);
 
   useEffect(() => {
+
     fetch('/api/admin/pages', { credentials: 'same-origin' })
       .then((res) => res.json() as Promise<{ success?: boolean; pages?: SitePage[] }>)
       .then((data) => {
@@ -252,48 +236,8 @@ export function AdminSidebar({
                   </li>
                 );
               })}
-
-
-
-              <li className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsManagementOpen((open) => !open)}
-                  className="flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-sm font-medium text-stone-400 transition-colors hover:bg-stone-800 hover:text-stone-50"
-                >
-                  <span>Management</span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    size={16}
-                    className={`transition-transform ${isManagementOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {isManagementOpen && (
-                  <ul className="mt-1 space-y-1 border-l border-stone-700 pl-6 pr-2">
-                    {managementItems.map((item) => {
-                      const Icon = item.icon;
-                      const active = isActive(pathname, item.href);
-                      return (
-                        <li key={item.href}>
-                          <Link
-                            href={item.href}
-                            className={`flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors ${
-                              active
-                                ? 'text-amber-100'
-                                : 'text-stone-400 hover:text-stone-50'
-                            }`}
-                            onClick={onToggle}
-                          >
-                            <Icon aria-hidden="true" size={14} />
-                            {item.label}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </li>
             </ul>
+
           </nav>
           <div className="border-t border-stone-800 p-4">
             <p className="text-xs text-stone-500">Site Builder CMS V2</p>

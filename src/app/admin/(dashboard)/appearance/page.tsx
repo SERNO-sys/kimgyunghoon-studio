@@ -1,4 +1,4 @@
-import { ThemeManager } from '@/components/admin/appearance/ThemeManager';
+import { PresetManager } from '@/components/admin/appearance/PresetManager';
 
 export const runtime = 'edge';
 
@@ -11,10 +11,11 @@ export default function AppearancePage() {
           Appearance
         </h1>
         <p className="mt-2 text-stone-600">
-          Choose a theme for your website.
+          Choose a design preset for your website.
         </p>
       </div>
-      <ThemeManager />
+      <PresetManager />
     </div>
   );
 }
+
