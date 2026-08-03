@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { getDb } from '@/lib/db/client';
+
 import { getPostBySlug, getSiteById } from '@/lib/db/queries';
 import { renderPostContent } from '@/lib/markdown';
 
@@ -43,14 +45,15 @@ export default async function DiarySlugPage({
         dangerouslySetInnerHTML={{ __html: contentHtml }}
       />
       <div className="pt-8">
-        <a
+        <Link
           href="/diary"
           className="text-sm font-bold text-amber-800 hover:underline"
         >
 
           ← Diary 목록으로
-        </a>
+        </Link>
       </div>
+
     </article>
   );
 }

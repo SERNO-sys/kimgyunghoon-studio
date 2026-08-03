@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { AudioPlayer } from '@/components/music/AudioPlayer';
+
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { getDb } from '@/lib/db/client';
 import { getPostBySlug, getSiteById } from '@/lib/db/queries';
@@ -55,14 +57,15 @@ export default async function SitePostPage({ params }: SitePostPageProps) {
           <MarkdownRenderer content={post.content} />
         </div>
         <div className="pt-8">
-          <a
+          <Link
             href="/"
             className="text-sm font-bold text-amber-800 hover:underline"
           >
 
             ← 목록으로
-          </a>
+          </Link>
         </div>
+
       </article>
     </main>
   );
