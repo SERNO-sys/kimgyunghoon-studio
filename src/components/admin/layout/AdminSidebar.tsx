@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
+  BookOpen,
   ChevronDown,
   Globe,
   Image as ImageIcon,
@@ -16,6 +17,7 @@ import {
   User,
   X,
 } from 'lucide-react';
+
 import type { SitePage } from '@/lib/db/types';
 
 interface AdminSidebarProps {
@@ -61,14 +63,16 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
   }, []);
 
   const postsActive = isActive(pathname, '/admin/posts');
+  const diaryActive = isActive(pathname, '/admin/posts?category=diary');
 
   // Fixed admin menu types are rendered as dedicated, always-visible items
-  // (Dashboard, All Posts, ABOUT, CONTACT). Exclude them from the dynamic
-  // custom pages list to avoid duplicate menu entries.
-  const fixedTypes = new Set(['home', 'diary', 'music', 'about', 'contact']);
+  // (Dashboard, All Posts, DIARY, ABOUT, CONTACT). Exclude them from the
+  // dynamic custom pages list to avoid duplicate menu entries.
+  const fixedTypes = new Set(['home', 'diary', 'about', 'contact']);
   const customPages = pages
     .filter((page) => page.visible !== false && !fixedTypes.has(page.type))
     .sort((a, b) => a.order - b.order);
+
 
 
 
@@ -137,7 +141,23 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                 </Link>
               </li>
 
+              <li>
+                <Link
+                  href="/admin/posts?category=diary"
+                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                    diaryActive
+                      ? 'bg-amber-900/30 text-amber-100'
+                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+                  }`}
+                  onClick={onToggle}
+                >
+                  <BookOpen aria-hidden="true" size={18} />
+                  DIARY
+                </Link>
+              </li>
+
               {customPages.map((page) => {
+
                 const href = `/admin/pages/${encodeURIComponent(page.id)}`;
                 const active = isActive(pathname, href);
                 return (
