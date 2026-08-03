@@ -8,12 +8,14 @@ import {
   Loader2,
   Rocket,
   Settings2,
+  Sparkles,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
 import { AdvancedEditorDrawer } from '@/components/admin/sites/AdvancedEditorDrawer';
 import { AIVibeChange } from '@/components/admin/sites/AIVibeChange';
+import type { AiDesignReport } from '@/types/site';
 
 
 interface SitePreviewPageProps {
@@ -25,7 +27,10 @@ interface SitePreviewPageProps {
   publicUrl: string;
   previewUrl: string;
   primaryDomain: string | null;
+  /** AWIE Decision Engine: the AI's design rationale shown to build trust. */
+  aiDesignReport?: AiDesignReport | null;
 }
+
 
 /**
  * V2 Theme System - Phase 4.
@@ -43,7 +48,9 @@ export function SitePreviewPage({
   publicUrl,
   previewUrl,
   primaryDomain,
+  aiDesignReport,
 }: SitePreviewPageProps) {
+
   const toast = useToast();
   const [publishing, setPublishing] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -118,8 +125,30 @@ export function SitePreviewPage({
         </Link>
       </div>
 
+      {/* AWIE Decision Engine: AI design report banner.
+          Explains WHY the AI designed the site this way, building trust that
+          the result came from analyzing the user's business, not a guess. */}
+      {aiDesignReport ? (
+        <Card className="border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700">
+              <Sparkles aria-hidden="true" size={18} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-serif text-base font-semibold text-stone-950">
+                AI가 {aiDesignReport.analyzed_industry || '내 사업'}을 분석해 설계했어요
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-stone-700">
+                {aiDesignReport.reasoning}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       {/* Primary action bar: Publish is the largest, most prominent element */}
       <Card className="flex flex-col gap-4 border-amber-900/20 bg-gradient-to-r from-amber-50 to-[#fffdf8] sm:flex-row sm:items-center sm:justify-between">
+
         <div>
           <h2 className="font-serif text-xl font-semibold text-stone-950">
             {isPublished ? '홈페이지가 실시간으로 운영 중입니다' : '홈페이지를 지금 바로 공개하세요'}

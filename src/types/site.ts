@@ -22,6 +22,71 @@ export type ThemePresetId =
   | 'minimal';
 
 /**
+ * AWIE (AI Website Intelligence Engine) - Decision Engine types.
+ *
+ * The AI does not pick a random pretty color. It analyzes the user's business
+ * intent and selects a logical Skin + Skeleton combination from a constrained
+ * set of options. These types model that decision so the AI's imagination is
+ * controlled and answers stay within a defined spec.
+ */
+
+/**
+ * The user's primary business objective, inferred by the AI from their input.
+ * - 'brand_experience' : emotional, visual brand storytelling (e.g. cafe, art)
+ * - 'authority'        : trust & expertise first (e.g. medical, legal)
+ * - 'conversion'       : drive a specific action (e.g. booking, contact)
+ * - 'commerce'         : sell products / showcase a catalog
+ * - 'community'        : gather and engage an audience (e.g. blog, forum)
+ */
+export type IntentType =
+  | 'brand_experience'
+  | 'authority'
+  | 'conversion'
+  | 'commerce'
+  | 'community';
+
+/** Color palette identifiers available to the AI decision engine. */
+export type ColorPaletteId = 'warm' | 'minimal' | 'trust' | 'luxury' | 'vibrant';
+
+/** Font pairing identifiers available to the AI decision engine. */
+export type FontPairingId = 'sans' | 'serif' | 'mono';
+
+/** Header layout identifiers available to the AI decision engine. */
+export type HeaderType = 'logo-left' | 'logo-center' | 'sidebar';
+
+/** Hero (main banner) layout identifiers available to the AI decision engine. */
+export type HeroType = 'cover' | 'split' | 'minimal';
+
+/**
+ * The visual style module chosen by the AI. Mirrors the AWIE blueprint's
+ * "Skin" concept (Color Palette + Font Pairing).
+ */
+export interface Skin {
+  color_palette: ColorPaletteId;
+  font_pairing: FontPairingId;
+}
+
+/**
+ * The structural module chosen by the AI. Mirrors the AWIE blueprint's
+ * "Skeleton" concept (Header Type + Hero Type).
+ */
+export interface Skeleton {
+  header_type: HeaderType;
+  hero_type: HeroType;
+}
+
+/**
+ * The AI's design rationale. Exposed to the user after site creation so they
+ * trust that the AI analyzed their business rather than guessing.
+ */
+export interface AiDesignReport {
+  /** The industry the AI inferred from the user's input (e.g. "브런치 카페"). */
+  analyzed_industry: string;
+  /** A short, human-readable explanation of why this design was chosen. */
+  reasoning: string;
+}
+
+/**
  * Theme configuration for a site. All fields are optional so that a partial
  * config can be layered on top of a preset (e.g. only overriding the color
  * palette while inheriting the rest from the preset).
@@ -37,4 +102,16 @@ export interface ThemeConfig {
   layoutStyle?: string;
   /** Identifier of the button style to apply (preset-specific). */
   buttonStyle?: string;
+
+  // ---- AWIE Decision Engine (V2) ----
+  /** The business intent the AI inferred from the user's input. */
+  intentType?: IntentType;
+  /** The visual style module (Skin) chosen by the AI. */
+  skin?: Skin;
+  /** The structural module (Skeleton) chosen by the AI. */
+  skeleton?: Skeleton;
+  /** The AI's design rationale, shown to the user after creation. */
+  aiDesignReport?: AiDesignReport;
+  /** Ordered list of section identifiers composing the page layout. */
+  sections?: string[];
 }

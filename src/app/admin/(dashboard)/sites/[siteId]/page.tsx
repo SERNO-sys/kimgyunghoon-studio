@@ -9,7 +9,9 @@ import {
 } from '@/lib/db/queries';
 
 import { getEnv } from '@/config/env';
+import type { AiDesignReport } from '@/types/site';
 import { SitePreviewPage } from './page.client';
+
 
 export const runtime = 'edge';
 
@@ -65,6 +67,11 @@ export default async function AdminSitePreviewPage({
   // sees the latest draft state regardless of publish status.
   const previewUrl = `/sites/${site.id}`;
 
+  // AWIE Decision Engine (V2): surface the AI's design rationale so the user
+  // trusts that the site was designed from an analysis of their business.
+  const aiDesignReport: AiDesignReport | null =
+    site.themeConfig?.aiDesignReport ?? null;
+
   return (
     <SitePreviewPage
       siteId={site.id}
@@ -75,6 +82,9 @@ export default async function AdminSitePreviewPage({
       publicUrl={publicUrl}
       previewUrl={previewUrl}
       primaryDomain={primary?.domain ?? null}
+      aiDesignReport={aiDesignReport}
     />
   );
 }
+
+

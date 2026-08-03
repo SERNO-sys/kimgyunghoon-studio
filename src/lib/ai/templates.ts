@@ -132,7 +132,14 @@ Concept: ${context}`,
     purpose: 'Generate the full site settings and navigation in one JSON response.',
     condition: 'Return a single JSON object with all site fields and page data.',
     tone: 'Warm, concise Korean website copy.',
-    systemPrompt: baseSystemPrompt,
+    systemPrompt: `You are the AWIE (AI Website Intelligence Engine) — a professional web designer and planner. You do NOT pick a random pretty color. You analyze the user's business intent and logically design the optimal digital showroom.
+
+Rules:
+- Write only in Korean (한국어) for all copy fields.
+- Do not invent concrete facts like dates, awards, or names that are not in the context, but you may gently expand the mood or atmosphere.
+- Keep the tone friendly, warm, and inviting.
+- Prefer short, breathing sentences over long, ornate paragraphs.
+- You MUST reason about the user's intent and choose a constrained Skin + Skeleton combination. Never invent values outside the allowed enums.`,
     userPrompt: (context) => {
       let concept = context;
       let extraPages = 1;
@@ -167,6 +174,32 @@ Fields:
   * contact: path "/contact", label "CONTACT"
   Allowed page types: home, diary, about, contact, custom. Use English uppercase labels for the four base pages. Give custom pages natural Korean labels and unique paths such as "/gallery" or "/schedule". Do not add any additional home, diary, about, or contact pages, and do not duplicate base paths or types.
 - "custom_page_intros": object mapping each custom page path to a short Korean subheading (2-4 words).
+
+AWIE Decision Engine — you MUST include these fields:
+- "intent_type": Analyze the user's business objective and choose EXACTLY ONE of:
+  * "brand_experience" : emotional, visual brand storytelling (e.g. cafe, art, portfolio)
+  * "authority"        : trust & expertise first (e.g. medical, legal, consulting)
+  * "conversion"       : drive a specific action (e.g. booking, reservation, contact)
+  * "commerce"         : sell products / showcase a catalog
+  * "community"        : gather and engage an audience (e.g. blog, forum, diary)
+- "skin": an object with EXACTLY these two keys:
+  * "color_palette": one of "warm" | "minimal" | "trust" | "luxury" | "vibrant"
+  * "font_pairing": one of "sans" | "serif" | "mono"
+- "skeleton": an object with EXACTLY these two keys:
+  * "header_type": one of "logo-left" | "logo-center" | "sidebar"
+  * "hero_type": one of "cover" | "split" | "minimal"
+- "sections": an ordered array of section identifiers for the homepage, e.g. ["hero", "about", "gallery", "menu", "contact"]. Choose from: hero, about, gallery, menu, services, testimonials, contact, map, faq, blog, products, team, partners, cta.
+- "ai_design_report": an object with EXACTLY these two keys:
+  * "analyzed_industry": the industry you inferred from the concept (e.g. "브런치 카페")
+  * "reasoning": a short Korean sentence explaining WHY you chose this design (e.g. "예약 전환율을 높이기 위해 우측에 CTA를 노출하고 따뜻한 베이지 톤을 적용했습니다.")
+
+Intent → design mapping (follow this logic):
+- "authority"     → color_palette "trust" or "minimal", header_type "logo-left", hero_type "minimal" or "split"
+- "conversion"    → color_palette "warm" or "vibrant", header_type "logo-left", hero_type "cover" or "split", include a "cta" section
+- "commerce"      → color_palette "vibrant" or "warm", header_type "logo-center", hero_type "cover", include "products" section
+- "brand_experience" → color_palette "warm" or "luxury", header_type "logo-center" or "sidebar", hero_type "cover", include "gallery" section
+- "community"     → color_palette "minimal" or "warm", header_type "logo-left", hero_type "minimal", include "blog" section
+
 - "themeConfig": object with a single required field "presetId". Choose exactly one preset that best matches the mood and personality of the concept. The available presets are:
   * "default": clean, neutral, timeless editorial look with a warm stone palette.
   * "modern": sleek, minimal, high-contrast look with a bold black-and-white palette.
@@ -181,3 +214,4 @@ Concept: ${concept}`;
     },
   },
 ];
+

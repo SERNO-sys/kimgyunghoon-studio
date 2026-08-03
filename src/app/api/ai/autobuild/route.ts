@@ -11,11 +11,13 @@ import {
   upsertSettings,
 } from '@/lib/db/queries';
 import { generateText } from '@/lib/ai/client';
+import { parseAwieDecision, toThemeConfigDecision } from '@/lib/ai/awie-schema';
 import { getCurrentUserTier, TIER_LIMITS } from '@/lib/config/tiers';
 import { getDefaultPages } from '@/lib/site-context';
 import { PRESETS } from '@/constants/presets';
-import type { ThemePresetId } from '@/types/site';
+import type { ThemeConfig, ThemePresetId } from '@/types/site';
 import type { Site, SiteSettings, User, Post, SitePage } from '@/lib/db/types';
+
 
 
 export const runtime = 'edge';
@@ -115,6 +117,17 @@ export async function POST(request: Request) {
       ? (rawPresetId as ThemePresetId)
       : 'default';
 
+    // AWIE Decision Engine (V2): validate the AI's intent/skin/skeleton/report
+    // against the strict Zod schema. If the AI returns out-of-spec values, we
+    // fall back to a preset-only config so site creation never breaks.
+    const awieDecision = parseAwieDecision(parsed);
+    const themeConfig: ThemeConfig = awieDecision
+      ? {
+          presetId,
+          ...toThemeConfigDecision(awieDecision),
+        }
+      : { presetId };
+
     const site: Site = {
       id: siteId,
       ownerId: session.userId,
@@ -123,13 +136,14 @@ export async function POST(request: Request) {
       language: 'ko',
       timezone: 'Asia/Seoul',
       theme: 'default',
-      themeConfig: { presetId },
+      themeConfig,
       maintenance: false,
       isPublished: false,
       deployVersion: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
 
 
     await createSite(db, site);
