@@ -1,12 +1,14 @@
 interface PhilosophyProps {
+  id?: string;
   label?: string;
   title: string;
   content: string;
 }
 
-export function Philosophy({ label, title, content }: PhilosophyProps) {
+export function Philosophy({ id, label, title, content }: PhilosophyProps) {
   return (
-    <section aria-labelledby="philosophy-heading" className="bg-stone-950 py-18 text-stone-100 sm:py-24">
+    <section id={id} aria-labelledby="philosophy-heading" className="bg-stone-950 py-18 text-stone-100 sm:py-24">
+
       <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-16 lg:px-8">
         {label ? (
           <p className="text-xs font-semibold tracking-[0.2em] text-amber-300">{label}</p>

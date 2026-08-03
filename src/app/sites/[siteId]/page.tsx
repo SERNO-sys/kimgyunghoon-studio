@@ -64,6 +64,26 @@ export default async function SitePage({ params }: SitePageProps) {
       ? site.themeConfig.sections
       : ['hero', 'about', 'contact'];
 
+  // Per-section placeholder copy. Each section gets its OWN text so the AI's
+  // `hero_subtitle` is never copy-pasted into unrelated sections (the previous
+  // bug). When the AI provides richer content later, these are the fallbacks.
+  const sectionCopy: Record<string, string> = {
+    hero: heroSubtitle,
+    about: aboutBio,
+    gallery: '작품과 순간들을 모아둔 갤러리입니다.',
+    menu: '대표 메뉴와 시그니처를 소개합니다.',
+    services: '제공하는 서비스와 전문 분야를 소개합니다.',
+    testimonials: '고객님들의 진심 어린 이야기를 전합니다.',
+    products: '대표 상품과 컬렉션을 만나보세요.',
+    team: '함께하는 팀을 소개합니다.',
+    partners: '함께하는 파트너와 협력사를 소개합니다.',
+    faq: '자주 묻는 질문을 정리했습니다.',
+    map: '찾아오시는 길을 안내합니다.',
+    cta: '지금 바로 문의해 보세요.',
+    blog: '새로운 소식과 이야기를 전합니다.',
+    contact: config.email || '문의는 이메일로 부탁드립니다.',
+  };
+
   return (
     <main>
       {sections.map((section) => {
@@ -72,6 +92,7 @@ export default async function SitePage({ params }: SitePageProps) {
             return (
               <Hero
                 key={section}
+                id={section}
                 siteName={site.name}
                 description={description}
                 imageUrl={
@@ -84,6 +105,7 @@ export default async function SitePage({ params }: SitePageProps) {
             return (
               <Philosophy
                 key={section}
+                id={section}
                 label={heroTitle}
                 title={heroSubtitle}
                 content={aboutBio}
@@ -94,6 +116,7 @@ export default async function SitePage({ params }: SitePageProps) {
             return (
               <LatestPosts
                 key={section}
+                id={section}
                 posts={posts}
                 emptyText=""
                 themeColors={config.themeColors}
@@ -103,6 +126,7 @@ export default async function SitePage({ params }: SitePageProps) {
             return (
               <section
                 key={section}
+                id={section}
                 className="px-6 py-16"
                 style={{
                   backgroundColor: config.themeColors.background,
@@ -118,11 +142,12 @@ export default async function SitePage({ params }: SitePageProps) {
           default:
             // Fallback block for any section without a dedicated component yet
             // (gallery, services, testimonials, map, faq, products, team,
-            // partners, cta, menu). Renders a labeled container so the section
-            // skeleton is visible and ready to be filled in.
+            // partners, cta, menu). Renders a labeled container with the
+            // section's OWN copy (never the hero/about text).
             return (
               <section
                 key={section}
+                id={section}
                 className="px-6 py-16"
                 style={{
                   backgroundColor: config.themeColors.background,
@@ -133,7 +158,7 @@ export default async function SitePage({ params }: SitePageProps) {
                   {section}
                 </h2>
                 <p className="max-w-xl text-sm leading-relaxed opacity-80">
-                  {aboutBio}
+                  {sectionCopy[section] || `${section} 섹션입니다.`}
                 </p>
               </section>
             );
@@ -142,3 +167,4 @@ export default async function SitePage({ params }: SitePageProps) {
     </main>
   );
 }
+

@@ -42,41 +42,50 @@ export default async function SiteLayout({
   const settings = await getSettingsBySiteId(db, site.id);
   const config = resolveSiteConfig(site, settings);
 
-  // V2 modular navigation: when the AI generated a `themeConfig.pages` array
-  // (Home, Portfolio, etc.), render those dynamic menu items. Otherwise fall
-  // back to the legacy settings pages (which default to DIARY/ABOUT/CONTACT).
-  // Fixed/basic menu types (home, diary, about, contact) are always shown
-  // before AI-generated custom pages, matching the admin sidebar order
-  // [기본 메뉴 -> 커스텀 메뉴]. Within each group the stored `order` is kept.
-  const fixedTypes = new Set(['home', 'diary', 'about', 'contact']);
-  const sourcePages =
-    config.themeConfig.pages && config.themeConfig.pages.length > 0
-      ? config.themeConfig.pages
-      : config.pages;
-  const allPages = flattenPages(sourcePages)
-    .filter((page) => page.visible)
-    .sort((a, b) => {
-      const aFixed = fixedTypes.has(a.type) ? 0 : 1;
-      const bFixed = fixedTypes.has(b.type) ? 0 : 1;
-      if (aFixed !== bFixed) return aFixed - bFixed;
-      return a.order - b.order;
-    });
+  // V2 modular navigation: the tenant site is a one-page (SPA) layout built
+  // from `themeConfig.sections`. The header menu is driven EXCLUSIVELY by the
+  // AI-generated `themeConfig.pages` array (Home, Portfolio, etc.) — we never
+  // fall back to the legacy hardcoded DIARY/ABOUT/CONTACT set. Each menu item
+  // maps to the matching section anchor (`#<section>`) so clicking it smooth-
+  // scrolls to that section on the same page.
+  const themePages = config.themeConfig.pages ?? [];
+  const themeSections = config.themeConfig.sections ?? [];
 
+  // Map a page to the section anchor it should scroll to. We prefer the page's
+  // own `path` (e.g. `/portfolio` -> `#portfolio`), then fall back to a
+  // type-based mapping, and finally to the first available section.
+  const typeToSection: Record<string, string> = {
+    home: 'hero',
+    about: 'about',
+    contact: 'contact',
+    diary: 'blog',
+    blog: 'blog',
+    posts: 'blog',
+    music: 'gallery',
+    gallery: 'gallery',
+  };
 
+  const allPages = flattenPages(themePages).filter((page) => page.visible);
 
-  // On the tenant subdomain all navigation links must be clean relative paths
-  // (e.g. `/`, `/notes`, `/gallery`) WITHOUT the `/sites/<siteId>` prefix; the
-  // middleware maps those clean paths to the internal `/sites/<siteId>` routes.
-  // Inside the admin preview iframe (main domain) we instead prefix every link
-  // with `/sites/<siteId>` so navigation stays within the tenant site and never
-  // escapes to a clean path on the main domain.
+  // On the tenant subdomain all navigation links are clean relative paths
+  // WITHOUT the `/sites/<siteId>` prefix; the middleware maps those clean paths
+  // to the internal `/sites/<siteId>` routes. Inside the admin preview iframe
+  // (main domain) we prefix every link with `/sites/<siteId>` so navigation
+  // stays within the tenant site.
   const homeHref = `${linkPrefix}/`;
   const navItems = allPages
     .filter((page) => page.path !== '/')
     .map((page) => {
-      const basePath = page.path === '/' ? '' : page.path;
-      return { href: `${linkPrefix}${basePath}`, label: page.label };
+      // Resolve the target section anchor for this menu item.
+      const pathSection = page.path.replace(/^\/+/, '').replace(/\/+$/, '');
+      const mappedSection =
+        (pathSection && themeSections.includes(pathSection) && pathSection) ||
+        typeToSection[page.type] ||
+        (themeSections.length > 0 ? themeSections[0] : 'hero');
+      const anchor = `#${mappedSection}`;
+      return { href: `${linkPrefix}${anchor}`, label: page.label };
     });
+
 
 
   return (

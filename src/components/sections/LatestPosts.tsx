@@ -2,6 +2,7 @@ import { PostCard } from '@/components/posts/PostCard';
 import type { Post } from '@/lib/db/types';
 
 interface LatestPostsProps {
+  id?: string;
   posts: Post[];
   title?: string;
   subtitle?: string;
@@ -16,6 +17,7 @@ interface LatestPostsProps {
 }
 
 export function LatestPosts({
+  id,
   posts,
   title,
   subtitle,
@@ -25,11 +27,13 @@ export function LatestPosts({
 }: LatestPostsProps) {
   return (
     <section
+      id={id}
       className="py-16 sm:py-24"
       style={
         themeColors ? { backgroundColor: themeColors.background } : undefined
       }
     >
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {subtitle || title ? (
           <div className="mb-8">

@@ -269,6 +269,19 @@ export async function POST(request: Request) {
     // etc.) instead of the hardcoded DIARY/ABOUT/CONTACT set.
     themeConfig.pages = generatedPages;
 
+    // AWIE Sections (V2): persist the ordered homepage section list the AI
+    // chose (e.g. ["hero", "about", "gallery", "contact"]). The tenant
+    // renderer iterates this array to build the one-page (SPA) layout, so
+    // without it the site falls back to the default hero/about/contact set.
+    const rawSections = Array.isArray(parsed.sections) ? parsed.sections : [];
+    const validSections = rawSections.filter(
+      (s: unknown) => typeof s === 'string' && s.trim().length > 0
+    ) as string[];
+    if (validSections.length > 0) {
+      themeConfig.sections = validSections;
+    }
+
+
     const settings: SiteSettings = {
       id: siteId,
       siteId,
