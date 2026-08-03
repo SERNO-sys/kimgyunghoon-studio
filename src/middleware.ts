@@ -31,14 +31,19 @@ export const config = {
  * `nextUrl.hostname` when neither is available.
  */
 function resolveHostname(request: NextRequest): string {
-  const hostHeader = request.headers.get('host');
+  // In Cloudflare Pages / Worker environments the `host` header may be
+  // overwritten to the Pages project domain (e.g. kimgyunghoon-studio.pages.dev)
+  // while `x-forwarded-host` carries the original tenant subdomain. Prefer
+  // `x-forwarded-host` first, then `host`, and finally `nextUrl.hostname`.
   const forwardedHost = request.headers.get('x-forwarded-host');
+  const hostHeader = request.headers.get('host');
 
-  const candidate = hostHeader || forwardedHost || request.nextUrl.hostname;
+  const candidate = forwardedHost || hostHeader || request.nextUrl.hostname;
 
   // Strip any port (e.g. `localhost:3000` -> `localhost`) and lowercase.
   return candidate.split(':')[0].toLowerCase();
 }
+
 
 
 /**
@@ -157,9 +162,10 @@ export async function middleware(request: NextRequest) {
   // be the Pages project domain after proxying.
   const hostname = resolveHostname(request);
 
-  // [Middleware Log] Debug the host/subdomain detection at request time.
+  // [Middleware] Debug the extracted host at request time.
+  console.log('[Middleware] Extracted Host:', hostname);
   console.log('[Middleware Log] nextUrl.hostname:', request.nextUrl.hostname);
-  console.log('[Middleware Log] resolved hostname:', hostname);
+
 
   // Admin routes: enforce authentication and onboarding.
   if (pathname.startsWith('/admin')) {
@@ -202,12 +208,15 @@ export async function middleware(request: NextRequest) {
   const platformConfigured = platformHost !== 'localhost';
 
   const isPlatform = isPlatformHost(hostname, platformHost);
+  const isMainDomain = isPlatform;
   console.log('[Middleware Log] isPlatformHost:', isPlatform);
+  console.log('[Middleware] Is Main Domain:', isMainDomain);
 
   // Non-platform host: a tenant subdomain (*.lucidworker.com) or a user's
   // custom domain. NEVER send these to the platform landing page. Resolve the
   // site via D1 and rewrite to the tenant route (/sites/<siteId>).
   if (platformConfigured && !isPlatform) {
+
     let site = null;
     let subdomain: string | null = null;
 
@@ -243,8 +252,10 @@ export async function middleware(request: NextRequest) {
       // Rewrite to the tenant route so the site renders via /sites/<siteId>.
       const tenantPath = mapTenantPath(pathname, site.id);
       console.log('[Middleware Log] resolved tenant site:', site.id, '-> rewrite to', tenantPath);
+      console.log('[Middleware] Rewriting to:', tenantPath);
 
       const response = NextResponse.rewrite(new URL(tenantPath, request.url));
+
       response.headers.set('x-site-id', site.id);
       response.headers.set('x-site-domain', hostname);
       if (subdomain) {
