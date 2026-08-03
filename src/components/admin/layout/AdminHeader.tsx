@@ -78,7 +78,7 @@ export function AdminHeader({ onMenuToggle, siteUrl, siteId }: AdminHeaderProps)
             type="button"
             onClick={handlePublish}
             disabled={publishing}
-            className="inline-flex items-center gap-1.5 rounded-sm bg-amber-900 px-3 py-2 text-sm font-semibold text-[#fffdf8] transition-colors hover:bg-amber-800 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-sm bg-amber-900 px-2.5 py-2 text-sm font-semibold text-[#fffdf8] transition-colors hover:bg-amber-800 disabled:opacity-60 sm:px-3"
             aria-label="Publish site"
           >
             {publishing ? (
@@ -86,8 +86,14 @@ export function AdminHeader({ onMenuToggle, siteUrl, siteId }: AdminHeaderProps)
             ) : (
               <Rocket aria-hidden="true" size={16} />
             )}
-            {publishing ? '배포 중...' : 'Publish / Update Site'}
+            <span className="hidden sm:inline">
+              {publishing ? '배포 중...' : 'Publish / Update Site'}
+            </span>
+            <span className="sm:hidden">
+              {publishing ? '배포 중...' : 'Publish'}
+            </span>
           </button>
+
           <button
             type="button"
             className="inline-flex size-10 items-center justify-center rounded-sm text-stone-600 transition-colors hover:bg-stone-100"

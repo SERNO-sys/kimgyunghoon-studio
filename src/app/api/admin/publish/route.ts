@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/admin/session';
+import type { NextRequest } from 'next/server';
+import { getSessionFromRequest } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
+
 import {
   getSettingsBySiteId,
   getSiteById,
@@ -35,14 +37,20 @@ async function resolveSiteId(
   return sites[0]?.id ?? null;
 }
 
-export async function POST(request: Request) {
-  const session = await getSession();
+export async function POST(request: NextRequest) {
+  // Read the session cookie directly from the request object. In the Edge
+  // runtime the `cookies()` API from `next/headers` can be unreliable for
+  // Route Handlers, so we use the same request-based helper the middleware
+  // uses. This guarantees the authenticated user is resolved before we write
+  // to D1.
+  const session = await getSessionFromRequest(request);
   if (!session) {
     return NextResponse.json(
       { success: false, message: 'Unauthorized' },
       { status: 401 }
     );
   }
+
 
   let requestedSiteId: string | undefined;
   try {
