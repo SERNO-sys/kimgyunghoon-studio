@@ -9,9 +9,10 @@ interface AdminShellProps {
   children: React.ReactNode;
   siteName?: string;
   siteUrl?: string;
+  siteId?: string;
 }
 
-export function AdminShell({ children, siteName, siteUrl }: AdminShellProps) {
+export function AdminShell({ children, siteName, siteUrl, siteId }: AdminShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -24,8 +25,10 @@ export function AdminShell({ children, siteName, siteUrl }: AdminShellProps) {
         />
         <AdminHeader
           siteUrl={siteUrl}
+          siteId={siteId}
           onMenuToggle={() => setIsSidebarOpen((current) => !current)}
         />
+
         <main className="pt-16 lg:ml-64">
           <div className="p-4 sm:p-6 lg:p-8">{children}</div>
         </main>

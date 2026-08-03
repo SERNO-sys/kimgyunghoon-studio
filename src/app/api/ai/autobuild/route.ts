@@ -166,15 +166,26 @@ export async function POST(request: Request) {
           about: 'ABOUT',
           contact: 'CONTACT',
         };
+        const label = baseLabel[type] || page.label || 'New Page';
+        // Custom pages must always carry a non-empty body so the catch-all
+        // route renders something instead of a blank page. If the AI did not
+        // provide an intro for this path, fall back to a short default blurb.
+        const content =
+          pageContentByPath[path] ||
+          baseContent[type] ||
+          (type === 'custom'
+            ? `${label} 페이지입니다. 이곳에 내용을 채워 넣으세요.`
+            : '');
         return {
           id: crypto.randomUUID(),
-          label: baseLabel[type] || page.label || 'New Page',
+          label,
           path,
           type,
           visible: true,
           order: index,
-          content: pageContentByPath[path] || baseContent[type] || '',
+          content,
         };
+
       });
     }
 

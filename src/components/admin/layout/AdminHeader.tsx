@@ -9,12 +9,14 @@ import { useToast } from '@/hooks/useToast';
 interface AdminHeaderProps {
   onMenuToggle: () => void;
   siteUrl?: string;
+  siteId?: string;
 }
 
-export function AdminHeader({ onMenuToggle, siteUrl }: AdminHeaderProps) {
+export function AdminHeader({ onMenuToggle, siteUrl, siteId }: AdminHeaderProps) {
   const router = useRouter();
   const toast = useToast();
   const [publishing, setPublishing] = useState(false);
+
 
   const handleLogout = async () => {
     await fetch('/api/auth/session', { method: 'DELETE' });
@@ -26,7 +28,11 @@ export function AdminHeader({ onMenuToggle, siteUrl }: AdminHeaderProps) {
     if (publishing) return;
     setPublishing(true);
     try {
-      const response = await fetch('/api/admin/publish', { method: 'POST' });
+      const response = await fetch('/api/admin/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId }),
+      });
       const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
         toast.addToast(
@@ -42,6 +48,7 @@ export function AdminHeader({ onMenuToggle, siteUrl }: AdminHeaderProps) {
       setPublishing(false);
     }
   };
+
 
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200 bg-[#fffdf8]/95 backdrop-blur">

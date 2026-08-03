@@ -57,10 +57,11 @@ export default async function AdminDashboardLayout({
     : `https://${deriveSubdomain(site.id)}.${appDomain}`;
 
   return (
-    <AdminShell siteName={site.name} siteUrl={siteUrl}>
+    <AdminShell siteName={site.name} siteUrl={siteUrl} siteId={site.id}>
       {children}
     </AdminShell>
   );
+
 }
 
 
