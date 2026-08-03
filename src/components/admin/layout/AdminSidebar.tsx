@@ -61,9 +61,15 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
   }, []);
 
   const postsActive = isActive(pathname, '/admin/posts');
-  const visiblePages = pages
-    .filter((page) => page.visible !== false)
+
+  // Fixed admin menu types are rendered as dedicated, always-visible items
+  // (Dashboard, All Posts, ABOUT, CONTACT). Exclude them from the dynamic
+  // custom pages list to avoid duplicate menu entries.
+  const fixedTypes = new Set(['home', 'diary', 'music', 'about', 'contact']);
+  const customPages = pages
+    .filter((page) => page.visible !== false && !fixedTypes.has(page.type))
     .sort((a, b) => a.order - b.order);
+
 
 
   return (
@@ -131,19 +137,8 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                 </Link>
               </li>
 
-              {visiblePages.map((page) => {
-                const href =
-                  page.type === 'home'
-                    ? '/admin'
-                    : page.type === 'diary'
-                      ? '/admin/posts?category=diary'
-                      : page.type === 'music'
-                        ? '/admin/posts?category=music'
-                        : page.type === 'about'
-                          ? '/admin/about'
-                          : page.type === 'contact'
-                            ? '/admin/contact'
-                            : `/admin/pages/${encodeURIComponent(page.id)}`;
+              {customPages.map((page) => {
+                const href = `/admin/pages/${encodeURIComponent(page.id)}`;
                 const active = isActive(pathname, href);
                 return (
                   <li key={page.id}>
@@ -162,6 +157,7 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                   </li>
                 );
               })}
+
 
 
               <li>
