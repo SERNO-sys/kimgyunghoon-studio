@@ -110,6 +110,39 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
           </div>
           <nav className="flex-1 overflow-y-auto px-3 py-4">
             <ul className="space-y-1">
+              {/* AI-generated custom pages are shown first (top of the sidebar)
+                  so newly created menus are the most prominent. The fixed admin
+                  menus (Dashboard, All Posts, DIARY, ABOUT, CONTACT) follow
+                  below. */}
+              {customPages.map((page) => {
+                const href = `/admin/pages/${encodeURIComponent(page.id)}`;
+                const active = isActive(pathname, href);
+                return (
+                  <li key={page.id}>
+                    <Link
+                      href={href}
+                      className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-amber-900/30 text-amber-100'
+                          : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+                      }`}
+                      onClick={onToggle}
+                      title={page.label}
+                    >
+                      {page.label}
+                    </Link>
+                  </li>
+                );
+              })}
+
+              {customPages.length > 0 ? (
+                <li className="pt-2">
+                  <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
+                    기본 메뉴
+                  </div>
+                </li>
+              ) : null}
+
               <li>
                 <Link
                   href="/admin"
@@ -156,34 +189,10 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                 </Link>
               </li>
 
-              {customPages.map((page) => {
-
-                const href = `/admin/pages/${encodeURIComponent(page.id)}`;
-                const active = isActive(pathname, href);
-                return (
-                  <li key={page.id}>
-                    <Link
-                      href={href}
-                      className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-amber-900/30 text-amber-100'
-                          : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                      }`}
-                      onClick={onToggle}
-                      title={page.label}
-                    >
-                      {page.label}
-                    </Link>
-                  </li>
-                );
-              })}
-
-
-
               <li>
                 <Link
                   href="/admin/about"
-                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive(pathname, '/admin/about')
                       ? 'bg-amber-900/30 text-amber-100'
                       : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
@@ -198,7 +207,7 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
               <li>
                 <Link
                   href="/admin/contact"
-                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive(pathname, '/admin/contact')
                       ? 'bg-amber-900/30 text-amber-100'
                       : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
@@ -209,6 +218,7 @@ export function AdminSidebar({ isOpen, onToggle, siteName }: AdminSidebarProps) 
                   CONTACT
                 </Link>
               </li>
+
 
               <li className="pt-2">
                 <button
