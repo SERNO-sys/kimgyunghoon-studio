@@ -16,6 +16,31 @@ export const config = {
 };
 
 
+/**
+ * Resolves the effective hostname for a request.
+ *
+ * In Cloudflare Pages the request may arrive through the wildcard proxy Worker
+ * (workers/wildcard-proxy.js), which forwards to the Pages project URL
+ * (e.g. kimgyunghoon-studio.pages.dev) while preserving the original `Host`
+ * header. `request.nextUrl.hostname` is built from the URL used to reach the
+ * Pages project, so it can be the Pages domain rather than the tenant
+ * subdomain (e.g. 50bd00da.lucidworker.com).
+ *
+ * To reliably detect the tenant subdomain we must prefer the original `Host`
+ * header, then `x-forwarded-host` (set by CDNs/proxies), and only fall back to
+ * `nextUrl.hostname` when neither is available.
+ */
+function resolveHostname(request: NextRequest): string {
+  const hostHeader = request.headers.get('host');
+  const forwardedHost = request.headers.get('x-forwarded-host');
+
+  const candidate = hostHeader || forwardedHost || request.nextUrl.hostname;
+
+  // Strip any port (e.g. `localhost:3000` -> `localhost`) and lowercase.
+  return candidate.split(':')[0].toLowerCase();
+}
+
+
 function isPlatformHost(hostname: string, platformHost: string): boolean {
   // Local development.
   if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
@@ -72,7 +97,18 @@ function extractSubdomain(hostname: string, platformHost: string): string | null
 const ADMIN_PUBLIC_PATHS = new Set(['/admin/login', '/admin/setup']);
 
 export async function middleware(request: NextRequest) {
-  const { pathname, hostname } = request.nextUrl;
+  const { pathname } = request.nextUrl;
+
+  // Resolve the effective hostname from the original Host header (preserved by
+  // the wildcard proxy Worker) rather than request.nextUrl.hostname, which can
+  // be the Pages project domain after proxying.
+  const hostname = resolveHostname(request);
+
+  // [Middleware Log] Debug the host/subdomain detection at request time.
+  console.log('[Middleware Log] host header:', request.headers.get('host'));
+  console.log('[Middleware Log] x-forwarded-host:', request.headers.get('x-forwarded-host'));
+  console.log('[Middleware Log] nextUrl.hostname:', request.nextUrl.hostname);
+  console.log('[Middleware Log] resolved hostname:', hostname);
 
   // Admin routes: enforce authentication and onboarding.
   if (pathname.startsWith('/admin')) {
@@ -107,12 +143,17 @@ export async function middleware(request: NextRequest) {
     // subdomains are still resolved (never fall back to 'localhost').
   }
 
+  console.log('[Middleware Log] platformHost:', platformHost);
+  console.log('[Middleware Log] process.env.PLATFORM_HOST:', process.env.PLATFORM_HOST);
+
   // The platform host is always configured in production. Treat every request
   // as the platform host only when the host is actually the platform itself.
   const platformConfigured = platformHost !== 'localhost';
 
+  const isPlatform = isPlatformHost(hostname, platformHost);
+  console.log('[Middleware Log] isPlatformHost:', isPlatform);
 
-  if (platformConfigured && !isPlatformHost(hostname, platformHost)) {
+  if (platformConfigured && !isPlatform) {
     let site = null;
     let subdomain: string | null = null;
 
@@ -127,6 +168,7 @@ export async function middleware(request: NextRequest) {
       //    `e801f11c.lucidworker.com`), which is not stored verbatim in the
       //    domains table, so we resolve it against the sites table.
       subdomain = extractSubdomain(hostname, platformHost);
+      console.log('[Middleware Log] extractSubdomain:', subdomain);
       if (!site && subdomain) {
         site = await getSiteBySubdomain(db, subdomain);
       }
@@ -140,9 +182,11 @@ export async function middleware(request: NextRequest) {
       // Unpublished sites are treated as missing so the public subdomain/custom
       // domain does not leak draft data. Return a fast 404 instead of 522.
       if (!site.isPublished) {
+        console.log('[Middleware Log] site found but unpublished, returning 404');
         return new NextResponse('Site not found', { status: 404 });
       }
 
+      console.log('[Middleware Log] resolved tenant site:', site.id, '-> next()');
       const response = NextResponse.next();
       response.headers.set('x-site-id', site.id);
       response.headers.set('x-site-domain', hostname);
@@ -153,6 +197,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Unknown custom domain: return a minimal not-configured response.
+    console.log('[Middleware Log] no site resolved, returning 404');
     return new NextResponse('Site not found', { status: 404 });
   }
 
@@ -160,8 +205,10 @@ export async function middleware(request: NextRequest) {
 
   // Platform host: rewrite root to platform landing page.
   if (pathname === '/') {
+    console.log('[Middleware Log] platform host, rewriting / -> /platform');
     return NextResponse.rewrite(new URL('/platform', request.url));
   }
 
+  console.log('[Middleware Log] platform host, next()');
   return NextResponse.next();
 }
