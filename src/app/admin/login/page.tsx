@@ -5,6 +5,12 @@ import Link from 'next/link';
 // next-on-pages fails with "Unable to find lambda for route: /admin/login".
 export const dynamic = 'force-dynamic';
 
+// @cloudflare/next-on-pages requires all non-static routes to run on the
+// Edge Runtime. Without this, the Pages production build fails with
+// "The following routes were not configured to run with the Edge Runtime".
+export const runtime = 'edge';
+
+
 export default function AdminLoginPage() {
 
   return (
