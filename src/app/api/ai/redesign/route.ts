@@ -167,6 +167,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    // Log the real error (e.g. the underlying SQLITE_ERROR) so it is visible in
+    // the server logs instead of being swallowed by a generic 500 response.
+    console.error('DB Error (redesign):', error);
     const message =
       error instanceof Error ? error.message : 'Failed to redesign site';
     return NextResponse.json(
@@ -175,3 +178,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+

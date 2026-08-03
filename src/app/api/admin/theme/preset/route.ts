@@ -149,10 +149,15 @@ export async function POST(request: Request) {
       message: 'Preset saved',
       themeConfig,
     });
-  } catch {
+  } catch (error) {
+    // Log the real error (e.g. the underlying SQLITE_ERROR) so it is visible in
+    // the server logs instead of being swallowed by a generic 500 response.
+    console.error('DB Update Error (theme preset):', error);
     return NextResponse.json(
       { success: false, message: 'Failed to process request' },
       { status: 500 }
     );
   }
 }
+
+
