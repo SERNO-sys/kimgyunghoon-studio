@@ -19,7 +19,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated build artifacts (e.g. @cloudflare/next-on-pages output) must
+    // never be linted. Linting these generated files fails the Cloudflare
+    // Pages production build (e.g. `require()` in ___next_launcher.cjs).
+    ".vercel/**",
+    "node_modules/**",
+    ".git/**",
   ]),
+
 ]);
 
 export default eslintConfig;
