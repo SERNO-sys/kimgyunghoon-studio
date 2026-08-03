@@ -34,6 +34,15 @@ export async function POST() {
     );
   }
 
+  // The tenant subdomain is the first segment of the site UUID (e.g.
+  // `f0e36aaa` for `f0e36aaa-xxxx-xxxx-xxxx-xxxxxxxxxxxx`). The middleware
+  // resolves `f0e36aaa.lucidworker.com` via a prefix match on the site id, so
+  // this is the value that must be bound for the subdomain to resolve.
+  const subdomain = siteId.split('-')[0] || siteId;
+  console.log('[Publish] siteId:', siteId);
+  console.log('[Publish] derived subdomain:', subdomain);
+  console.log('[Publish] public URL:', `https://${subdomain}.lucidworker.com`);
+
   try {
     const db = getDb();
     const now = new Date().toISOString();
@@ -42,11 +51,14 @@ export async function POST() {
     const deployment = await createDeploymentSnapshot(db, siteId, 'manual');
 
     // Mark the site as published and record the latest deploy version.
-    await updateSite(db, siteId, {
+    const updated = await updateSite(db, siteId, {
       updatedAt: now,
       isPublished: true,
       deployVersion: deployment.version,
     });
+    console.log('[Publish] updateSite result:', updated);
+    console.log('[Publish] isPublished now:', updated?.isPublished);
+
 
     const settings = await getSettingsBySiteId(db, siteId);
     if (settings) {
