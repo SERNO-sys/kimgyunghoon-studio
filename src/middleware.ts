@@ -156,6 +156,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Internal tenant preview routes (`/sites/<siteId>`) are used as the iframe
+  // src for the admin "미리보기" panel. They must ALWAYS render the tenant site
+  // (never the admin dashboard), so on the main domain we pass them straight
+  // through to the `/sites/[siteId]` route. This guard is intentionally placed
+  // before tenant resolution so a logged-in admin's preview iframe can never be
+  // mistaken for an admin route or rewritten to the platform landing page.
+  if (pathname.startsWith('/sites/')) {
+    return NextResponse.next();
+  }
+
   // Public tenant routes: resolve site by custom domain and attach headers.
   // PLATFORM_HOST defaults to the production platform host (lucidworker.com) in
   // env.ts, so even if the env var is missing in the Pages dashboard we still

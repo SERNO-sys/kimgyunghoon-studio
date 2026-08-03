@@ -24,8 +24,16 @@ export default function ContactAdminPage() {
 
   useEffect(() => {
     fetch('/api/admin/settings')
-      .then((res) => res.json() as Promise<{ settings?: Record<string, unknown> }>)
-      .then((data) => {
+      .then(async (res) => {
+        // A 404 ("No site configured") is expected when the user has no site
+        // yet — silently fall back to an empty form instead of alarming the
+        // user with an error toast. Only surface genuine failures.
+        if (!res.ok && res.status !== 404) {
+          toast.addToast('Failed to load contact settings.', 'error');
+        }
+        const data = (await res.json()) as {
+          settings?: Record<string, unknown>;
+        };
         if (data?.settings) {
           setBaseSettings(data.settings);
           const general = (data.settings.general as Record<string, string>) || {};

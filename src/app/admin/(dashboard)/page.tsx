@@ -17,6 +17,7 @@ import {
 } from '@/lib/db/queries';
 import { SyncStatus } from '@/components/admin/dashboard/SyncStatus';
 import { AIQuickGenerate } from '@/components/admin/dashboard/AIQuickGenerate';
+import { DeleteSiteButton } from '@/components/admin/sites/DeleteSiteButton';
 
 
 export const runtime = 'edge';
@@ -88,13 +89,16 @@ export default async function AdminDashboardPage() {
               </p>
             </div>
           </div>
-          <Link
-            href={`/admin/sites/${site.id}`}
-            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-sm bg-amber-900 px-6 py-3 text-base font-bold text-[#fffdf8] shadow-lg shadow-amber-900/20 transition-all hover:bg-amber-800 hover:shadow-xl"
-          >
-            <Rocket aria-hidden="true" size={18} />
-            미리보기 & 발행
-          </Link>
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href={`/admin/sites/${site.id}`}
+              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-sm bg-amber-900 px-6 py-3 text-base font-bold text-[#fffdf8] shadow-lg shadow-amber-900/20 transition-all hover:bg-amber-800 hover:shadow-xl"
+            >
+              <Rocket aria-hidden="true" size={18} />
+              미리보기 & 발행
+            </Link>
+            <DeleteSiteButton siteId={site.id} siteName={site.name} />
+          </div>
         </Card>
       ) : null}
 

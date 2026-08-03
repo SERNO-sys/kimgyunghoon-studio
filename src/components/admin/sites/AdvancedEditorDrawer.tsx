@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { PresetManager } from '@/components/admin/appearance/PresetManager';
+import { DeleteSiteButton } from '@/components/admin/sites/DeleteSiteButton';
 
 
 interface AdvancedEditorDrawerProps {
@@ -173,6 +174,21 @@ export function AdvancedEditorDrawer({
                     </Link>
                   );
                 })}
+              </div>
+
+              {/* Danger zone: delete the site entirely so the user can start fresh. */}
+              <div className="mt-8 rounded-sm border border-red-200 bg-red-50/60 p-5">
+                <h3 className="font-serif text-base font-semibold text-red-800">
+                  위험 구역
+                </h3>
+                <p className="mt-1 text-sm text-red-700/80">
+                  사이트를 삭제하면 모든 콘텐츠가 영구적으로 지워집니다. 꼬인
+                  사이트를 지우고 AWIE AI 생성을 처음부터 다시 테스트하고 싶다면
+                  여기서 삭제하세요.
+                </p>
+                <div className="mt-4">
+                  <DeleteSiteButton siteId={siteId} compact />
+                </div>
               </div>
             </TabsContent>
           </Tabs>
