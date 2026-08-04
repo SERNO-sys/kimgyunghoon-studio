@@ -1,8 +1,19 @@
 import { writeFileSync } from 'node:fs';
 
-const ACCOUNT = 'a7d07d413295043712df1a0ae1a166bd';
-const PROJECT = 'kimgyunghoon-studio';
-const TOKEN = 'cfoat_9B9Qu55xLMGYMw94SRpAZkPWZ0FJt09Vi9aoVET9rx0.j_tR3JgPeBO1VsTlS8pJbc2Rl5GtG13DRMQiJIW1o2Y';
+// Credentials must be provided via environment variables — never hardcode them.
+// Usage (PowerShell):
+//   $env:CF_ACCOUNT_ID = '...'; $env:CF_PAGES_PROJECT = '...'; $env:CF_API_TOKEN = '...'
+//   node download-worker.mjs
+const ACCOUNT = process.env.CF_ACCOUNT_ID;
+const PROJECT = process.env.CF_PAGES_PROJECT;
+const TOKEN = process.env.CF_API_TOKEN;
+
+if (!ACCOUNT || !PROJECT || !TOKEN) {
+  console.error(
+    'Missing env vars: CF_ACCOUNT_ID, CF_PAGES_PROJECT and CF_API_TOKEN are required.'
+  );
+  process.exit(1);
+}
 
 const headers = { Authorization: `Bearer ${TOKEN}` };
 
