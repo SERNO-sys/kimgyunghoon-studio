@@ -15,7 +15,6 @@ import {
   countPostsBySite,
   listSitesByOwner,
 } from '@/lib/db/queries';
-import { SyncStatus } from '@/components/admin/dashboard/SyncStatus';
 import { AIQuickGenerate } from '@/components/admin/dashboard/AIQuickGenerate';
 import { DeleteSiteButton } from '@/components/admin/sites/DeleteSiteButton';
 
@@ -146,7 +145,6 @@ export default async function AdminDashboardPage() {
             ))}
           </div>
         </Card>
-        <SyncStatus />
         <AIQuickGenerate />
       </div>
     </div>

@@ -120,24 +120,10 @@ const ADMIN_PUBLIC_PATHS = new Set(['/admin/login', '/admin/setup']);
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // [Middleware Request Host] Log the exact Host values seen by the middleware
-  // so we can confirm which header carries the original tenant subdomain in the
-  // Cloudflare Pages / wildcard Worker environment.
-  console.log('[Middleware Request Host]', {
-    host: request.headers.get('host'),
-    xForwardedHost: request.headers.get('x-forwarded-host'),
-    xOriginalHost: request.headers.get('x-original-host'),
-    url: request.url,
-  });
-
   // Resolve the effective hostname from the original Host header (preserved by
   // the wildcard proxy Worker) rather than request.nextUrl.hostname, which can
   // be the Pages project domain after proxying.
   const hostname = resolveHostname(request);
-
-  // [Middleware] Debug the extracted host at request time.
-  console.log('[Middleware] Extracted Host:', hostname);
-  console.log('[Middleware Log] nextUrl.hostname:', request.nextUrl.hostname);
 
 
   // Admin routes: enforce authentication and onboarding.
@@ -183,9 +169,6 @@ export async function middleware(request: NextRequest) {
     // subdomains are still resolved (never fall back to 'localhost').
   }
 
-  console.log('[Middleware Log] platformHost:', platformHost);
-  console.log('[Middleware Log] process.env.PLATFORM_HOST:', process.env.PLATFORM_HOST);
-
   // The Cloudflare Pages project domain is treated as a platform/development
   // host so the default pages.dev URL and preview deployments render the main
   // platform page instead of "Site not found".
@@ -202,8 +185,6 @@ export async function middleware(request: NextRequest) {
     hostname.endsWith(`.${pagesProjectHost}`) ||
     hostname === 'localhost' ||
     hostname === '127.0.0.1';
-
-  console.log('[Middleware] Is Main Domain:', isMainDomain);
 
   // Non-main-domain host: a tenant subdomain (*.lucidworker.com) or a user's
   // custom domain. NEVER send these to the platform landing page. Resolve the
@@ -223,7 +204,6 @@ export async function middleware(request: NextRequest) {
       //    `e801f11c.lucidworker.com`), which is not stored verbatim in the
       //    domains table, so we resolve it against the sites table.
       subdomain = extractSubdomain(hostname, platformHost);
-      console.log('[Middleware Log] extractSubdomain:', subdomain);
       if (!site && subdomain) {
         site = await getSiteBySubdomain(db, subdomain);
       }
@@ -241,9 +221,6 @@ export async function middleware(request: NextRequest) {
       // preview iframe and the public URL both hit this path). Treating an
       // unpublished site as 404 caused "Site not found" on valid subdomains.
       const tenantPath = mapTenantPath(pathname, site.id);
-      console.log('[Middleware Log] resolved tenant site:', site.id, '-> rewrite to', tenantPath);
-      console.log('[Middleware] Rewriting to:', tenantPath);
-
       const response = NextResponse.rewrite(new URL(tenantPath, request.url));
 
       response.headers.set('x-site-id', site.id);
@@ -257,16 +234,13 @@ export async function middleware(request: NextRequest) {
 
     // Unknown custom domain: return a minimal not-configured response. NEVER
     // redirect/rewrite to the main page when the site is not found.
-    console.log('[Middleware Log] no site resolved, returning 404');
     return new NextResponse('Site not found', { status: 404 });
   }
 
   // Main domain: rewrite root to platform landing page.
   if (pathname === '/') {
-    console.log('[Middleware Log] main domain, rewriting / -> /platform');
     return NextResponse.rewrite(new URL('/platform', request.url));
   }
 
-  console.log('[Middleware Log] main domain, next()');
   return NextResponse.next();
 }

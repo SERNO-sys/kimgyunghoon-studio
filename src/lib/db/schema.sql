@@ -117,4 +117,5 @@ CREATE TABLE IF NOT EXISTS deploy_versions (
 CREATE INDEX IF NOT EXISTS idx_posts_site ON posts(site_id);
 CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(site_id, status);
 CREATE INDEX IF NOT EXISTS idx_media_site ON media(site_id);
+CREATE INDEX IF NOT EXISTS idx_categories_site ON categories(site_id);
 CREATE INDEX IF NOT EXISTS idx_deploy_versions_site ON deploy_versions(site_id);

@@ -39,7 +39,12 @@ CREATE TABLE IF NOT EXISTS sites (
   language TEXT NOT NULL DEFAULT 'ko' CHECK (language IN ('ko', 'en')),
   timezone TEXT NOT NULL DEFAULT 'Asia/Seoul',
   theme TEXT NOT NULL DEFAULT 'default' CHECK (theme IN ('default', 'dark', 'warm')),
+  -- V2 Theme System: optional design-system config (JSON). When NULL, consumers
+  -- fall back to the DEFAULT_PRESET so existing sites render exactly as before.
+  theme_config TEXT,
   maintenance BOOLEAN NOT NULL DEFAULT 0,
+  is_published BOOLEAN NOT NULL DEFAULT 0,
+  deploy_version TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -118,4 +123,5 @@ CREATE INDEX IF NOT EXISTS idx_domains_domain ON domains(domain);
 CREATE INDEX IF NOT EXISTS idx_posts_site ON posts(site_id);
 CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(site_id, status);
 CREATE INDEX IF NOT EXISTS idx_media_site ON media(site_id);
+CREATE INDEX IF NOT EXISTS idx_categories_site ON categories(site_id);
 CREATE INDEX IF NOT EXISTS idx_deploy_versions_site ON deploy_versions(site_id);

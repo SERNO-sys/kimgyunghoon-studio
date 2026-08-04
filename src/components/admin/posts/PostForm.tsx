@@ -221,38 +221,6 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
     [contentRegisterRef]
   );
 
-  const syncToGitHub = async (data: PostFormData, status: Post['status']) => {
-    try {
-      const markdown = `---\ntitle: ${data.title}\nslug: ${data.slug}\ncategory: ${data.category}\nstatus: ${status}\ntags: [${data.tags ?? ''}]\n---\n\n${data.content}`;
-      const response = await fetch('/api/admin/github/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          siteId: 'default',
-          changes: [
-            { path: `src/content/posts/${data.slug}.md`, content: markdown },
-          ],
-          commitMessage: `${status === 'published' ? 'Publish' : 'Update'}: ${data.title}`,
-        }),
-      });
-      const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
-      if (response.ok && result.success) {
-        toast.addToast('GitHub sync completed.', 'success');
-        toast.addToast('Deployment started.', 'success');
-        setTimeout(() => {
-          toast.addToast('Deployment completed.', 'success');
-        }, 2000);
-      } else {
-        toast.addToast(
-          result.message || 'GitHub sync failed.',
-          'error'
-        );
-      }
-    } catch {
-      toast.addToast('GitHub sync failed.', 'error');
-    }
-  };
-
   const onSubmit = async (data: PostFormData, status: Post['status']) => {
     setIsSubmitting(true);
     try {
@@ -270,9 +238,6 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
           status === 'published' ? 'Post published.' : 'Draft saved.',
           'success'
         );
-        if (status === 'published') {
-          await syncToGitHub(data, status);
-        }
         router.push('/admin/posts');
       } else {
         toast.addToast(
