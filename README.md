@@ -1,122 +1,278 @@
-# KIM GYUNG HOON STUDIO
+# AWIE V2
 
-A multi-tenant homepage SaaS platform built with Next.js (App Router), TypeScript, and Tailwind CSS. Anyone can sign up, create a personal site, connect a custom domain, and manage content from a single admin dashboard.
+> **AI Website Intelligence Engine V2**  
+> An enterprise-grade, deterministic website generation platform that separates **AI decision-making** from **presentation rendering**.
 
-## Dual Architecture
+---
 
-The codebase is structured as a dual architecture:
+# Why AWIE?
 
-- **SaaS Platform:** The platform entrypoint at `/` (when accessed via `PLATFORM_HOST`) welcomes visitors and routes authenticated users into the admin dashboard. It lives under `src/app/platform` and is served through middleware rewrites.
-- **Tenant Public Sites:** Custom domains render the owner&apos;s public website. Pages in `src/app/(public)` resolve the correct `site_id` from the request domain and load site settings, theme, and published posts from the database in real time.
-- **V2 Admin Dashboard:** The administration system under `/admin` provides multi-tenant content management, media library, theme system, AI writer, GitHub sync, Cloudflare deployment, custom domain management, and user/account settings.
+Most AI website builders generate HTML directly from an LLM response.
 
-The public tenant renderer and the admin dashboard share the same Next.js build but are isolated by route groups and middleware logic so that admin development never affects live tenant sites.
+AWIE takes a fundamentally different approach.
 
-## Tech Stack
+Instead of letting AI produce the final website, AI only makes **decisions**.
 
-- **Framework:** Next.js 16 (App Router)
-- **Runtime:** Edge runtime for API routes
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-- **Database:** Cloudflare D1 (with an in-memory local adapter for development)
-- **Forms & Validation:** React Hook Form + Zod
-- **UI Components:** Custom shadcn/ui-inspired components
-- **Content:** Markdown + DB-backed posts
-- **Icons:** Lucide React
-- **Authentication:** Google OAuth with signed session cookies
-- **Deployment:** Cloudflare Pages (Edge runtime build)
+Those decisions are transformed into a deterministic, framework-agnostic rendering pipeline.
 
-## Project Structure
-
-- `src/app/(public)/` - Tenant public website pages (rendered on custom domains)
-- `src/app/platform/` - SaaS platform landing page (rendered on `PLATFORM_HOST`)
-- `src/app/admin/` - Admin dashboard pages and API routes
-- `src/app/api/admin/` - Admin API route handlers
-- `src/app/api/auth/` - Authentication API route handlers
-- `src/middleware.ts` - Platform vs tenant routing and admin auth guard
-- `src/components/admin/` - Admin dashboard components
-- `src/components/ui/` - Shared UI primitives
-- `src/components/layout/` - Public layout components (Header, Footer)
-- `src/lib/db/` - D1 database schema, types, local adapter, and query layer
-- `src/lib/admin/` - Admin domain logic
-- `src/lib/ai/` - AI Writer service layer and prompt templates
-- `src/lib/cloudflare/` - Cloudflare deployment services
-- `src/lib/github/` - GitHub repository sync services
-- `src/lib/security/` - Security utilities (file upload validation)
-- `src/config/env.ts` - Centralized environment variable validation
-- `content/` - Markdown content (music archive)
-- `public/` - Static assets
-
-## Getting Started
-
-1. Install dependencies:
-
-```bash
-npm install
+```
+AI
+    ↓
+Business Brief
+    ↓
+Recipe Engine
+    ↓
+ThemeConfig (SSOT)
+    ↓
+Runtime Services
+    ↓
+Theme Engine
+    ↓
+RenderNode
+    ↓
+Framework Adapter
+    ↓
+React / Vue / Future Frameworks
 ```
 
-2. Copy the environment variable example and fill in your values:
+This architecture makes the platform deterministic, testable, extensible, and maintainable.
 
-```bash
-cp .env.example .env.local
+---
+
+# Core Principles
+
+The platform is built on several immutable architectural contracts.
+
+## AI decides. Runtime executes.
+
+AI never renders UI.
+
+The Runtime never makes business decisions.
+
+Each layer has exactly one responsibility.
+
+## ThemeConfig is the SSOT
+
+Every rendering operation originates from a single immutable ThemeConfig.
+
+No duplicated presentation state exists anywhere in the pipeline.
+
+## Deterministic Rendering
+
+Identical ThemeConfig input always produces identical RenderNode output.
+
+Rendering is completely framework-agnostic.
+
+## Zero Core Imports
+
+Plugins never import internal Core modules.
+
+External developers interact only through the public SDK.
+
+The Core remains frozen and protected.
+
+---
+
+# Architecture Overview
+
+```
+Decision Layer
+    │
+    ▼
+Business Brief
+    │
+    ▼
+Recipe Engine
+    │
+    ▼
+ThemeConfig
+    │
+    ▼
+Runtime Services
+    │
+    ▼
+Theme Engine
+    │
+    ▼
+RenderNode
+    │
+    ▼
+React / Vue / Future Adapters
 ```
 
-At minimum, set `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI`.
+---
 
-3. Run the development server:
+# Runtime Platform
 
-```bash
-npm run dev
+The Runtime is independent platform infrastructure.
+
+Included services:
+
+- Asset Resolver
+- Localization
+- Cache
+- Media Pipeline
+- SEO
+- Accessibility
+- Analytics
+- Performance
+- Security
+- Feature Flags
+- Migration Pipeline
+- Diagnostics
+- Metrics
+- Circuit Breaker
+- Retry Policy
+
+None of these services contain business logic.
+
+---
+
+# CMS Platform
+
+The Application Layer provides:
+
+- Multi-tenant Project Model
+- Command Pattern
+- Immutable Patch Pipeline
+- Undo / Redo
+- Audit Trail
+- Version Snapshots
+- Publish / Release separation
+- Release Pointer
+- Application Event Bus
+
+Editing and rendering remain completely separated.
+
+---
+
+# Delivery Layer
+
+Released content is served through immutable snapshots.
+
+Features include:
+
+- Conditional GET
+- ETag
+- HTTP 304
+- Release Pointer
+- Rollback by pointer update
+- CDN-friendly caching
+
+---
+
+# Plugin Platform
+
+AWIE V2 is designed to be extended without modifying the Core.
+
+```
+Plugin
+    ↓
+SDK
+    ↓
+Plugin Loader
+    ↓
+Core Registry
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) to view the SaaS platform landing page, and [http://localhost:3000/admin](http://localhost:3000/admin) to access the admin dashboard.
+Plugins:
 
-## Database
+- never import Core modules
+- receive a scoped PluginContext
+- pass SemVer validation
+- pass Compatibility Matrix validation
+- cannot overwrite existing resources
 
-The schema is defined in `src/lib/db/schema.sql`. In production on Cloudflare Pages, bind the D1 database to the worker environment. For local development, the app ships with an in-memory adapter (`src/lib/db/memory.ts`) so you can iterate without a live D1 binding.
+---
 
-To switch to the real D1 binding, update `src/lib/db/client.ts` to return `getRequestContext().env.DB` (or your platform&apos;s equivalent) instead of the in-memory store.
+# CLI
 
-## Multi-Tenant Routing
+The Developer Platform includes a dependency-free CLI.
 
-`src/middleware.ts` decides how each request is handled:
-
-- `PLATFORM_HOST` (e.g. `localhost`, `kimgyunghoon.studio`): `/` renders the SaaS landing page.
-- Custom domains: the middleware resolves the domain to a `site_id`, attaches `x-site-id`/`x-site-domain` headers, and `src/app/(public)` pages render that tenant&apos;s settings and posts.
-- `/admin/*` always requires a valid session cookie, except `/admin/login`.
-
-## Build
-
-```bash
-npm run build
+```
+awie create
+awie validate
+awie build
+awie install
+awie doctor
 ```
 
-This project uses the standard Next.js build with Edge runtime for API routes, not static export.
+The CLI performs offline validation before a plugin is allowed into the platform.
 
-## Admin Features
+---
 
-- **Dashboard:** Overview stats, quick actions, GitHub sync status, and AI quick generate.
-- **Content Manager:** Create, edit, filter, and publish posts with slug auto-generation.
-- **Media Manager:** Drag-and-drop image uploads with secure validation.
-- **Theme System:** Select and preview site themes.
-- **Site & Account Settings:** Tabbed forms with validation.
-- **AI Writer:** Generate About, SEO, Copyright, and Hero text with structured prompts.
-- **GitHub Sync:** Push content changes to a GitHub repository.
-- **Cloudflare Deployment:** Trigger and monitor Cloudflare Pages deployments.
-- **Custom Domain:** Connect and manage custom domains.
-- **User Management:** Owned sites list, data export, and account deletion.
+# Reference Products
 
-## Mock Integrations
+The engine has been validated with production-style reference websites:
 
-External service integrations (Google OAuth, Gemini, GitHub, Cloudflare R2/Pages) are currently mocked where credentials are not configured. Each service layer has `TODO` markers indicating where to implement real API calls once the corresponding environment variables are provided.
+- Flower Shop
+- Restaurant
+- Law Firm
+- Church
+- Photographer
+- Hospital
 
-The local database adapter is also a mock implementation. To use Cloudflare D1 in production, bind the database and update `src/lib/db/client.ts`.
+All products are rendered through the Plugin System without modifying the frozen Core.
 
-## Security
+---
 
-- Environment variables are centralized and validated in `src/config/env.ts`.
-- The env module is server-only and will throw if imported on the client.
-- All tenant data is scoped by `site_id`; admin APIs only return data belonging to the authenticated user&apos;s sites.
-- File uploads are validated by MIME type, extension, magic bytes, and SVG content scanning.
-- Sessions are signed with HMAC-SHA-256 and stored in httpOnly cookies.
-- Danger-zone actions require explicit confirmation.
+# Verification
+
+Current platform verification includes:
+
+- TypeScript strict compilation
+- Architecture Guard
+- Golden Journey End-to-End validation
+- Runtime tests
+- CMS tests
+- Plugin SDK tests
+- Reference Product tests
+
+The engine is validated through hundreds of automated assertions across the complete pipeline.
+
+---
+
+# Developer Philosophy
+
+**Core owns contracts. Plugins own implementations.**
+
+The Core Platform is frozen.
+
+Future functionality is expected to be added through plugins, application features, and product modules—not by modifying the engine itself.
+
+---
+
+# Roadmap
+
+## v2.0
+
+Core Platform
+
+- AI Decision Engine
+- Runtime Platform
+- CMS Platform
+- Delivery Layer
+- Plugin SDK
+- Plugin Loader
+- CLI Toolkit
+- Official Business Components
+- Reference Products
+
+## Future
+
+The engine is complete.
+
+Future releases focus on product capabilities:
+
+- Global localization
+- Commerce
+- Booking
+- CRM
+- Music
+- Marketing Automation
+- AI Workflow
+- Product Templates
+
+---
+
+Built for deterministic AI-driven website generation.

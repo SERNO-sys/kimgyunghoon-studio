@@ -1,7 +1,13 @@
-import { GoogleGenAI } from '@google/genai';
-import { getEnv } from '@/config/env';
+import { getAiEngine } from './engine';
 import { templates } from './templates';
 
+/**
+ * Template-based text generation.
+ *
+ * Thin adapter between the legacy template registry (`templates.ts`) and the
+ * provider-agnostic AI Engine. All provider access, retry, sanitization and
+ * telemetry live in the engine — never here.
+ */
 export async function generateText(
   templateKey: string,
   context: string
@@ -11,20 +17,12 @@ export async function generateText(
     throw new Error('Unknown template');
   }
 
-  const { GEMINI_API_KEY: apiKey } = getEnv();
-  if (!apiKey) {
-    return `[Mock Gemini Generated Text]\n\nTemplate: ${template.label}\nPurpose: ${template.purpose}\nCondition: ${template.condition}\nTone: ${template.tone}\n\nContext:\n${context}\n\nThis is a placeholder response. Once GEMINI_API_KEY is configured, the real Gemini API will generate text using the structured prompt above.`;
-  }
-
-  const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.5-flash-lite',
-    contents: template.userPrompt(context),
-    config: {
-      systemInstruction: template.systemPrompt,
-    },
+  const result = await getAiEngine().generateText({
+    flow: `template:${templateKey}`,
+    model: 'autobuild-default',
+    system: template.systemPrompt,
+    prompt: template.userPrompt(context),
   });
-  const generated =
-    typeof response.text === 'string' ? response.text : '';
-  return generated || `[No response from Gemini for ${template.label}]`;
+
+  return result.text || `[No response from AI for ${template.label}]`;
 }

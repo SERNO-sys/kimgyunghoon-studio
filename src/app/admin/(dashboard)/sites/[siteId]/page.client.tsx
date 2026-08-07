@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   CheckCircle2,
   ExternalLink,
+  LayoutTemplate,
   Loader2,
   Rocket,
   Settings2,
@@ -15,7 +16,10 @@ import { Card } from '@/components/ui/Card';
 import { useToast } from '@/hooks/useToast';
 import { AdvancedEditorDrawer } from '@/components/admin/sites/AdvancedEditorDrawer';
 import { AIVibeChange } from '@/components/admin/sites/AIVibeChange';
+import { EditorShell } from '@/components/admin/editor';
+import type { EditorCommandPayload } from '@/lib/editor-integration';
 import type { AiDesignReport } from '@/types/site';
+
 
 
 interface SitePreviewPageProps {
@@ -54,8 +58,24 @@ export function SitePreviewPage({
   const toast = useToast();
   const [publishing, setPublishing] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  // Phase 17.1: the four-zone Editor Shell (Dumb Client). Opens as a full-screen
+  // overlay. For Shell-only, the command emitter is a no-op placeholder; the
+  // server wiring (which sends EditorCommandPayloads) is a later Phase 17 step.
+  const [shellOpen, setShellOpen] = useState(false);
   // Bumped after an AI redesign so the preview iframe reloads with the new theme.
   const [previewKey, setPreviewKey] = useState(0);
+
+  // Phase 17.1: Dumb Client command emitter (prepare only). The shell hands
+  // Commands here; the orchestrator sends them to the server. For Shell-only,
+  // this is a no-op placeholder until the Command wiring step.
+  const commandEmitter = {
+    emit: (payload: EditorCommandPayload) => {
+      // Phase 17.1: no-op. The Command wiring step will POST this payload to
+      // the Server-Side Orchestration API.
+      void payload;
+    },
+  };
+
 
 
   const handlePublish = async () => {
@@ -181,6 +201,15 @@ export function SitePreviewPage({
             <Settings2 aria-hidden="true" size={20} />
             ⚙️ 고급 편집
           </button>
+          <button
+            type="button"
+            onClick={() => setShellOpen(true)}
+            className="inline-flex min-h-14 items-center justify-center gap-2 rounded-sm border border-amber-900/30 bg-amber-900/5 px-6 py-3 text-base font-semibold text-amber-900 transition-colors hover:bg-amber-900 hover:text-[#fffdf8]"
+          >
+            <LayoutTemplate aria-hidden="true" size={20} />
+            🧩 에디터
+          </button>
+
         </div>
       </Card>
 
@@ -231,6 +260,25 @@ export function SitePreviewPage({
         onClose={() => setEditorOpen(false)}
         siteId={siteId}
       />
+
+      {/* Phase 17.1: four-zone Editor Shell (Dumb Client) as a full-screen
+          overlay. For Shell-only, renderNode is null (the shell renders its
+          empty states) and the command emitter is a no-op placeholder. The
+          server wiring (RenderNode preview + Command POST) is a later Phase 17
+          step. */}
+      {shellOpen ? (
+        <div className="fixed inset-0 z-[100]">
+          <EditorShell
+            renderNode={null}
+            commandEmitter={commandEmitter}
+            projectId={siteId}
+            pageId="home"
+            onClose={() => setShellOpen(false)}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
+
+

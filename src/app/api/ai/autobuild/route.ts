@@ -11,6 +11,7 @@ import {
   upsertSettings,
 } from '@/lib/db/queries';
 import { generateText } from '@/lib/ai/client';
+import { parseJsonResponse } from '@/lib/ai/engine';
 import { parseAwieDecision, toThemeConfigDecision } from '@/lib/ai/awie-schema';
 import { getCurrentUserTier, TIER_LIMITS } from '@/lib/config/tiers';
 import { getDefaultPages } from '@/lib/site-context';
@@ -86,43 +87,19 @@ export async function POST(request: Request) {
       JSON.stringify({ concept: trimmed, extraPages })
     );
 
-    // --- AI JSON sanitization (V2 emergency patch) -------------------------
-    // The AI frequently wraps its response in a markdown code fence
-    // (```json ... ```) or emits stray backticks / leading prose. We strip all
-    // of that BEFORE JSON.parse so a malformed wrapper never throws
-    // "Expected double-quoted property name in JSON at position N".
-    let cleaned = autobuildJson
-      .trim()
-      // Remove any leading prose up to the first `{` (AI sometimes answers
-      // with "Here is the JSON:" before the object).
-      .replace(/^[^{]*/, '')
-      // Remove a trailing markdown fence and any trailing prose after `}`.
-      // (`[^}]` already matches newlines, so no `s` flag is needed.)
-      .replace(/\}\s*```\s*[^}]*$/, '}')
-
-      // Remove any remaining ```json / ``` fences anywhere in the string.
-      .replace(/```json\s*/gi, '')
-      .replace(/```/g, '')
-      .trim();
-
-    // If the AI returned an empty object or nothing usable, fall back to a
-    // minimal valid object so site creation never breaks.
-    if (!cleaned || !cleaned.startsWith('{')) {
-      cleaned = '{}';
-    }
-
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(cleaned) as Record<string, unknown>;
-    } catch {
-      // Last-resort guard: if the AI still produced invalid JSON (e.g. an
-      // unescaped quote inside a Korean string), log it and fall back to an
-      // empty object. The rest of the handler already defaults every field, so
-      // a site is still created with sensible placeholder content.
+    // Sanitize + parse via the unified AI Engine parser (one sanitizer for
+    // every structured flow). If the AI produced no parseable JSON object,
+    // fall back to an empty object — the rest of the handler defaults every
+    // field, so a site is still created with sensible placeholder content.
+    const parsedJson = parseJsonResponse(autobuildJson);
+    const parsed: Record<string, unknown> =
+      parsedJson !== null && typeof parsedJson === 'object' && !Array.isArray(parsedJson)
+        ? (parsedJson as Record<string, unknown>)
+        : {};
+    if (parsedJson === null) {
       console.error('[autobuild] AI returned invalid JSON, using fallback:', {
         raw: autobuildJson.slice(0, 500),
       });
-      parsed = {};
     }
 
 
