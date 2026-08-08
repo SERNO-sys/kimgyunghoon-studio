@@ -121,9 +121,40 @@ export interface ProjectRepository {
    */
   loadReleasedSnapshot(projectId: CmsId): Promise<VersionSnapshot | undefined>;
 
+  /**
+   * Lists ALL VersionSnapshots for a Project, newest first.
+   *
+   * PHASE H.2 (Version History): This is a READ-ONLY query that surfaces the
+   * existing VersionSnapshot infrastructure as a user-facing Version History.
+   * It returns the immutable snapshots created by Publish, ordered by publish
+   * time (newest first). It NEVER mutates a snapshot and NEVER evaluates
+   * business meaning — it is a pure persistence query for the Application
+   * Layer.
+   *
+   * @param projectId The Project id.
+   * @returns The immutable VersionSnapshots for the Project, newest first.
+   */
+  listSnapshots(projectId: CmsId): Promise<VersionSnapshot[]>;
+
+  /**
+   * Loads a single VersionSnapshot by id.
+   *
+   * PHASE H.2 (Version History): This is a READ-ONLY query used to view the
+   * details of a specific version. It returns the immutable snapshot, or
+   * undefined if it does not exist. It NEVER mutates a snapshot.
+   *
+   * @param projectId The Project id.
+   * @param snapshotId The id of the VersionSnapshot to load.
+   * @returns The VersionSnapshot, or undefined if not found.
+   */
+  loadSnapshot(
+    projectId: CmsId,
+    snapshotId: CmsId,
+  ): Promise<VersionSnapshot | undefined>;
 
   /**
    * Archives a Project.
+
    *
    * This is a use-case-driven method: it transitions the Project to the
    * Archived lifecycle state.

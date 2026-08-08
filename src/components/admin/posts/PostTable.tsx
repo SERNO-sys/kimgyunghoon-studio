@@ -44,12 +44,15 @@ export function PostTable({ posts, onDelete }: PostTableProps) {
                 className={
                   post.status === 'published'
                     ? 'bg-green-100 text-green-900'
-                    : 'bg-stone-100 text-stone-700'
+                    : post.status === 'scheduled'
+                      ? 'bg-amber-100 text-amber-900'
+                      : 'bg-stone-100 text-stone-700'
                 }
               >
                 {post.status}
               </Badge>
             </TableCell>
+
             <TableCell>
               {new Date(post.updatedAt).toLocaleDateString()}
             </TableCell>

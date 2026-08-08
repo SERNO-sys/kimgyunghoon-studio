@@ -45,11 +45,13 @@ import {
   DeleteComponentHandler,
   EditorService,
   InsertComponentHandler,
+  MoveComponentHandler,
   ThemePatchPipeline,
   UpdateComponentHandler,
   UpdateHeadingHandler,
   type Command,
 } from '@/lib/cms-core';
+
 
 
 // Runtime Layer (Golden Path) — the orchestrator that renders ThemeConfig into
@@ -236,7 +238,9 @@ function buildEditorService(): EditorService<Command> {
   service.register(new UpdateComponentHandler());
   service.register(new InsertComponentHandler());
   service.register(new DeleteComponentHandler());
+  service.register(new MoveComponentHandler());
   return service;
+
 }
 
 

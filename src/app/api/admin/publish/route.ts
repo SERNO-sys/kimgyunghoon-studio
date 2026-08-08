@@ -4,15 +4,32 @@ import { getSessionFromRequest } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
 
 import {
-  getSettingsBySiteId,
   getSiteById,
-  listPostsBySite,
   listSitesByOwner,
-  updateSite,
 } from '@/lib/db/queries';
-import { createDeploymentSnapshot } from '@/lib/deployment';
+
+// The shared Publish pipeline. The admin Publish button MUST delegate to the
+// SAME PublishOrchestrator + shared singleton repository that the CMS publish
+// route uses. This is what makes a publish from the admin UI visible to the
+// Version History panel and the Delivery Layer (Public Serve API). The route
+// remains a THIN WRAPPER: it resolves the site's Draft ThemeConfig from D1 and
+// delegates the VersionSnapshot freeze + Release to the orchestrator, then
+// delegates ALL legacy D1 deployment bookkeeping (deployment snapshot,
+// isPublished flag, subdomain) to the Delivery Layer's DeploymentService so the
+// tenant subdomain still resolves.
+//
+// MILESTONE J — TOTAL LEGACY ABSORPTION:
+// The route NO LONGER re-implements any deployment logic. It consumes the
+// DeploymentResult snapshot returned by DeploymentService.recordDeployment().
+import {
+  DeploymentService,
+  PublishOrchestrator,
+  projectRepository,
+  resolveDraftThemeConfig,
+} from '@/lib/editor-integration/server';
 
 export const runtime = 'edge';
+
 
 /**
  * Resolves the site to publish. Prefers an explicit `siteId` from the request
@@ -70,81 +87,61 @@ export async function POST(request: NextRequest) {
     );
   }
 
-
-  // The tenant subdomain is the first segment of the site UUID (e.g.
-  // `f0e36aaa` for `f0e36aaa-xxxx-xxxx-xxxx-xxxxxxxxxxxx`). The middleware
-  // resolves `f0e36aaa.lucidworker.com` via a prefix match on the site id, so
-  // this is the value that must be bound for the subdomain to resolve.
-  const subdomain = siteId.split('-')[0] || siteId;
-  console.log('[Publish] siteId:', siteId);
-  console.log('[Publish] derived subdomain:', subdomain);
-  console.log('[Publish] public URL:', `https://${subdomain}.lucidworker.com`);
-
   try {
     const db = getDb();
-    const now = new Date().toISOString();
 
-    // Create a deployment snapshot first so we can persist its version.
-    const deployment = await createDeploymentSnapshot(db, siteId, 'manual');
-
-    // Mark the site as published and record the latest deploy version.
-    const updated = await updateSite(db, siteId, {
-      updatedAt: now,
-      isPublished: true,
-      deployVersion: deployment.version,
-    });
-    console.log('[Publish] updateSite result:', updated);
-    console.log('[Publish] isPublished now:', updated?.isPublished);
-
-    // Verify the publish state was actually persisted to D1 by re-reading the
-    // site. If it did not stick, surface a clear error instead of silently
-    // returning success (which would leave the tenant subdomain 404ing).
-    const persisted = await getSiteById(db, siteId);
-    if (!persisted) {
-      return NextResponse.json(
-        { success: false, message: 'Site not found after publish' },
-        { status: 500 }
-      );
-    }
-    if (!persisted.isPublished) {
-      console.error(
-        '[Publish] is_published did not persist for site',
-        siteId,
-        'persisted value:',
-        persisted.isPublished
-      );
+    // 1. DELEGATE TO THE SHARED PUBLISH PIPELINE.
+    //
+    //    The admin Publish button MUST freeze the site's Draft ThemeConfig into
+    //    an immutable VersionSnapshot and designate it as Live via the SAME
+    //    PublishOrchestrator + shared singleton repository that the CMS publish
+    //    route uses. This is what makes a publish from the admin UI visible to
+    //    the Version History panel and the Delivery Layer (Public Serve API).
+    //
+    //    The Draft is resolved from D1 via the shared resolver (the single
+    //    source of truth for the publish pipeline). The orchestrator's getDraft
+    //    is synchronous, so we resolve the Draft first and close over it.
+    const draft = await resolveDraftThemeConfig(db, siteId);
+    if (!draft) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            '발행 상태가 저장되지 않았습니다. 잠시 후 다시 시도해 주세요.',
+          message: '발행할 홈페이지 구성이 없습니다. 먼저 홈페이지를 생성해 주세요.',
         },
-        { status: 500 }
+        { status: 400 }
       );
     }
 
-    const settings = await getSettingsBySiteId(db, siteId);
-    if (settings) {
-      await db.settings.update(siteId, {
-        ...settings,
-        updatedAt: now,
-      });
+    const publishOrchestrator = new PublishOrchestrator(
+      projectRepository,
+      () => draft,
+    );
+    const publishResult = await publishOrchestrator.publish(
+      siteId,
+      session.userId,
+      '1.0.0',
+    );
+    console.log('[Publish] VersionSnapshot created:', publishResult.snapshot.id);
 
-      const posts = await listPostsBySite(db, siteId);
-      for (const post of posts) {
-        await db.posts.update(post.id, {
-          ...post,
-          updatedAt: now,
-        });
-      }
-    }
+    // 2. DELEGATE ALL LEGACY D1 DEPLOYMENT BOOKKEEPING TO THE DELIVERY LAYER.
+    //
+    //    The DeploymentService is the SINGLE owner of the legacy deployment
+    //    snapshot + isPublished flag + tenant subdomain resolution. It returns
+    //    a DeploymentResult snapshot (deployment record + subdomain + publicUrl)
+    //    that this route consumes verbatim. The route NEVER re-derives these.
+    const deploymentService = new DeploymentService(db);
+    const deploymentResult = await deploymentService.recordDeployment(
+      siteId,
+      'manual',
+    );
+    console.log('[Publish] deployment recorded:', deploymentResult.deployment.id);
 
     return NextResponse.json({
       success: true,
       message: '1초 만에 홈페이지가 실시간 갱신 배포되었습니다!',
-      deployment,
+      deployment: deploymentResult.deployment,
       siteId,
-      publicUrl: `https://${subdomain}.lucidworker.com`,
+      publicUrl: deploymentResult.publicUrl,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Publish failed';
@@ -155,5 +152,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

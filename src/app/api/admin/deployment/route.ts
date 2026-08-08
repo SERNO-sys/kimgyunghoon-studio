@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
 import { listSitesByOwner } from '@/lib/db/queries';
-import {
-  createDeploymentSnapshot,
-  getDeploymentHistoryForSite,
-  rollbackToDeployment,
-} from '@/lib/deployment';
+
+// MILESTONE J — TOTAL LEGACY ABSORPTION:
+// This route is a THIN WRAPPER. ALL deployment logic (snapshot creation,
+// history listing, rollback) is owned by the Delivery Layer's
+// DeploymentService. The route only resolves the current site and delegates.
+import { DeploymentService } from '@/lib/editor-integration/server';
 
 export const runtime = 'edge';
 
@@ -34,7 +35,8 @@ export async function GET() {
   }
 
   const db = getDb();
-  const deployments = await getDeploymentHistoryForSite(db, siteId);
+  const deploymentService = new DeploymentService(db);
+  const deployments = await deploymentService.getDeploymentHistoryForSite(siteId);
   return NextResponse.json({ success: true, deployments });
 }
 
@@ -60,12 +62,12 @@ export async function POST(request: Request) {
       commitHash?: string;
     };
     const db = getDb();
-    const record = await createDeploymentSnapshot(
-      db,
+    const deploymentService = new DeploymentService(db);
+    const result = await deploymentService.recordDeployment(
       siteId,
-      body.commitHash || 'manual'
+      body.commitHash || 'manual',
     );
-    return NextResponse.json({ success: true, deployment: record });
+    return NextResponse.json({ success: true, deployment: result.deployment });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Deploy failed';
     return NextResponse.json(
@@ -102,7 +104,8 @@ export async function PUT(request: Request) {
   }
 
   const db = getDb();
-  const record = await rollbackToDeployment(db, siteId, id);
+  const deploymentService = new DeploymentService(db);
+  const record = await deploymentService.rollbackToDeployment(siteId, id);
   if (!record) {
     return NextResponse.json(
       { success: false, message: 'Not found' },

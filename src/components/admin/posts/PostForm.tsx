@@ -47,6 +47,30 @@ function SlugInput({ form, setIsSlugManual }: SlugInputProps) {
   );
 }
 
+/**
+ * Milestone H — Phase H.1: Scheduled Publishing.
+ * Converts an ISO datetime (stored on the Post) to the local `datetime-local`
+ * input value, and back. The form keeps the ISO string; the input needs a
+ * local, timezone-less representation.
+ */
+function isoToLocalInput(iso?: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function localInputToIso(local: string): string {
+  if (!local) return '';
+  const date = new Date(local);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString();
+}
+
+
 export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
   const router = useRouter();
   const toast = useToast();
@@ -70,9 +94,11 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
       featuredImageUrl: post?.featuredImageUrl ?? '',
       content: post?.content ?? '',
       status: post?.status ?? 'draft',
+      scheduledAt: post?.scheduledAt ?? '',
     },
     mode: 'onBlur',
   });
+
 
   const title = form.watch('title');
   const slug = form.watch('slug');
@@ -234,11 +260,15 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
       });
       const result = (await response.json()) as { success?: boolean; message?: string; [key: string]: unknown };
       if (response.ok && result.success) {
-        toast.addToast(
-          status === 'published' ? 'Post published.' : 'Draft saved.',
-          'success'
-        );
+        const message =
+          status === 'published'
+            ? 'Post published.'
+            : status === 'scheduled'
+              ? 'Post scheduled.'
+              : 'Draft saved.';
+        toast.addToast(message, 'success');
         router.push('/admin/posts');
+
       } else {
         toast.addToast(
           result.message || 'Failed to save post.',
@@ -307,8 +337,32 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
           />
         </div>
 
+        <div>
+          <Label htmlFor="scheduledAt">Schedule Publish (optional)</Label>
+          <Input
+            id="scheduledAt"
+            type="datetime-local"
+            value={isoToLocalInput(form.watch('scheduledAt'))}
+            onChange={(event) =>
+              form.setValue('scheduledAt', localInputToIso(event.target.value), {
+                shouldValidate: true,
+              })
+            }
+          />
+          <p className="mt-1 text-xs text-stone-500">
+            Set a future time to hold this post as "Scheduled" until it
+            auto-publishes.
+          </p>
+          {form.formState.errors.scheduledAt && (
+            <p className="mt-1 text-sm text-red-600">
+              {form.formState.errors.scheduledAt.message}
+            </p>
+          )}
+        </div>
+
         <div className="md:col-span-2">
           <Label htmlFor="audioUrl">Audio / Music Source URL</Label>
+
           <Input
             id="audioUrl"
             type="url"
@@ -453,6 +507,17 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
           </Button>
           <Button
             type="button"
+            variant="secondary"
+            disabled={isSubmitting}
+            className="flex-1 sm:flex-none"
+            onClick={() =>
+              form.handleSubmit((data) => onSubmit(data, 'scheduled'))()
+            }
+          >
+            {isSubmitting ? 'Saving...' : 'Schedule'}
+          </Button>
+          <Button
+            type="button"
             disabled={isSubmitting}
             className="flex-1 sm:flex-none"
             onClick={() =>
@@ -461,6 +526,7 @@ export function PostForm({ post, defaultCategory, siteId }: PostFormProps) {
           >
             {isSubmitting ? 'Saving...' : 'Publish'}
           </Button>
+
         </div>
       </div>
     </form>

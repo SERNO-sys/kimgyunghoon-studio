@@ -5,7 +5,9 @@ import {
   createPost,
   listPostsBySite,
   listSitesByOwner,
+  publishDuePosts,
 } from '@/lib/db/queries';
+
 import { postSchema, type Post } from '@/lib/admin/posts';
 import { slugify } from '@/lib/admin/slug';
 
@@ -35,9 +37,13 @@ export async function GET() {
   }
 
   const db = getDb();
+  // Milestone H — Phase H.1: Scheduled Publishing. Lazily flip any scheduled
+  // posts whose due time has passed before returning the list.
+  await publishDuePosts(db, siteId);
   const posts = await listPostsBySite(db, siteId);
   return NextResponse.json({ success: true, posts });
 }
+
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -71,6 +77,15 @@ export async function POST(request: Request) {
     }
 
     const data = result.data;
+    const now = new Date().toISOString();
+    // Milestone H — Phase H.1: Scheduled Publishing. When a future scheduledAt
+    // is provided, hold the post in `scheduled` state. Otherwise honor the
+    // requested status (draft/published) and stamp publishedAt on publish.
+    const isScheduled =
+      data.status === 'scheduled' &&
+      !!data.scheduledAt &&
+      new Date(data.scheduledAt).getTime() > new Date(now).getTime();
+
     const newPost: Post = {
       id: crypto.randomUUID(),
       siteId,
@@ -87,10 +102,14 @@ export async function POST(request: Request) {
       audioUrl: data.audioUrl || undefined,
       featuredImageUrl: data.featuredImageUrl || undefined,
       content: data.content,
-      status: data.status,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      status: isScheduled ? 'scheduled' : data.status,
+      scheduledAt: data.scheduledAt || undefined,
+      publishedAt:
+        !isScheduled && data.status === 'published' ? now : undefined,
+      createdAt: now,
+      updatedAt: now,
     };
+
 
     const db = getDb();
     const post = await createPost(db, newPost);

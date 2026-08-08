@@ -53,10 +53,23 @@ export interface Post {
   content: string;
   audioUrl?: string;
   featuredImageUrl?: string;
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'scheduled';
+  /**
+   * Milestone H — Phase H.1: Scheduled Publishing.
+   * ISO datetime at which a scheduled post should auto-publish. When set to a
+   * future datetime, the post is held in `status = 'scheduled'` and flips to
+   * `published` lazily on the next read after the due time.
+   */
+  scheduledAt?: string;
+  /**
+   * Actual datetime the post became published. Set once when the post
+   * transitions to `published` (immediately or via the scheduled lazy-flip).
+   */
+  publishedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
+
 
 export interface Media {
   id: string;

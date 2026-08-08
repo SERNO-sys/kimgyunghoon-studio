@@ -39,8 +39,11 @@ import {
   InsertComponentHandler,
   createDeleteComponentCommand,
   DeleteComponentHandler,
+  createMoveComponentCommand,
+  MoveComponentHandler,
   ThemePatchPipeline,
 } from '../src/lib/cms-core';
+
 import type { ThemeConfig } from '../src/lib/theme-config/v2/types';
 
 let passed = 0;
@@ -382,11 +385,90 @@ section('F - Component Deletion (Phase 17.7 / Amendment G)');
 }
 
 // ---------------------------------------------------------------------------
+// G. Component Move / Reorder (Phase 17.8 / Amendment G)
+// ---------------------------------------------------------------------------
+
+section('G - Component Move / Reorder (Phase 17.8 / Amendment G)');
+
+{
+  const config = buildConfig();
+  const original = JSON.stringify(config);
+
+  // The Command binds to the Semantic Component Identities of the source
+  // ("hero") and the drop target ("footer"). It NEVER uses nodeId, DOM id,
+  // React key, RenderNode id, tree index, or runtime UUID.
+  const command = createMoveComponentCommand({
+    projectId: 'p1',
+    actorId: 'u1',
+    sourceSemanticId: 'hero',
+    targetSemanticId: 'footer',
+    sectionId: 'hero',
+  });
+  const handler = new MoveComponentHandler();
+  const patch = handler.toPatch(command, config);
+
+  // The handler MUST NOT mutate the config.
+  assert(
+    JSON.stringify(config) === original,
+    'MoveComponentHandler does NOT mutate the ThemeConfig',
+  );
+
+  // The patch is a SINGLE `replace` operation on the page's sectionIds array.
+  assert(
+    patch.operations.length === 1,
+    'MoveComponentHandler produces a SINGLE replace operation (whole sectionIds array)',
+  );
+  assert(
+    patch.operations[0].op === 'replace' &&
+      patch.operations[0].path === 'resources.pages[0].sectionIds',
+    'The replace operation targets the home page section order',
+  );
+
+  // The patch path is derived from the Semantic Component Identity. It NEVER
+  // uses nodeId / RenderNode id / React key.
+  assert(
+    !patch.operations[0].path.includes('nodeId') &&
+      !patch.operations[0].path.includes('renderNodeId') &&
+      !patch.operations[0].path.includes('key'),
+    'Move patch path NEVER uses nodeId / RenderNode id / React key',
+  );
+
+  // Applying the patch produces a NEW config with the source moved immediately
+  // AFTER the target (hero after footer -> ['footer', 'hero']).
+  const pipeline = new ThemePatchPipeline();
+  const next = pipeline.apply(config, patch);
+  assert(
+    next !== config,
+    'Applying the move patch produces a NEW ThemeConfig (never mutates in place)',
+  );
+  assert(
+    JSON.stringify(next.resources.pages[0].sectionIds) ===
+      JSON.stringify(['footer', 'hero']),
+    'The new config reorders the sections (hero moved after footer)',
+  );
+  assert(
+    JSON.stringify(config.resources.pages[0].sectionIds) ===
+      JSON.stringify(['hero', 'footer']),
+    'The original config is unchanged (original section order preserved)',
+  );
+
+  // HISTORY COMPATIBILITY (ADR-011B): The produced SINGLE `replace` operation
+  // is inverted by the existing InversePatchGenerator into a `replace`
+  // restoring the ORIGINAL array, so a Move is fully undoable with NO new
+  // history infrastructure.
+  assert(
+    patch.operations.every((op) => op.op === 'replace'),
+    'Move produces ONLY a replace operation (invertible by InversePatchGenerator)',
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 
 console.log(`\n${'='.repeat(60)}`);
 console.log(`Command Handlers Constitution Test: ${passed} passed, ${failed} failed`);
+
 console.log(`${'='.repeat(60)}`);
 
 if (failed > 0) {

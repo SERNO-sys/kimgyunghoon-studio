@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export type PostStatus = 'draft' | 'published';
+export type PostStatus = 'draft' | 'published' | 'scheduled';
 
 export interface Post {
   id: string;
@@ -13,6 +13,18 @@ export interface Post {
   audioUrl?: string;
   featuredImageUrl?: string;
   status: PostStatus;
+  /**
+   * Milestone H — Phase H.1: Scheduled Publishing.
+   * ISO datetime at which a scheduled post should auto-publish. When set to a
+   * future datetime, the post is held in `status = 'scheduled'` and flips to
+   * `published` lazily on the next read after the due time.
+   */
+  scheduledAt?: string;
+  /**
+   * Actual datetime the post became published. Set once when the post
+   * transitions to `published` (immediately or via the scheduled lazy-flip).
+   */
+  publishedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,8 +51,16 @@ export const postSchema = z.object({
     ])
     .optional(),
   content: z.string().min(1, 'Content is required'),
-  status: z.enum(['draft', 'published']),
+  status: z.enum(['draft', 'published', 'scheduled']),
+  /**
+   * Optional ISO datetime for scheduled publishing. When present and in the
+   * future, the server holds the post in `status = 'scheduled'`.
+   */
+  scheduledAt: z
+    .union([z.literal(''), z.string().datetime({ offset: true })])
+    .optional(),
 });
+
 
 export type PostFormData = z.infer<typeof postSchema>;
 

@@ -172,8 +172,149 @@ export type EditorHistoryResponse = EditorHistoryResult | EditorHistoryError;
 
 
 // ---------------------------------------------------------------------------
+// Version History Wire Contract (Server -> Client)
+// ---------------------------------------------------------------------------
+
+/**
+ * A single Version History entry.
+ *
+ * PHASE H.2 (Version History): This is the METADATA of an immutable
+ * VersionSnapshot, surfaced to the Dumb Client. It deliberately NEVER carries
+ * the ThemeConfig — the client NEVER receives or holds the ThemeConfig. It
+ * carries only the snapshot identity, the semantic version, the schema version,
+ * the publisher, and the publish time.
+ */
+export interface VersionHistoryEntry {
+  /** The stable snapshot id. */
+  readonly snapshotId: string;
+  /** The semantic version of this snapshot (e.g. "1.0.0"). */
+  readonly version: string;
+  /** The ThemeConfig schema version (e.g. "v2.0"). */
+  readonly schemaVersion: string;
+  /** The id of the user who published this snapshot. */
+  readonly publishedBy: string;
+  /** When the snapshot was created (publish time). */
+  readonly publishedAt: string;
+  /** Whether this snapshot is the currently Released (Live) version. */
+  readonly isLive: boolean;
+}
+
+/**
+ * The result of listing a Project's Version History.
+ *
+ * PHASE H.2 (Version History): The Dumb Client receives ONLY the snapshot
+ * metadata — NEVER the ThemeConfig. The list is ordered newest-first. The
+ * `liveSnapshotId` identifies the currently Released (Live) version, and
+ * `hasDraft` indicates whether an unpublished Draft exists in the Preview
+ * Session (Published/Draft visibility).
+ */
+export interface VersionHistoryResult {
+  /** Whether the query succeeded. */
+  readonly success: true;
+  /** The id of the Project. */
+  readonly projectId: string;
+  /** The Version History entries, newest first. */
+  readonly versions: readonly VersionHistoryEntry[];
+  /** The id of the currently Released (Live) snapshot, if any. */
+  readonly liveSnapshotId?: string;
+  /** Whether an unpublished Draft exists in the Preview Session. */
+  readonly hasDraft: boolean;
+}
+
+/**
+ * The result of viewing a single Version's details.
+ *
+ * PHASE H.2 (Version History): The Dumb Client receives the snapshot metadata
+ * PLUS a framework-agnostic RenderNode preview of that version's home page. It
+ * NEVER receives or holds the ThemeConfig — the server renders the snapshot via
+ * the GoldenPathOrchestrator (Runtime Layer) and returns only the RenderNode.
+ */
+export interface VersionDetailResult {
+  /** Whether the query succeeded. */
+  readonly success: true;
+  /** The id of the Project. */
+  readonly projectId: string;
+  /** The snapshot metadata. */
+  readonly version: VersionHistoryEntry;
+  /** The framework-agnostic RenderNode preview of this version. */
+  readonly preview: RenderNode;
+  /** The id of the page that was rendered. */
+  readonly pageId: string;
+}
+
+/**
+ * The error result returned by the Version History API when a query fails.
+ */
+export interface VersionHistoryError {
+  /** Always false for an error result. */
+  readonly success: false;
+  /** A human-readable error message. */
+  readonly error: string;
+}
+
+/**
+ * The union of possible Version History API responses.
+ */
+export type VersionHistoryResponse =
+  | VersionHistoryResult
+  | VersionDetailResult
+  | VersionHistoryError;
+
+
+// ---------------------------------------------------------------------------
+// Version Rollback Wire Contract (Server -> Client)
+// ---------------------------------------------------------------------------
+
+/**
+ * The result of a Version Rollback operation.
+ *
+ * PHASE H.3 (Version Rollback): The Dumb Client sends a single POST intent to
+ * roll back to a specific VersionSnapshot. The server re-points the Release
+ * Pointer at that snapshot (the existing rollback capability) and returns ONLY
+ * metadata — the rolled-back snapshot's identity, version, and publish time,
+ * plus the new Live snapshot id. The client NEVER receives or holds the
+ * ThemeConfig.
+ *
+ * The snapshots themselves are NEVER mutated. Rollback only moves the Release
+ * Pointer, which is the single, mutable "live" designation.
+ */
+export interface VersionRollbackResult {
+  /** Whether the rollback succeeded. */
+  readonly success: true;
+  /** The id of the Project. */
+  readonly projectId: string;
+  /** The id of the snapshot that is now Live after the rollback. */
+  readonly liveSnapshotId: string;
+  /** The semantic version of the snapshot that is now Live. */
+  readonly version: string;
+  /** The ThemeConfig schema version of the rolled-back snapshot. */
+  readonly schemaVersion: string;
+  /** When the rolled-back snapshot was originally published. */
+  readonly publishedAt: string;
+  /** The id of the user who originally published the rolled-back snapshot. */
+  readonly publishedBy: string;
+}
+
+/**
+ * The error result returned by the Version Rollback API when a rollback fails.
+ */
+export interface VersionRollbackError {
+  /** Always false for an error result. */
+  readonly success: false;
+  /** A human-readable error message. */
+  readonly error: string;
+}
+
+/**
+ * The union of possible Version Rollback API responses.
+ */
+export type VersionRollbackResponse = VersionRollbackResult | VersionRollbackError;
+
+
+// ---------------------------------------------------------------------------
 // Preview Session
 // ---------------------------------------------------------------------------
+
 
 /**
  * A Preview Session decouples the Editor (Draft) state from the Published

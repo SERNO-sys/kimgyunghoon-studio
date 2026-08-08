@@ -65,9 +65,11 @@ import { SelectionModel } from './selection-model';
 import {
   DropIntentAdapter,
   generateInsertComponentCommand,
+  generateMoveComponentCommand,
   type DragSourcePayload,
   type DropTargetPayload,
 } from './drop-intent';
+
 import {
   generateUpdateComponentCommand,
   isInlineEditable,
@@ -269,9 +271,19 @@ export function EditorCanvas({
         // AMENDMENT J: The generated Command is intent only. It is handed to the
         // EditorCommandEmitter, which sends it to the Server-Side Orchestration
         // API. The client NEVER applies the Command itself.
-        const command = generateInsertComponentCommand(intent, ++clientSequenceRef.current);
+        //
+        // PHASE 17.8 - COMPONENT MOVE (REORDER): A MOVE intent (dragging an
+        // EXISTING section onto another section) generates a
+        // MoveComponentCommand; an INSERT intent (dragging a NEW palette item)
+        // generates an InsertComponentCommand. Both bind to Semantic Component
+        // Identity only (Amendment G / Amendment L).
+        const command =
+          intent.kind === 'move'
+            ? generateMoveComponentCommand(intent, ++clientSequenceRef.current)
+            : generateInsertComponentCommand(intent, ++clientSequenceRef.current);
         commandEmitter.emit(command);
       }
+
 
       // AMENDMENT K: Clear the disposable drag state on drop.
       setActiveDrag(null);

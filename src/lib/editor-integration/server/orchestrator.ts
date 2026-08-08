@@ -44,6 +44,7 @@ import type {
   DeleteComponentCommand,
   EditorService,
   InsertComponentCommand,
+  MoveComponentCommand,
   UpdateComponentCommand,
   UpdateHeadingCommand,
 } from '../../cms-core';
@@ -53,9 +54,11 @@ import {
   ThemePatchPipeline,
   DELETE_COMPONENT_COMMAND,
   INSERT_COMPONENT_COMMAND,
+  MOVE_COMPONENT_COMMAND,
   UPDATE_COMPONENT_COMMAND,
   UPDATE_HEADING_COMMAND,
 } from '../../cms-core';
+
 
 import type { GoldenPathOrchestrator } from '../../golden-path';
 import type {
@@ -209,8 +212,10 @@ export class ServerSideOrchestrator {
     | UpdateHeadingCommand
     | UpdateComponentCommand
     | InsertComponentCommand
-    | DeleteComponentCommand {
+    | DeleteComponentCommand
+    | MoveComponentCommand {
     const createdAt = new Date().toISOString();
+
 
     switch (payload.type) {
       case UPDATE_HEADING_COMMAND:
@@ -326,10 +331,49 @@ export class ServerSideOrchestrator {
         };
       }
 
+      // PHASE 17.8 - COMPONENT MOVE (REORDER): The client emits a
+      // MoveComponentCommand (Semantic Component Identity based, ADR-012 /
+      // Amendment G) when an existing section is dragged onto another section.
+      // The server translates the wire payload into a full Command and executes
+      // it via the EditorService. The produced SINGLE `replace` operation on the
+      // page's `sectionIds` array is inverted by the existing
+      // InversePatchGenerator (restoring the ORIGINAL array), so Move is fully
+      // undoable with no new history infrastructure.
+      case MOVE_COMPONENT_COMMAND: {
+        // The wire payload's `value` is a JSON string carrying the source and
+        // target Semantic Component Identities (see drop-intent.ts).
+        let sourceSemanticId = '';
+        let targetSemanticId = '';
+        try {
+          const parsed = JSON.parse(payload.value ?? '{}') as {
+            sourceSemanticId?: string;
+            targetSemanticId?: string;
+          };
+          sourceSemanticId = parsed.sourceSemanticId ?? '';
+          targetSemanticId = parsed.targetSemanticId ?? '';
+        } catch {
+          // Fall back to the raw payload value if it is not JSON.
+          sourceSemanticId = payload.sectionId ?? '';
+          targetSemanticId = payload.value ?? '';
+        }
+        return {
+          type: MOVE_COMPONENT_COMMAND,
+          commandId: payload.commandId,
+          projectId,
+          actorId,
+          sourceSemanticId,
+          targetSemanticId,
+          sectionId: payload.sectionId ?? '',
+          createdAt,
+          requiredCapability: 'project:edit',
+        };
+      }
+
       default:
         throw new Error(
           `ServerSideOrchestrator: unsupported command type "${payload.type}".`,
         );
+
     }
   }
 

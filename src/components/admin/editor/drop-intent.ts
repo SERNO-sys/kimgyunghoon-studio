@@ -202,3 +202,39 @@ export function generateInsertComponentCommand(
     clientSequence,
   };
 }
+
+/**
+ * Generates a MoveComponentCommand (an EditorCommandPayload) from a MOVE
+ * DropIntent.
+ *
+ * PHASE 17.8 - COMPONENT MOVE (REORDER): When an EXISTING section is dragged
+ * onto another section, the canvas builds a MOVE DropIntent and this generator
+ * converts it into a MoveComponentCommand. The value carries the source and
+ * target Semantic Component Identities (AMENDMENT L / Amendment G) — the ONLY
+ * identities. The server interprets this to perform the actual reorder.
+ *
+ * AMENDMENT J: The generated Command is intent only. It is handed to the
+ * EditorCommandEmitter, which sends it to the Server-Side Orchestration API.
+ * The client NEVER applies the Command itself.
+ *
+ * @param intent The MOVE DropIntent (source + target Semantic Component Identity).
+ * @param clientSequence The client sequence number for the Command.
+ * @returns A MoveComponentCommand wire payload.
+ */
+export function generateMoveComponentCommand(
+  intent: DropIntent,
+  clientSequence: number,
+): EditorCommandPayload {
+  return {
+    type: MOVE_COMPONENT_COMMAND_TYPE,
+    commandId: `move-${intent.sourceComponentId}-${Date.now()}-${clientSequence}`,
+    sectionId: intent.sectionId ?? undefined,
+    value: JSON.stringify({
+      sourceSemanticId: intent.sourceComponentId,
+      targetSemanticId: intent.targetSemanticId,
+    }),
+    clientSequence,
+  };
+}
+
+

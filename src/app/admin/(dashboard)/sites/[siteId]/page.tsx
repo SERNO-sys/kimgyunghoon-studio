@@ -3,15 +3,18 @@ import { notFound, redirect } from 'next/navigation';
 import { getSession } from '@/lib/admin/session';
 import { getDb } from '@/lib/db/client';
 import {
+  countMediaBySite,
+  countPostsBySite,
   getPrimaryDomain,
   getSettingsBySiteId,
   getSiteById,
+  listDeployVersionsBySite,
+  listDomainsBySite,
 } from '@/lib/db/queries';
 
 import { getEnv } from '@/config/env';
 import type { AiDesignReport } from '@/types/site';
 import { SitePreviewPage } from './page.client';
-
 
 export const runtime = 'edge';
 
@@ -46,6 +49,19 @@ export default async function AdminSitePreviewPage({
 
   const settings = await getSettingsBySiteId(db, siteId);
   const primary = await getPrimaryDomain(db, siteId);
+
+  // Phase 20.6: Project-scoped content stats. A read-only server-rendered
+  // snapshot of what lives inside THIS project (posts, media, domains, deploy
+  // versions). The client is a Dumb Client — it only renders these counts and
+  // links to the existing management surfaces. No business logic, no
+  // ThemeConfig mutation.
+  const [postCount, mediaCount, domainCount, deployVersionCount] =
+    await Promise.all([
+      countPostsBySite(db, siteId),
+      countMediaBySite(db, siteId),
+      listDomainsBySite(db, siteId).then((domains) => domains.length),
+      listDeployVersionsBySite(db, siteId).then((versions) => versions.length),
+    ]);
 
   // Build the public site URL as a tenant subdomain of the fixed platform
   // domain (e.g. https://e801f11c.lucidworker.com). Local dev falls back to
@@ -83,8 +99,10 @@ export default async function AdminSitePreviewPage({
       previewUrl={previewUrl}
       primaryDomain={primary?.domain ?? null}
       aiDesignReport={aiDesignReport}
+      postCount={postCount}
+      mediaCount={mediaCount}
+      domainCount={domainCount}
+      deployVersionCount={deployVersionCount}
     />
   );
 }
-
-

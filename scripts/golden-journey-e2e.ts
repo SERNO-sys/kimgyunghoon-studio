@@ -197,9 +197,31 @@ class InMemoryProjectRepository implements ProjectRepository {
     }
     return this.snapshots.get(pointer);
   }
+  async listSnapshots(projectId: string): Promise<VersionSnapshot[]> {
+    // PHASE H.2 (Version History): A READ-ONLY query that surfaces the existing
+    // VersionSnapshot infrastructure. It returns the immutable snapshots for
+    // the project, ordered by publish time (newest first).
+    return Array.from(this.snapshots.values())
+      .filter((s) => s.projectId === projectId)
+      .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  }
+  async loadSnapshot(
+    projectId: string,
+    snapshotId: string,
+  ): Promise<VersionSnapshot | undefined> {
+    // PHASE H.2 (Version History): A READ-ONLY query used to view the details
+    // of a specific version. It returns the immutable snapshot, or undefined if
+    // it does not exist or belongs to a different project.
+    const snapshot = this.snapshots.get(snapshotId);
+    if (!snapshot || snapshot.projectId !== projectId) {
+      return undefined;
+    }
+    return snapshot;
+  }
   async archive(): Promise<void> {
     // No-op for this milestone.
   }
+
   async loadLifecycle(): Promise<
     import('@/lib/cms-core').ProjectLifecycle | undefined
   > {

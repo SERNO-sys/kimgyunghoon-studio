@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@awie/sdk": ["./src/lib/sdk"],
+      "@cloudflare/*": ["./node_modules/@cloudflare/*"]
+    }
+  }
+}

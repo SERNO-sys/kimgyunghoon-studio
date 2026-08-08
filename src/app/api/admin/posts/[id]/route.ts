@@ -69,6 +69,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     const data = result.data;
+    const now = new Date().toISOString();
+    // Milestone H — Phase H.1: Scheduled Publishing. When a future scheduledAt
+    // is provided, hold the post in `scheduled` state. Otherwise honor the
+    // requested status and stamp publishedAt once on publish.
+    const isScheduled =
+      data.status === 'scheduled' &&
+      !!data.scheduledAt &&
+      new Date(data.scheduledAt).getTime() > new Date(now).getTime();
+
     const updatedPost: Partial<Post> = {
       title: data.title,
       slug: data.slug,
@@ -83,9 +92,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
       audioUrl: data.audioUrl || undefined,
       featuredImageUrl: data.featuredImageUrl || undefined,
       content: data.content,
-      status: data.status,
-      updatedAt: new Date().toISOString(),
+      status: isScheduled ? 'scheduled' : data.status,
+      scheduledAt: data.scheduledAt || undefined,
+      publishedAt:
+        !isScheduled && data.status === 'published'
+          ? existing.publishedAt ?? now
+          : existing.publishedAt,
+      updatedAt: now,
     };
+
 
     const post = await updatePost(db, id, updatedPost);
     return NextResponse.json({ success: true, post });

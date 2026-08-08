@@ -12,3 +12,22 @@
 
 export { ServerSideOrchestrator } from './orchestrator';
 export { PreviewSessionStore } from './preview-session-store';
+export { InMemoryProjectRepository } from './project-repository';
+export { D1ProjectRepository } from './d1-project-repository';
+export { PublishOrchestrator } from './publish-orchestrator';
+
+export type { PublishResult } from './publish-orchestrator';
+export { VersionHistoryService } from './version-history-service';
+export { VersionRollbackService } from './version-rollback-service';
+export { DeliveryCache } from './delivery-cache';
+export type { ConditionalGetDecision } from './delivery-cache';
+export {
+  STABLE_URL_CACHE_CONTROL,
+  VERSIONED_URL_CACHE_CONTROL,
+} from './delivery-cache';
+export { projectRepository, previewStore } from './state';
+export { resolveDraftThemeConfig } from './draft-resolver';
+export { DeploymentService } from './deployment-service';
+export type { DeploymentResult } from './deployment-service';
+
+

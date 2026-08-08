@@ -31,7 +31,9 @@ export function PostsFilter({
       >
         <option value="all">All Status</option>
         <option value="published">Published</option>
+        <option value="scheduled">Scheduled</option>
         <option value="draft">Draft</option>
+
       </Select>
     </div>
   );

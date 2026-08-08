@@ -21,6 +21,7 @@
  */
 
 import type { ThemeConfig } from '../../theme-config/v2/types';
+import { createUniqueId } from '../domain/ids';
 import type { CmsId, Timestamp } from '../domain/types';
 import type { ThemePatch } from '../patch/types';
 import type { Command, CommandHandler } from './types';
@@ -58,8 +59,7 @@ export function createPublishProjectCommand(params: {
   const createdAt = params.createdAt ?? new Date().toISOString();
   return {
     type: PUBLISH_PROJECT_COMMAND,
-    commandId:
-      params.commandId ?? `cmd-${params.projectId}-${createdAt}-publish`,
+    commandId: params.commandId ?? createUniqueId('cmd'),
     projectId: params.projectId,
     actorId: params.actorId,
     version: params.version,

@@ -366,6 +366,25 @@ class InMemoryProjectRepository implements ProjectRepository {
     }
     return this.snapshots.find((s) => s.id === pointer);
   }
+  async listSnapshots(projectId: string): Promise<VersionSnapshot[]> {
+    // PHASE H.2 (Version History): A READ-ONLY query that surfaces the existing
+    // VersionSnapshot infrastructure. It returns the immutable snapshots for
+    // the project, ordered by publish time (newest first).
+    return this.snapshots
+      .filter((s) => s.projectId === projectId)
+      .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  }
+  async loadSnapshot(
+    projectId: string,
+    snapshotId: string,
+  ): Promise<VersionSnapshot | undefined> {
+    // PHASE H.2 (Version History): A READ-ONLY query used to view the details
+    // of a specific version. It returns the immutable snapshot, or undefined if
+    // it does not exist or belongs to a different project.
+    return this.snapshots.find(
+      (s) => s.id === snapshotId && s.projectId === projectId,
+    );
+  }
   async archive(projectId: string): Promise<void> {
     this.lifecycles.set(projectId, 'archived');
   }
@@ -373,6 +392,7 @@ class InMemoryProjectRepository implements ProjectRepository {
     return this.lifecycles.get(projectId);
   }
 }
+
 
 
 

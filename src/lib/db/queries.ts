@@ -54,6 +54,52 @@ export async function deleteSite(db: Db, id: string): Promise<boolean> {
   return await db.sites.delete(id);
 }
 
+/**
+ * Phase 20.5: Duplicate Project.
+ *
+ * Clones a site's design (ThemeConfig + settings + pages) into a brand-new,
+ * independent Site row. The source ThemeConfig is the immutable SSOT — it is
+ * READ and copied verbatim, never mutated. The new site gets a fresh id and
+ * fresh timestamps so it is fully independent of the source.
+ *
+ * Content/infra (domains, posts, media, deploy versions) are intentionally NOT
+ * copied: each project owns its own subdomain and content. Only the design
+ * surface is duplicated.
+ */
+export async function duplicateSite(
+  db: Db,
+  source: Site,
+  newName: string,
+  newDescription: string
+): Promise<Site> {
+  const now = new Date().toISOString();
+  const newId = crypto.randomUUID();
+
+  const copy: Site = {
+    id: newId,
+    ownerId: source.ownerId,
+    name: newName,
+    description: newDescription,
+    language: source.language,
+    timezone: source.timezone,
+    theme: source.theme,
+    // The immutable SSOT is copied verbatim (deep-cloned) so the new project
+    // starts from the exact same design. It is never mutated here.
+    themeConfig: source.themeConfig
+      ? (JSON.parse(JSON.stringify(source.themeConfig)) as typeof source.themeConfig)
+      : undefined,
+    maintenance: false,
+    isPublished: false,
+    deployVersion: '',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await db.sites.insert(copy);
+  return copy;
+}
+
+
 // ---------- Domains ----------
 
 export async function getDomainByName(db: Db, domain: string): Promise<Domain | null> {
@@ -110,10 +156,11 @@ export async function getSiteBySubdomain(
 export async function listPostsBySite(
   db: Db,
   siteId: string,
-  status?: 'draft' | 'published'
+  status?: 'draft' | 'published' | 'scheduled'
 ): Promise<Post[]> {
   return await db.posts.findMany(status ? { siteId, status } : { siteId });
 }
+
 
 export async function getPostById(db: Db, id: string): Promise<Post | null> {
   return await db.posts.findById(id);
@@ -139,6 +186,59 @@ export async function countPostsBySite(db: Db, siteId: string): Promise<number> 
   const posts = await db.posts.findMany({ siteId });
   return posts.length;
 }
+
+/**
+ * Milestone H — Phase H.1: Scheduled Publishing.
+ *
+ * Returns posts for a site that are currently held in the `scheduled` state.
+ * Used by the admin Posts list to surface upcoming publications.
+ */
+export async function listScheduledPostsBySite(
+  db: Db,
+  siteId: string
+): Promise<Post[]> {
+  const posts = await db.posts.findMany({ siteId, status: 'scheduled' });
+  return posts.sort(
+    (a, b) =>
+      new Date(a.scheduledAt ?? 0).getTime() -
+      new Date(b.scheduledAt ?? 0).getTime()
+  );
+}
+
+/**
+ * Milestone H — Phase H.1: Scheduled Publishing.
+ *
+ * THE single scheduling helper reused across ALL read paths (admin list, admin
+ * detail, public post read). It lazily flips any `scheduled` post whose due
+ * time has passed into `published`, stamping `published_at` once.
+ *
+ * This is a deterministic, no-new-infrastructure approach: on an Edge/D1 stack
+ * without a guaranteed cron, scheduled posts become visible the first time they
+ * are observed after their due time. It never mutates ThemeConfig and never
+ * touches Core — it only transitions post rows.
+ *
+ * Returns the ids of posts that were flipped, so callers can re-read if needed.
+ */
+export async function publishDuePosts(db: Db, siteId: string): Promise<string[]> {
+  const now = new Date().toISOString();
+  const scheduled = await db.posts.findMany({ siteId, status: 'scheduled' });
+  const flipped: string[] = [];
+
+  for (const post of scheduled) {
+    if (!post.scheduledAt) continue;
+    if (new Date(post.scheduledAt).getTime() <= new Date(now).getTime()) {
+      await db.posts.update(post.id, {
+        status: 'published',
+        publishedAt: post.publishedAt ?? now,
+        updatedAt: now,
+      });
+      flipped.push(post.id);
+    }
+  }
+
+  return flipped;
+}
+
 
 // ---------- Media ----------
 

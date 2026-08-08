@@ -53,6 +53,7 @@ export type {
   CommandType,
   DeleteComponentCommand,
   InsertComponentCommand,
+  MoveComponentCommand,
   PublishProjectCommand,
   ReleaseProjectCommand,
   UpdateComponentCommand,
@@ -61,6 +62,7 @@ export type {
 export {
   createDeleteComponentCommand,
   createInsertComponentCommand,
+  createMoveComponentCommand,
   createPublishProjectCommand,
   createReleaseProjectCommand,
   createUpdateComponentCommand,
@@ -70,6 +72,8 @@ export {
   EditorService,
   InsertComponentHandler,
   INSERT_COMPONENT_COMMAND,
+  MoveComponentHandler,
+  MOVE_COMPONENT_COMMAND,
   PublishProjectHandler,
   PUBLISH_PROJECT_COMMAND,
   ReleaseProjectHandler,
@@ -79,6 +83,7 @@ export {
   UpdateHeadingHandler,
   UPDATE_HEADING_COMMAND,
 } from './commands';
+
 
 
 

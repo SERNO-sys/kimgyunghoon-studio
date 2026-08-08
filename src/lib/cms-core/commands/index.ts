@@ -51,12 +51,19 @@ export {
 } from './delete-component';
 export type { DeleteComponentCommand } from './delete-component';
 
+export {
+  createMoveComponentCommand,
+  MoveComponentHandler,
+  MOVE_COMPONENT_COMMAND,
+} from './move-component';
+export type { MoveComponentCommand } from './move-component';
 
 export {
   createPublishProjectCommand,
   PublishProjectHandler,
   PUBLISH_PROJECT_COMMAND,
 } from './publish-project';
+
 export type { PublishProjectCommand } from './publish-project';
 
 export {
