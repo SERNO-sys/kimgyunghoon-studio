@@ -54,6 +54,10 @@ import {
   createPublishProjectCommand,
   createReleaseProjectCommand,
 } from '../../cms-core';
+import { AuditLogRepository } from './audit-log-repository';
+import { DeliveryLogger } from './delivery-logger';
+import { DeliveryMetrics } from './delivery-metrics';
+
 
 /** The schema version of the ThemeConfig snapshots produced by this workflow. */
 const SNAPSHOT_SCHEMA_VERSION = 'v2.0';
@@ -88,17 +92,35 @@ export interface PublishResult {
  * decides business meaning.
  */
 export class PublishOrchestrator {
+  /** The durable audit trail (D1-backed, with in-memory fallback). */
+  private readonly audit: AuditLogRepository;
+  /** The structured JSON-lines logger. */
+  private readonly logger: DeliveryLogger;
+  /** The delivery metrics facade. */
+  private readonly metrics: DeliveryMetrics;
+
   /**
    * Constructs a PublishOrchestrator.
    *
    * @param repository The shared ProjectRepository (persistence port).
    * @param getDraft A function that resolves the current Draft ThemeConfig for
    *   a project (from the Preview Session).
+   * @param audit An optional AuditLogRepository (defaults to a fresh instance).
+   * @param logger An optional DeliveryLogger (defaults to a fresh instance).
+   * @param metrics An optional DeliveryMetrics (defaults to a fresh instance).
    */
   constructor(
     private readonly repository: ProjectRepository,
     private readonly getDraft: (projectId: string) => ThemeConfig,
-  ) {}
+    audit?: AuditLogRepository,
+    logger?: DeliveryLogger,
+    metrics?: DeliveryMetrics,
+  ) {
+    this.audit = audit ?? new AuditLogRepository();
+    this.logger = logger ?? new DeliveryLogger();
+    this.metrics = metrics ?? new DeliveryMetrics();
+  }
+
 
   /**
    * Executes the Publish Workflow for a project.
@@ -113,9 +135,12 @@ export class PublishOrchestrator {
     actorId: string,
     version: string,
   ): Promise<PublishResult> {
+    const startedAt = Date.now();
+
     // 1. Read the current Draft ThemeConfig (Preview Session). The Draft is the
     //    working copy; it is read-only here and NEVER mutated.
     const draft = this.getDraft(projectId);
+
 
     // 2. Execute the PublishProjectCommand (Application Layer). This FREEZES
     //    the Draft into an immutable VersionSnapshot. The command is PURE
@@ -162,6 +187,28 @@ export class PublishOrchestrator {
     //    itself is immutable and never touched; only the pointer moves.
     await this.repository.release(projectId, snapshot.id);
 
+    const durationMs = Date.now() - startedAt;
+
+    // OBSERVABILITY: record the publish in the durable audit trail, emit a
+    // structured log line, and increment the publish metric. These are pure
+    // infrastructure side-effects; they NEVER alter the publish result.
+    await this.audit.record({
+      id: crypto.randomUUID(),
+      projectId,
+      actorId,
+      action: 'publish',
+      commandHash: publishCommand.commandId,
+      detail: `version=${version} snapshot=${snapshot.id}`,
+      createdAt: publishedAt,
+    });
+    this.logger.info('delivery.publish', 'publish.completed', {
+      projectId,
+      actorId,
+      durationMs,
+      fields: { version, snapshotId: snapshot.id },
+    });
+    this.metrics.recordPublish(projectId);
+
     // 7. Return the PublishResult. The client receives ONLY this — never the
     //    ThemeConfig.
     return {
@@ -174,3 +221,5 @@ export class PublishOrchestrator {
     };
   }
 }
+
+

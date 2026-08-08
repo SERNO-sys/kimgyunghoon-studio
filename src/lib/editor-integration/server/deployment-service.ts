@@ -57,6 +57,10 @@ import {
   restoreSiteSnapshot,
   updateSite,
 } from '../../db/queries';
+import { AuditLogRepository } from './audit-log-repository';
+import { DeliveryLogger } from './delivery-logger';
+import { DeliveryMetrics } from './delivery-metrics';
+
 
 /** The legacy deployment snapshot payload (settings + posts). */
 interface Snapshot {
@@ -88,12 +92,32 @@ export interface DeploymentResult {
  * business meaning.
  */
 export class DeploymentService {
+  /** The durable audit trail (D1-backed, with in-memory fallback). */
+  private readonly audit: AuditLogRepository;
+  /** The structured JSON-lines logger. */
+  private readonly logger: DeliveryLogger;
+  /** The delivery metrics facade. */
+  private readonly metrics: DeliveryMetrics;
+
   /**
    * Constructs a DeploymentService.
    *
    * @param db The D1 database handle (persistence port).
+   * @param audit An optional AuditLogRepository (defaults to a fresh instance).
+   * @param logger An optional DeliveryLogger (defaults to a fresh instance).
+   * @param metrics An optional DeliveryMetrics (defaults to a fresh instance).
    */
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    audit?: AuditLogRepository,
+    logger?: DeliveryLogger,
+    metrics?: DeliveryMetrics,
+  ) {
+    this.audit = audit ?? new AuditLogRepository();
+    this.logger = logger ?? new DeliveryLogger();
+    this.metrics = metrics ?? new DeliveryMetrics();
+  }
+
 
   /**
    * Derives the tenant subdomain from a site id.
@@ -132,6 +156,7 @@ export class DeploymentService {
     siteId: string,
     commitHash: string,
   ): Promise<DeploymentResult> {
+    const startedAt = Date.now();
     const now = new Date().toISOString();
 
     // 1. Create a legacy deployment snapshot first so we can persist its
@@ -168,12 +193,34 @@ export class DeploymentService {
     }
 
     const subdomain = this.subdomainFor(siteId);
+    const durationMs = Date.now() - startedAt;
+
+    // OBSERVABILITY: record the deployment in the durable audit trail, emit a
+    // structured log line, and increment the deployment metric. These are pure
+    // infrastructure side-effects; they NEVER alter the deployment result.
+    await this.audit.record({
+      id: crypto.randomUUID(),
+      projectId: siteId,
+      actorId: 'system',
+      action: 'deployment',
+      commandHash: commitHash,
+      detail: `version=${deployment.version}`,
+      createdAt: now,
+    });
+    this.logger.info('delivery.deployment', 'deployment.recorded', {
+      projectId: siteId,
+      durationMs,
+      fields: { version: deployment.version, commitHash },
+    });
+    this.metrics.recordDeployment(siteId);
+
     return {
       deployment,
       subdomain,
       publicUrl: `https://${subdomain}.lucidworker.com`,
     };
   }
+
 
   /**
    * Creates a legacy deployment snapshot (settings + posts) in `deploy_versions`.
@@ -247,6 +294,7 @@ export class DeploymentService {
     siteId: string,
     id: string,
   ): Promise<DeploymentRecord | null> {
+    const startedAt = Date.now();
     const versions = await listDeployVersionsBySite(this.db, siteId);
     const version = versions.find((v) => v.id === id);
     if (!version) return null;
@@ -261,6 +309,28 @@ export class DeploymentService {
       snapshot.posts ?? [],
     );
 
+    const now = new Date().toISOString();
+    const durationMs = Date.now() - startedAt;
+
+    // OBSERVABILITY: record the rollback in the durable audit trail, emit a
+    // structured log line, and increment the rollback metric. These are pure
+    // infrastructure side-effects; they NEVER alter the rollback result.
+    await this.audit.record({
+      id: crypto.randomUUID(),
+      projectId: siteId,
+      actorId: 'system',
+      action: 'rollback',
+      commandHash: version.version,
+      detail: `deploymentId=${id}`,
+      createdAt: now,
+    });
+    this.logger.info('delivery.deployment', 'deployment.rollback', {
+      projectId: siteId,
+      durationMs,
+      fields: { deploymentId: id, version: version.version },
+    });
+    this.metrics.recordRollback(siteId);
+
     return {
       id: version.id,
       siteId: version.siteId,
@@ -268,8 +338,10 @@ export class DeploymentService {
       version: version.version,
       status: 'success',
       startedAt: version.createdAt,
-      completedAt: new Date().toISOString(),
-      durationMs: 0,
+      completedAt: now,
+      durationMs,
     };
   }
 }
+
+

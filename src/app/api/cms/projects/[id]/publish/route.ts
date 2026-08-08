@@ -44,13 +44,19 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSessionFromRequest } from '@/lib/admin/session';
 
 import {
   PublishOrchestrator,
   projectRepository,
   previewStore,
 } from '@/lib/editor-integration/server';
+import {
+  requireSiteOwnership,
+  guardError,
+  isValidVersion,
+  publishRateLimit,
+} from '@/lib/security';
+import { getDb } from '@/lib/db/client';
 
 
 /**
@@ -66,19 +72,29 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  // 1. Authenticate the user. The client is a Dumb Client; the server resolves
-  //    the actor identity from the session.
-  const session = await getSessionFromRequest(request);
-  if (!session) {
+  const { id: projectId } = await context.params;
+
+  // 1. SECURITY BOUNDARY: Authenticate AND enforce tenant isolation. The
+  //    authenticated session MUST own the project (site). Anonymous access and
+  //    cross-tenant access are EXPLICITLY rejected. This also strictly validates
+  //    the projectId to block injection / path traversal / SSRF.
+  const db = getDb();
+  const guard = await requireSiteOwnership(request, db, projectId);
+  if (!guard.ok) {
+    return guardError(guard);
+  }
+  const session = guard.session;
+
+  // 2. RATE LIMITING BOUNDARY: Prevent abuse of the publish endpoint. Keyed by
+  //    actor + route. (Preparation boundary; production path is Cloudflare-native.)
+  if (!publishRateLimit.allow(`${session.userId}:publish`)) {
     return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 },
+      { success: false, error: 'Too many requests' },
+      { status: 429 },
     );
   }
 
-  const { id: projectId } = await context.params;
-
-  // 2. Parse the Publish intent. The client sends ONLY the semantic version to
+  // 3. Parse the Publish intent. The client sends ONLY the semantic version to
   //    assign to the published snapshot. It NEVER sends the ThemeConfig.
   let version: string;
   try {
@@ -90,6 +106,13 @@ export async function POST(
       );
     }
     version = body.version.trim();
+    // Strictly validate the version string to block injection / path traversal.
+    if (!isValidVersion(version)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid version format' },
+        { status: 400 },
+      );
+    }
   } catch {
     return NextResponse.json(
       { success: false, error: 'Invalid JSON body' },

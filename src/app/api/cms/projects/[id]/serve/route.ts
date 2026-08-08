@@ -88,6 +88,7 @@ import {
   DeliveryCache,
   projectRepository,
 } from '@/lib/editor-integration/server';
+import { isValidId, isValidPageId } from '@/lib/security';
 
 
 // The GoldenPathOrchestrator is constructed once from the frozen registries.
@@ -117,8 +118,26 @@ export async function GET(
 ) {
   const { id: projectId } = await context.params;
 
-  // 1. Resolve the requested page id. Defaults to the home page.
+  // 1. SECURITY BOUNDARY (INPUT VALIDATION): This is the PUBLIC Delivery Layer,
+  //    so it is intentionally NOT authenticated (published sites are public).
+  //    However, the `page` and `v` (snapshotId) query params are strictly
+  //    validated to block path traversal / injection / SSRF. The projectId is
+  //    also validated before it is used to query the repository.
+  if (!isValidId(projectId)) {
+    return NextResponse.json(
+      { success: false, code: 'validation.rejected', message: 'Invalid project id' },
+      { status: 400 },
+    );
+  }
+
+  // 1a. Resolve the requested page id. Defaults to the home page.
   const pageId = request.nextUrl.searchParams.get('page') ?? 'home';
+  if (!isValidPageId(pageId)) {
+    return NextResponse.json(
+      { success: false, code: 'validation.rejected', message: 'Invalid page id' },
+      { status: 400 },
+    );
+  }
 
   // 2. Resolve the requested snapshot.
   //
@@ -134,6 +153,15 @@ export async function GET(
   //    to load. It never interprets business meaning and never mutates state.
   const requestedSnapshotId =
     request.nextUrl.searchParams.get('v') ?? undefined;
+
+  // 2b. Strictly validate the versioned snapshot id (if present) to block
+  //     injection / path traversal / SSRF.
+  if (requestedSnapshotId !== undefined && !isValidId(requestedSnapshotId)) {
+    return NextResponse.json(
+      { success: false, code: 'validation.rejected', message: 'Invalid snapshot id' },
+      { status: 400 },
+    );
+  }
 
   // 3. Load the snapshot.
   //

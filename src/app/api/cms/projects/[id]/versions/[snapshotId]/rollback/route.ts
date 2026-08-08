@@ -47,12 +47,18 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSessionFromRequest } from '@/lib/admin/session';
 
 import {
   VersionRollbackService,
   projectRepository,
 } from '@/lib/editor-integration/server';
+import {
+  requireSiteOwnership,
+  guardError,
+  isValidId,
+  publishRateLimit,
+} from '@/lib/security';
+import { getDb } from '@/lib/db/client';
 
 
 /**
@@ -68,19 +74,36 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string; snapshotId: string }> },
 ) {
-  // 1. Authenticate the user. The client is a Dumb Client; the server resolves
-  //    the actor identity from the session.
-  const session = await getSessionFromRequest(request);
-  if (!session) {
+  const { id: projectId, snapshotId } = await context.params;
+
+  // 1. SECURITY BOUNDARY: Authenticate AND enforce tenant isolation. The
+  //    authenticated session MUST own the project (site). Anonymous access and
+  //    cross-tenant access are EXPLICITLY rejected. This also strictly validates
+  //    the projectId to block injection / path traversal / SSRF.
+  const db = getDb();
+  const guard = await requireSiteOwnership(request, db, projectId);
+  if (!guard.ok) {
+    return guardError(guard);
+  }
+  const session = guard.session;
+
+  // 2. Strictly validate the snapshotId to block injection / path traversal.
+  if (!isValidId(snapshotId)) {
     return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 },
+      { success: false, error: 'Invalid snapshot id' },
+      { status: 400 },
     );
   }
 
-  const { id: projectId, snapshotId } = await context.params;
+  // 3. RATE LIMITING BOUNDARY: Prevent abuse of the rollback endpoint.
+  if (!publishRateLimit.allow(`${session.userId}:rollback`)) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests' },
+      { status: 429 },
+    );
+  }
 
-  // 2. Build the VersionRollbackService for this project. It wires the shared
+  // 4. Build the VersionRollbackService for this project. It wires the shared
   //    ProjectRepository (persistence port). It is constructed per-request.
   const service = new VersionRollbackService(projectRepository);
 

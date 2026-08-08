@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/admin/session';
+import type { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import {
   deletePost,
@@ -7,6 +7,10 @@ import {
   updatePost,
 } from '@/lib/db/queries';
 import { postSchema, type Post } from '@/lib/admin/posts';
+import {
+  requireSiteOwnership,
+  guardError,
+} from '@/lib/security';
 
 export const runtime = 'edge';
 
@@ -14,38 +18,49 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json(
-      { success: false, message: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
-  const { id } = await params;
+/**
+ * Resolves the post and enforces tenant isolation: the authenticated session
+ * MUST own the site the post belongs to. Cross-tenant access is rejected with
+ * 403. This is a THIN WRAPPER over the security boundary — no business logic.
+ */
+async function authorizePost(
+  request: NextRequest,
+  id: string,
+): Promise<{ ok: true; db: ReturnType<typeof getDb> } | { ok: false; response: NextResponse }> {
   const db = getDb();
   const post = await getPostById(db, id);
   if (!post) {
-    return NextResponse.json(
-      { success: false, message: 'Not found' },
-      { status: 404 }
-    );
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { success: false, message: 'Not found' },
+        { status: 404 },
+      ),
+    };
   }
+  const guard = await requireSiteOwnership(request, db, post.siteId);
+  if (!guard.ok) {
+    return { ok: false, response: guardError(guard) };
+  }
+  return { ok: true, db };
+}
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  const auth = await authorizePost(request, id);
+  if (!auth.ok) return auth.response;
+
+  const db = auth.db;
+  const post = await getPostById(db, id);
   return NextResponse.json({ success: true, post });
 }
 
-export async function PUT(request: Request, { params }: RouteParams) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json(
-      { success: false, message: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
-  const db = getDb();
+  const auth = await authorizePost(request, id);
+  if (!auth.ok) return auth.response;
+
+  const db = auth.db;
   const existing = await getPostById(db, id);
   if (!existing) {
     return NextResponse.json(
@@ -112,25 +127,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: RouteParams) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json(
-      { success: false, message: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
-  const db = getDb();
-  const existing = await getPostById(db, id);
-  if (!existing) {
-    return NextResponse.json(
-      { success: false, message: 'Not found' },
-      { status: 404 }
-    );
-  }
+  const auth = await authorizePost(request, id);
+  if (!auth.ok) return auth.response;
 
-  await deletePost(db, id);
+  await deletePost(auth.db, id);
   return NextResponse.json({ success: true });
 }

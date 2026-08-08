@@ -34,7 +34,9 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSessionFromRequest } from '@/lib/admin/session';
+
+import { requireSiteOwnership, guardError } from '@/lib/security';
+import { getDb } from '@/lib/db/client';
 
 import type { EditorCommandPayload } from '@/lib/editor-integration';
 import { ServerSideOrchestrator } from '@/lib/editor-integration/server';
@@ -97,17 +99,18 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  // 1. Authenticate the user. The client is a Dumb Client; the server resolves
-  //    the actor identity from the session.
-  const session = await getSessionFromRequest(request);
-  if (!session) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 },
-    );
-  }
-
   const { id: projectId } = await context.params;
+
+  // 1. SECURITY BOUNDARY: Authenticate AND enforce tenant isolation. The
+  //    authenticated session MUST own the project (site). Anonymous access and
+  //    cross-tenant access are EXPLICITLY rejected. This also strictly validates
+  //    the projectId to block injection / path traversal / SSRF.
+  const db = getDb();
+  const guard = await requireSiteOwnership(request, db, projectId);
+  if (!guard.ok) {
+    return guardError(guard);
+  }
+  const session = guard.session;
 
   // 2. Parse the Command wire payload.
   let payload: EditorCommandPayload;
