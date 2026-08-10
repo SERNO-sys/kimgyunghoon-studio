@@ -1,8 +1,12 @@
 /**
  * AWIE V2 - Phase 03 Final Polish Validation Smoke Test.
  *
- * Test Case A: A valid page renders its registered sections.
- * Test Case B: An unknown section type falls back to GenericSection (dev JSON).
+ * The RenderEngine builds its production registry internally (server-safe), so
+ * this test validates the real production rendering path:
+ *
+ * Test Case A: A valid page renders its registered sections via the production
+ *              registry (hero, text).
+ * Test Case B: An unknown section type falls back to GenericSection.
  * Test Case C: An empty page (sectionIds: []) renders the base layout wrapper
  *              successfully without crashing.
  *
@@ -11,12 +15,7 @@
 
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import {
-  DefaultSectionRegistry,
-  RenderEngine,
-  resolveThemeTokens,
-  type SectionProps,
-} from '../src/lib/renderer';
+import { RenderEngine, resolveThemeTokens } from '../src/lib/renderer';
 import type { ThemeConfig } from '../src/lib/theme-config/v2';
 
 
@@ -35,16 +34,6 @@ function check(name: string, condition: boolean, detail?: string): void {
 
 function section(name: string): void {
   console.log(`\n=== ${name} ===`);
-}
-
-/** A simple registered section component for testing. */
-function HeroSection({ section, theme }: SectionProps): React.ReactElement {
-  const title = (section.content?.title as string | undefined) ?? 'Untitled';
-  return (
-    <section data-awie-section={section.id} data-awie-type={section.type}>
-      <h1 style={{ color: theme.colors.primary }}>{title}</h1>
-    </section>
-  );
 }
 
 /** Builds a valid V2 ThemeConfig. */
@@ -99,49 +88,53 @@ function run(): void {
   const theme = resolveThemeTokens(config);
 
   // ---------------------------------------------------------------------------
-  section('Test Case A: Valid page renders registered sections');
+  section('Test Case A: Valid page renders registered sections via production registry');
   {
-    const registry = new DefaultSectionRegistry();
-    registry.register('hero', HeroSection, { version: '1.0.0', capabilities: ['a11y'] });
-
     const html = renderToStaticMarkup(
-      <RenderEngine config={config} registry={registry} theme={theme} route="/" />,
+      <RenderEngine config={config} theme={theme} route="/" />,
     );
 
     check('A1: page wrapper rendered', html.includes('data-awie-page="home"'));
     check('A2: route attribute set', html.includes('data-awie-route="/"'));
-    check('A3: registered hero section rendered', html.includes('data-awie-type="hero"'));
+    check('A3: hero section rendered', html.includes('data-awie-hero='));
     check('A4: hero content rendered', html.includes('Welcome'));
-    check('A5: unknown "text" section fell back to GenericSection', html.includes('data-awie-fallback="true"'));
+    check('A5: text section rendered', html.includes('data-awie-section="text"'));
   }
 
   // ---------------------------------------------------------------------------
   section('Test Case B: Unknown section type falls back to GenericSection');
   {
-    const registry = new DefaultSectionRegistry();
-    // Register nothing — every section type is unknown.
+    const unknownConfig: ThemeConfig = {
+      ...config,
+      resources: {
+        ...config.resources,
+        pages: [
+          { id: 'home', route: '/', title: 'Home', sectionIds: ['mystery'], isHome: true },
+        ],
+        sections: [
+          { id: 'mystery', type: 'mystery-type' as never, content: { title: 'Mystery' } },
+        ],
+      },
+    };
+
 
     const html = renderToStaticMarkup(
-      <RenderEngine config={config} registry={registry} theme={theme} route="/" />,
+      <RenderEngine config={unknownConfig} theme={theme} route="/" />,
     );
 
     check('B1: page wrapper still rendered', html.includes('data-awie-page="home"'));
-    check('B2: hero fell back to GenericSection', html.includes('data-awie-fallback="true"'));
-    check('B3: fallback preserves section id', html.includes('data-awie-section="hero"'));
-    check('B4: fallback preserves section type', html.includes('data-awie-type="hero"'));
+    check('B2: unknown section fell back to GenericSection', html.includes('data-awie-fallback="true"'));
+    check('B3: fallback preserves section id', html.includes('data-awie-section="mystery"'));
   }
 
   // ---------------------------------------------------------------------------
   section('Test Case C: Empty page (sectionIds: []) renders base layout without crashing');
   {
-    const registry = new DefaultSectionRegistry();
-    registry.register('hero', HeroSection, { version: '1.0.0', capabilities: ['a11y'] });
-
     let html = '';
     let threw = false;
     try {
       html = renderToStaticMarkup(
-        <RenderEngine config={config} registry={registry} theme={theme} route="/empty" />,
+        <RenderEngine config={config} theme={theme} route="/empty" />,
       );
     } catch (err) {
       threw = true;
