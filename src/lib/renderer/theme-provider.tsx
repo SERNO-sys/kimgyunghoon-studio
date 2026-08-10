@@ -17,6 +17,8 @@
 import * as React from 'react';
 import type { ThemeConfig } from '../theme-config/v2';
 import type { ThemeTokens } from './types';
+import { PRESETS, FONT_PAIRINGS, DEFAULT_PRESET } from '../../constants/presets';
+
 
 /** The React context that carries the resolved ThemeTokens. */
 export const ThemeContext = React.createContext<ThemeTokens | null>(null);
@@ -76,6 +78,21 @@ const DEFAULT_TOKENS: ThemeTokens = {
 
 
 /**
+ * Resolves a font pairing token to its concrete font classes.
+ *
+ * Falls back to the default pairing when the token is unknown or absent so the
+ * renderer never collapses.
+ */
+function resolveFontPairing(
+  token: string | undefined,
+): { heading: string; body: string } {
+  if (token && Object.prototype.hasOwnProperty.call(FONT_PAIRINGS, token)) {
+    return FONT_PAIRINGS[token as keyof typeof FONT_PAIRINGS];
+  }
+  return FONT_PAIRINGS.default;
+}
+
+/**
  * Resolves the raw settings into structured ThemeTokens.
  *
  * This is a pure function: it reads the config and returns a new tokens object.
@@ -83,13 +100,24 @@ const DEFAULT_TOKENS: ThemeTokens = {
  * rendering never collapses.
  */
 export function resolveThemeTokens(config: ThemeConfig): ThemeTokens {
+
   const settings = config.resources.settings;
 
+  // Resolve the palette token (e.g. "modern", "warm", "minimal") to the
+  // concrete colors defined in the existing preset system. Design Intelligence
+  // never generates arbitrary HEX values — it selects an existing palette.
+  const paletteToken = settings.skin?.colorPalette;
+  const preset =
+    (paletteToken && PRESETS[paletteToken as keyof typeof PRESETS]?.colors)
+      ? PRESETS[paletteToken as keyof typeof PRESETS]
+      : DEFAULT_PRESET;
+
+
   const colors = {
-    primary: settings.primaryColor ?? settings.skin?.colorPalette ?? DEFAULT_TOKENS.colors.primary,
+    primary: settings.primaryColor ?? preset.colors.primary ?? DEFAULT_TOKENS.colors.primary,
     secondary: settings.secondaryColor ?? DEFAULT_TOKENS.colors.secondary,
-    background: settings.backgroundColor ?? DEFAULT_TOKENS.colors.background,
-    text: settings.textColor ?? DEFAULT_TOKENS.colors.text,
+    background: settings.backgroundColor ?? preset.colors.background ?? DEFAULT_TOKENS.colors.background,
+    text: settings.textColor ?? preset.colors.foreground ?? DEFAULT_TOKENS.colors.text,
   };
 
   const spacing = {
@@ -100,10 +128,18 @@ export function resolveThemeTokens(config: ThemeConfig): ThemeTokens {
     xl: DEFAULT_TOKENS.spacing.xl,
   };
 
+  // Resolve the font token (e.g. "default", "modern", "warm", "minimal") to
+  // the concrete font classes defined in the existing typography system.
+  const fontToken = settings.skin?.fontPairing;
+  const pairing = resolveFontPairing(fontToken);
+
   const typography = {
-    font: settings.font ?? settings.skin?.fontPairing ?? DEFAULT_TOKENS.typography.font,
-    headingFont: settings.font ?? settings.skin?.fontPairing ?? DEFAULT_TOKENS.typography.headingFont,
+    font: settings.font ?? pairing.body ?? DEFAULT_TOKENS.typography.font,
+    headingFont: settings.font ?? pairing.heading ?? DEFAULT_TOKENS.typography.headingFont,
   };
+
+
+
 
   const radius = {
     sm: DEFAULT_TOKENS.radius.sm,

@@ -10,14 +10,62 @@ import {
   getUserById,
   upsertSettings,
 } from '@/lib/db/queries';
-import { generateText } from '@/lib/ai/client';
-import { parseJsonResponse } from '@/lib/ai/engine';
-import { parseAwieDecision, toThemeConfigDecision } from '@/lib/ai/awie-schema';
 import { getCurrentUserTier, TIER_LIMITS } from '@/lib/config/tiers';
 import { getDefaultPages } from '@/lib/site-context';
-import { PRESETS } from '@/constants/presets';
-import type { ThemeConfig, ThemePresetId } from '@/types/site';
+import { BrainGoldenPath } from '@/lib/golden-path/brain-pipeline';
+import { RecipeMerger } from '@/lib/recipe-engine';
+import type { ThemeConfig } from '@/types/site';
 import type { Site, SiteSettings, User, Post, SitePage } from '@/lib/db/types';
+import type { ThemeConfig as V2ThemeConfig } from '@/lib/theme-config/v2/types';
+
+/**
+ * STEP 15-C — Minimum V2.6 Renderer Adapter.
+ *
+ * The RecipeMerger produces a ThemeConfig v2 (data lives under `metadata.*`
+ * and `resources.*`), but the existing V2.6 Renderer consumes the legacy
+ * ThemeConfig shape (`@/types/site`): `content`, `pages`, and a flat `sections`
+ * array. This adapter performs the ONLY explicit, typed conversion between the
+ * two schemas. It maps already-generated values deterministically — it never
+ * invents copy, never generates new content, and never reinterprets the user's
+ * business.
+ */
+function toLegacyThemeConfig(
+  v2: V2ThemeConfig,
+  derived: {
+    heroTitle: string;
+    heroSubtitle: string;
+    aboutBio: string;
+    pages: SitePage[];
+  }
+): ThemeConfig {
+  // The v2 config carries no legacy preset fields; the legacy renderer falls
+  // back to DEFAULT_PRESET for those. We only surface the fields the renderer
+  // actually reads from the persisted config.
+  const legacy: ThemeConfig = v2 as unknown as ThemeConfig;
+
+  // A. Populate the legacy `pages` field from the already-generated pages
+  //    (derived from v2.resources.pages). The tenant layout reads
+  //    `config.themeConfig.pages`, not `settings.pages`.
+  if (derived.pages.length > 0) {
+    legacy.pages = derived.pages;
+  }
+
+  // B. Populate the legacy `content` fields from the already-generated
+  //    metadata (title/tagline/description). The tenant renderer reads
+  //    `themeConfig.content.hero_title/hero_subtitle/about_bio`.
+  legacy.content = {
+    hero_title: derived.heroTitle,
+    hero_subtitle: derived.heroSubtitle,
+    about_bio: derived.aboutBio,
+  };
+
+  // C. The flat `sections` array is populated by the caller after the v2
+  //    section ids are derived (kept here for symmetry with the existing flow).
+
+  return legacy;
+}
+
+
 
 
 
@@ -82,74 +130,142 @@ export async function POST(request: Request) {
     const userTier = getCurrentUserTier();
     const maxMenus = TIER_LIMITS[userTier].MAX_MENUS;
     const extraPages = Math.max(0, maxMenus - 4);
-    const autobuildJson = await generateText(
-      'autobuild',
-      JSON.stringify({ concept: trimmed, extraPages })
-    );
 
-    // Sanitize + parse via the unified AI Engine parser (one sanitizer for
-    // every structured flow). If the AI produced no parseable JSON object,
-    // fall back to an empty object — the rest of the handler defaults every
-    // field, so a site is still created with sensible placeholder content.
-    const parsedJson = parseJsonResponse(autobuildJson);
-    const parsed: Record<string, unknown> =
-      parsedJson !== null && typeof parsedJson === 'object' && !Array.isArray(parsedJson)
-        ? (parsedJson as Record<string, unknown>)
-        : {};
-    if (parsedJson === null) {
-      console.error('[autobuild] AI returned invalid JSON, using fallback:', {
-        raw: autobuildJson.slice(0, 500),
+    // AWIE V2 Brain — Step 14 Golden Path.
+    //
+    // The first operation on the raw prompt is ALWAYS extractSingleShotBrief()
+    // (inside the orchestrator). The Brain semantic decision pipeline, Recipe
+    // Integration, ContentPlan, AI #2, Fact Validator, and ThemeConfig Bridge
+    // run in the frozen order. The orchestrator produces a V2.6-compatible
+    // MergeInput, which the existing V2.6 RecipeMerger consumes to produce the
+    // final ThemeConfig.
+    //
+    // There is NO legacy AI decision path here. If the Golden Path fails, we
+    // return a structured failure — we never silently fall back to the old
+    // direct-LLM autobuild decision engine.
+    const goldenPath = new BrainGoldenPath();
+    const pipeline = goldenPath.run(trimmed);
+    if (!pipeline.ok) {
+      return NextResponse.json(
+        { success: false, message: `Golden Path failed: ${pipeline.error.code} — ${pipeline.error.message}` },
+        { status: 422 }
+      );
+    }
+
+    // V2.6 execution boundary: the existing RecipeMerger consumes the bridge
+    // result directly. The orchestrator does NOT construct ThemeConfig itself.
+    const merger = new RecipeMerger();
+    const mergeResult = merger.merge(pipeline.mergeInput);
+    const v2Config = mergeResult.config;
+
+    // Derive the site metadata from the V2.6 ThemeConfig (the single source of
+    // truth produced by the Golden Path). The DB persists this config as JSON.
+    const name = (v2Config.metadata?.title || '').trim().slice(0, 50) || 'My Site';
+    const description = v2Config.metadata?.description || '';
+    const homeHeroTitle = name;
+    const homeHeroSubtitle = v2Config.metadata?.tagline || '';
+    const homePhilosophyText = '';
+    const aboutSubHeading = '';
+    const aboutText = description;
+    const aboutPhilosophyHeading = 'Philosophy';
+    const aboutPhilosophy = '';
+    const diarySubheading = '';
+    const contactSubheading = '';
+    const customPageIntros: Record<string, string> = {};
+
+    // AWIE Pages (V2): the navigation is derived from the V2.6 ThemeConfig
+    // produced by the Golden Path (the single source of truth). The tenant
+    // header renders these dynamic menu items instead of the hardcoded
+    // DIARY/ABOUT/CONTACT set.
+    const pageContentByPath: Record<string, string> = {
+      '/diary': diarySubheading,
+      '/about': aboutPhilosophyHeading,
+      '/contact': contactSubheading,
+      ...customPageIntros,
+    };
+    // STEP 15-E — Preserve the legacy navigation while connecting AWIE output.
+    //
+    // The legacy V2.6 navigation is HOME / DIARY / ABOUT / CONTACT. AWIE's
+    // `resources.pages` may contain only a HOME entry (Gallery/Products live in
+    // `resources.sections`), so replacing the defaults with `resources.pages`
+    // would drop the core menu. Instead we START from the legacy defaults and
+    // APPEND AWIE pages/menu entries whose path is not already present. This
+    // preserves HOME/DIARY/ABOUT/CONTACT and surfaces AWIE-generated entries
+    // (Gallery, Products, etc.) as real navigation items.
+    const v2Pages = v2Config.resources?.pages ?? [];
+    const v2Menus = v2Config.resources?.menus ?? [];
+
+    const generatedPages: SitePage[] = [...getDefaultPages(name)];
+    const seenPaths = new Set(generatedPages.map((p) => p.path));
+
+    const appendPage = (
+      label: string,
+      path: string,
+      type: SitePage['type'],
+      content: string
+    ) => {
+      if (seenPaths.has(path)) return;
+      seenPaths.add(path);
+      generatedPages.push({
+        id: crypto.randomUUID(),
+        label,
+        path,
+        type,
+        visible: true,
+        order: generatedPages.length,
+        content,
       });
+    };
+
+    // FIX B — Connect AWIE `resources.pages` (page entries) to the navigation.
+    for (const page of v2Pages) {
+      const label = page.title || 'New Page';
+      const path = page.route || '/';
+      const type: SitePage['type'] = page.isHome ? 'home' : 'custom';
+      const content =
+        pageContentByPath[path] ||
+        (type === 'custom'
+          ? `${label} 페이지입니다. 이곳에 내용을 채워 넣으세요.`
+          : '');
+      appendPage(label, path, type, content);
     }
 
-
-    const title = String(parsed.title || '');
-    const name = title.trim().slice(0, 50) || 'My Site';
-    const description = String(parsed.description || '');
-    const homeHeroTitle = String(parsed.home_hero_title || name);
-    const homeHeroSubtitle = String(parsed.home_hero_subtitle || '');
-    const homePhilosophyText = String(parsed.home_philosophy_text || '');
-    const aboutSubHeading = String(parsed.about_subheading || '');
-    const aboutText = String(parsed.about_text || '');
-    const aboutPhilosophyHeading = String(parsed.about_philosophy_heading || 'Philosophy');
-    const aboutPhilosophy = String(parsed.about_philosophy || '');
-    const diarySubheading = String(parsed.diary_subheading || '');
-    const contactSubheading = String(parsed.contact_subheading || '');
-    const customPageIntros = (parsed.custom_page_intros || {}) as Record<string, string>;
-
-    // V2 Theme System - Phase 3: curate a preset from the AI response.
-    // The AI returns a `themeConfig.presetId` string. Validate it against the
-    // known preset registry and fall back to 'default' if it is missing or
-    // invalid, so a bad AI response never breaks site creation.
-    const rawThemeConfig = (parsed.themeConfig || {}) as Record<string, unknown>;
-    const rawPresetId = String(rawThemeConfig.presetId || '');
-    const presetId: ThemePresetId = PRESETS[rawPresetId as ThemePresetId]
-      ? (rawPresetId as ThemePresetId)
-      : 'default';
-
-    // AWIE Decision Engine (V2): validate the AI's intent/skin/skeleton/report
-    // against the strict Zod schema. If the AI returns out-of-spec values, we
-    // fall back to a preset-only config so site creation never breaks.
-    const awieDecision = parseAwieDecision(parsed);
-    const themeConfig: ThemeConfig = awieDecision
-      ? {
-          presetId,
-          ...toThemeConfigDecision(awieDecision),
-        }
-      : { presetId };
-
-    // AWIE Content (V2): persist the AI-written copy on the theme config so the
-    // modular frontend renderer can display it. If the AI did not return a
-    // `content` object (or it failed validation), fall back to the per-page
-    // copy fields so the site still has real text.
-    if (!themeConfig.content) {
-      themeConfig.content = {
-        hero_title: String(parsed.home_hero_title || name),
-        hero_subtitle: String(parsed.home_hero_subtitle || ''),
-        about_bio: String(parsed.about_text || ''),
-      };
+    // FIX B — Connect AWIE `resources.menus` (navigation menu items) to the
+    // existing navigation/page structure. Menu targets are route paths or
+    // resource ids; we map them to SitePage entries so the existing
+    // Header/Navigation renders them as clickable items.
+    for (const menu of v2Menus) {
+      for (const item of menu.items ?? []) {
+        const target = item.target;
+        const path =
+          typeof target === 'string' && target.startsWith('/')
+            ? target
+            : `/${target}`;
+        appendPage(item.label || 'Menu', path, 'custom', '');
+      }
     }
 
+    // AWIE Sections (V2): the ordered homepage section list is derived from the
+    // V2.6 ThemeConfig sections. The tenant renderer iterates this array to
+    // build the one-page (SPA) layout.
+    const v2Sections = v2Config.resources?.sections ?? [];
+    const validSections = v2Sections
+      .map((s) => s.id)
+      .filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+
+    // STEP 15-C — The V2.6 ThemeConfig is the persisted site configuration. It
+    // is stored as JSON on the site record (the DB column is a JSON blob). The
+    // explicit adapter maps the already-generated pages/content/sections into
+    // the legacy ThemeConfig shape the existing Renderer consumes.
+    const themeConfig: ThemeConfig = toLegacyThemeConfig(v2Config, {
+      heroTitle: homeHeroTitle,
+      heroSubtitle: homeHeroSubtitle,
+      aboutBio: aboutText,
+      pages: generatedPages,
+    });
+    if (validSections.length > 0) {
+      themeConfig.sections = validSections;
+    }
 
     const site: Site = {
       id: siteId,
@@ -163,11 +279,10 @@ export async function POST(request: Request) {
       maintenance: false,
       isPublished: false,
       deployVersion: '',
+      revision: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
-
 
     await createSite(db, site);
 
@@ -181,82 +296,7 @@ export async function POST(request: Request) {
       updatedAt: new Date().toISOString(),
     });
 
-    const pageContentByPath: Record<string, string> = {
-      '/diary': diarySubheading,
-      '/about': aboutPhilosophyHeading,
-      '/contact': contactSubheading,
-      ...customPageIntros,
-    };
 
-    let generatedPages: SitePage[] = getDefaultPages(name);
-    const rawMenu = Array.isArray(parsed.menu) ? parsed.menu : [];
-    const basePages = rawMenu.filter((item: unknown) =>
-      ['home', 'diary', 'about', 'contact'].includes(
-        (item as { type?: string }).type || ''
-      )
-    );
-    const customPages = rawMenu.filter(
-      (item: unknown) => (item as { type?: string }).type === 'custom'
-    );
-    const menu = [...basePages, ...customPages.slice(0, extraPages)];
-    if (menu.length > 0) {
-      generatedPages = menu.map((item: unknown, index: number) => {
-        const page = item as { label?: string; path?: string; type?: string };
-        const type = ['home', 'music', 'diary', 'about', 'contact', 'custom'].includes(page.type || '')
-          ? (page.type as SitePage['type'])
-          : 'custom';
-        const path = page.path || '/';
-        const baseContent: Record<string, string> = {
-          home: '',
-          diary: diarySubheading,
-          about: aboutPhilosophyHeading,
-          contact: contactSubheading,
-        };
-        const baseLabel: Record<string, string> = {
-          home: 'HOME',
-          diary: 'DIARY',
-          about: 'ABOUT',
-          contact: 'CONTACT',
-        };
-        const label = baseLabel[type] || page.label || 'New Page';
-        // Custom pages must always carry a non-empty body so the catch-all
-        // route renders something instead of a blank page. If the AI did not
-        // provide an intro for this path, fall back to a short default blurb.
-        const content =
-          pageContentByPath[path] ||
-          baseContent[type] ||
-          (type === 'custom'
-            ? `${label} 페이지입니다. 이곳에 내용을 채워 넣으세요.`
-            : '');
-        return {
-          id: crypto.randomUUID(),
-          label,
-          path,
-          type,
-          visible: true,
-          order: index,
-          content,
-        };
-
-      });
-    }
-
-    // AWIE Pages (V2): persist the AI-generated navigation on the theme config
-    // so the tenant header renders these dynamic menu items (Home, Portfolio,
-    // etc.) instead of the hardcoded DIARY/ABOUT/CONTACT set.
-    themeConfig.pages = generatedPages;
-
-    // AWIE Sections (V2): persist the ordered homepage section list the AI
-    // chose (e.g. ["hero", "about", "gallery", "contact"]). The tenant
-    // renderer iterates this array to build the one-page (SPA) layout, so
-    // without it the site falls back to the default hero/about/contact set.
-    const rawSections = Array.isArray(parsed.sections) ? parsed.sections : [];
-    const validSections = rawSections.filter(
-      (s: unknown) => typeof s === 'string' && s.trim().length > 0
-    ) as string[];
-    if (validSections.length > 0) {
-      themeConfig.sections = validSections;
-    }
 
 
     const settings: SiteSettings = {

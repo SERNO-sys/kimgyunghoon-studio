@@ -7,6 +7,31 @@ import { ThemeStyles } from '@/components/layout/ThemeStyles';
 import { getDb } from '@/lib/db/client';
 import { getSettingsBySiteId, getSiteById } from '@/lib/db/queries';
 import { flattenPages, resolveSiteConfig } from '@/lib/site-context';
+import type { SitePage } from '@/lib/db/types';
+
+/**
+ * Merges the legacy navigation pages (config.pages from resolvePages, which
+ * falls back to HOME/DIARY/ABOUT/CONTACT) with the AWIE-generated pages
+ * (themeConfig.pages). Legacy entries win for the same path so the core
+ * ABOUT/DIARY/CONTACT navigation is always preserved, while AWIE pages
+ * (Gallery, Products, etc.) are appended as additional navigation entries.
+ */
+function mergeNavigationPages(
+  legacyPages: SitePage[],
+  themePages: SitePage[]
+): SitePage[] {
+  const byPath = new Map<string, SitePage>();
+  for (const page of legacyPages) {
+    byPath.set(page.path, page);
+  }
+  for (const page of themePages) {
+    if (!byPath.has(page.path)) {
+      byPath.set(page.path, page);
+    }
+  }
+  return Array.from(byPath.values());
+}
+
 
 
 interface SiteLayoutProps {
@@ -42,30 +67,21 @@ export default async function SiteLayout({
   const settings = await getSettingsBySiteId(db, site.id);
   const config = resolveSiteConfig(site, settings);
 
-  // V2 modular navigation: the tenant site is a one-page (SPA) layout built
-  // from `themeConfig.sections`. The header menu is driven EXCLUSIVELY by the
-  // AI-generated `themeConfig.pages` array (Home, Portfolio, etc.) — we never
-  // fall back to the legacy hardcoded DIARY/ABOUT/CONTACT set. Each menu item
-  // maps to the matching section anchor (`#<section>`) so clicking it smooth-
-  // scrolls to that section on the same page.
+  // Navigation restoration: the tenant site header menu is driven by the
+  // legacy navigation pages (config.pages from resolvePages, which falls back
+  // to HOME/DIARY/ABOUT/CONTACT) MERGED with the AI-generated
+  // `themeConfig.pages` array (Gallery, Products, Services, etc.). Each menu
+  // item links to a REAL page route (`/about`, `/diary`, `/contact`,
+  // `/gallery`, ...) so every menu is a genuine entry point that renders its
+  // own page — not a `#section` anchor on a single-page layout. The HOME item
+  // stays at `/` (the tenant homepage).
+  const legacyPages = config.pages ?? [];
   const themePages = config.themeConfig.pages ?? [];
-  const themeSections = config.themeConfig.sections ?? [];
 
-  // Map a page to the section anchor it should scroll to. We prefer the page's
-  // own `path` (e.g. `/portfolio` -> `#portfolio`), then fall back to a
-  // type-based mapping, and finally to the first available section.
-  const typeToSection: Record<string, string> = {
-    home: 'hero',
-    about: 'about',
-    contact: 'contact',
-    diary: 'blog',
-    blog: 'blog',
-    posts: 'blog',
-    music: 'gallery',
-    gallery: 'gallery',
-  };
+  const allPages = flattenPages(
+    mergeNavigationPages(legacyPages, themePages)
+  ).filter((page) => page.visible);
 
-  const allPages = flattenPages(themePages).filter((page) => page.visible);
 
   // On the tenant subdomain all navigation links are clean relative paths
   // WITHOUT the `/sites/<siteId>` prefix; the middleware maps those clean paths
@@ -76,15 +92,15 @@ export default async function SiteLayout({
   const navItems = allPages
     .filter((page) => page.path !== '/')
     .map((page) => {
-      // Resolve the target section anchor for this menu item.
-      const pathSection = page.path.replace(/^\/+/, '').replace(/\/+$/, '');
-      const mappedSection =
-        (pathSection && themeSections.includes(pathSection) && pathSection) ||
-        typeToSection[page.type] ||
-        (themeSections.length > 0 ? themeSections[0] : 'hero');
-      const anchor = `#${mappedSection}`;
-      return { href: `${linkPrefix}${anchor}`, label: page.label };
+      // Each menu item is a real page route. Normalize the path so it is a
+      // clean relative path (e.g. `/about`, `/gallery`) that the middleware
+      // maps to the internal `/sites/<siteId>/<path>` route.
+      const cleanPath = page.path.startsWith('/')
+        ? page.path
+        : `/${page.path}`;
+      return { href: `${linkPrefix}${cleanPath}`, label: page.label };
     });
+
 
 
 

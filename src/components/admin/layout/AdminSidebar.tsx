@@ -7,10 +7,15 @@ import {
   Eye,
   Globe,
   LayoutDashboard,
+  Palette,
   Rocket,
   X,
+  FileText,
+  Image as ImageIcon,
+  Menu,
+  User,
+  Mail,
 } from 'lucide-react';
-
 
 
 
@@ -58,9 +63,12 @@ export function AdminSidebar({
   }, []);
 
   const postsActive = isActive(pathname, '/admin/posts');
+  const pagesActive = isActive(pathname, '/admin/pages');
+  const settingsActive = isActive(pathname, '/admin/settings');
+  const mediaActive = isActive(pathname, '/admin/media');
 
   // Fixed admin menu types are rendered as dedicated, always-visible items
-  // (Dashboard, All Posts, ABOUT, CONTACT). Exclude them from the dynamic
+  // (Dashboard, DIARY, ABOUT, CONTACT). Exclude them from the dynamic
   // custom pages list to avoid duplicate menu entries.
   const fixedTypes = new Set(['home', 'diary', 'about', 'contact']);
 
@@ -68,8 +76,20 @@ export function AdminSidebar({
     .filter((page) => page.visible !== false && !fixedTypes.has(page.type))
     .sort((a, b) => a.order - b.order);
 
+  const sitePreviewHref = siteId ? `/admin/sites/${siteId}` : null;
 
+  const linkClass = (active: boolean) =>
+    `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
+      active
+        ? 'bg-amber-900/30 text-amber-100'
+        : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
+    }`;
 
+  const sectionLabel = (text: string) => (
+    <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
+      {text}
+    </div>
+  );
 
   return (
     <>
@@ -105,24 +125,15 @@ export function AdminSidebar({
           </div>
           <nav className="flex-1 overflow-y-auto px-3 py-4">
             <ul className="space-y-1">
-              {/* Fixed admin menus (Dashboard, All Posts, DIARY, ABOUT, CONTACT)
-                  are shown first (top of the sidebar) to match the public
-                  homepage header order [기본 메뉴 -> 커스텀 메뉴]. AI-generated
-                  custom pages follow below. */}
-              <li>
-                <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
-                  기본 메뉴
-                </div>
-              </li>
+              {/* MY SITE — the core homepage menus (ABOUT / DIARY / CONTACT)
+                  are surfaced as dedicated, always-visible entry points so the
+                  user can jump straight to each management screen. */}
+              <li>{sectionLabel('MY SITE')}</li>
 
               <li>
                 <Link
                   href="/admin"
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                    pathname === '/admin'
-                      ? 'bg-amber-900/30 text-amber-100'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                  }`}
+                  className={linkClass(pathname === '/admin')}
                   onClick={onToggle}
                 >
                   <LayoutDashboard aria-hidden="true" size={18} />
@@ -130,15 +141,80 @@ export function AdminSidebar({
                 </Link>
               </li>
 
-              {siteId ? (
+              <li>
+                <Link
+                  href="/admin/settings?tab=general"
+                  className={linkClass(settingsActive)}
+                  onClick={onToggle}
+                >
+                  <User aria-hidden="true" size={18} />
+                  ABOUT
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/posts"
+                  className={linkClass(postsActive)}
+                  onClick={onToggle}
+                >
+                  <FileText aria-hidden="true" size={18} />
+                  DIARY
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/settings?tab=contact"
+                  className={linkClass(settingsActive)}
+                  onClick={onToggle}
+                >
+                  <Mail aria-hidden="true" size={18} />
+                  CONTACT
+                </Link>
+              </li>
+
+              {/* SITE MANAGEMENT — navigation, design, media, preview, publish. */}
+              <li className="pt-2">{sectionLabel('SITE MANAGEMENT')}</li>
+
+              <li>
+                <Link
+                  href="/admin/pages"
+                  className={linkClass(pagesActive)}
+                  onClick={onToggle}
+                >
+                  <Menu aria-hidden="true" size={18} />
+                  Edit Navigation
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/settings"
+                  className={linkClass(settingsActive)}
+                  onClick={onToggle}
+                >
+                  <Palette aria-hidden="true" size={18} />
+                  Design Theme
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/admin/media"
+                  className={linkClass(mediaActive)}
+                  onClick={onToggle}
+                >
+                  <ImageIcon aria-hidden="true" size={18} />
+                  Media
+                </Link>
+              </li>
+
+              {sitePreviewHref ? (
                 <li>
                   <Link
-                    href={`/admin/sites/${siteId}`}
-                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive(pathname, `/admin/sites/${siteId}`)
-                        ? 'bg-amber-900/30 text-amber-100'
-                        : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                    }`}
+                    href={sitePreviewHref}
+                    className={linkClass(isActive(pathname, sitePreviewHref))}
                     onClick={onToggle}
                   >
                     <Eye aria-hidden="true" size={18} />
@@ -147,17 +223,28 @@ export function AdminSidebar({
                 </li>
               ) : null}
 
+              {sitePreviewHref ? (
+                <li>
+                  <Link
+                    href={sitePreviewHref}
+                    className={linkClass(isActive(pathname, sitePreviewHref))}
+                    onClick={onToggle}
+                  >
+                    <Rocket aria-hidden="true" size={18} />
+                    Publish / Update
+                  </Link>
+                </li>
+              ) : null}
+
               {/* Infrastructure menus (Domain, Deployment) live in the sidebar,
                   not inside the Advanced Edit drawer, because they manage the
                   site's infra rather than its content/design. */}
+              <li className="pt-2">{sectionLabel('INFRASTRUCTURE')}</li>
+
               <li>
                 <Link
                   href="/admin/domain"
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive(pathname, '/admin/domain')
-                      ? 'bg-amber-900/30 text-amber-100'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                  }`}
+                  className={linkClass(isActive(pathname, '/admin/domain'))}
                   onClick={onToggle}
                 >
                   <Globe aria-hidden="true" size={18} />
@@ -168,11 +255,7 @@ export function AdminSidebar({
               <li>
                 <Link
                   href="/admin/deployment"
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive(pathname, '/admin/deployment')
-                      ? 'bg-amber-900/30 text-amber-100'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                  }`}
+                  className={linkClass(isActive(pathname, '/admin/deployment'))}
                   onClick={onToggle}
                 >
                   <Rocket aria-hidden="true" size={18} />
@@ -180,30 +263,10 @@ export function AdminSidebar({
                 </Link>
               </li>
 
-              <li>
-                <Link
-                  href="/admin/posts"
-
-                  className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                    postsActive
-                      ? 'bg-amber-900/30 text-amber-100'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                  }`}
-                  onClick={onToggle}
-                >
-                  <span className="flex flex-1 items-center gap-3">
-                    All Posts
-                  </span>
-                </Link>
-              </li>
-
-
+              {/* AI GENERATED PAGES — AWIE-generated custom menus. */}
               {customPages.length > 0 ? (
-
                 <li className="pt-2">
-                  <div className="px-3 text-[0.65rem] font-semibold uppercase tracking-[0.15em] text-stone-500">
-                    커스텀 메뉴
-                  </div>
+                  {sectionLabel('AI GENERATED PAGES')}
                 </li>
               ) : null}
 
@@ -214,11 +277,7 @@ export function AdminSidebar({
                   <li key={page.id}>
                     <Link
                       href={href}
-                      className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
-                        active
-                          ? 'bg-amber-900/30 text-amber-100'
-                          : 'text-stone-300 hover:bg-stone-800 hover:text-stone-50'
-                      }`}
+                      className={linkClass(active)}
                       onClick={onToggle}
                       title={page.label}
                     >

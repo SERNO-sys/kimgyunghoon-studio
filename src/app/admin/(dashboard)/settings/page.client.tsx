@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
+
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import {
@@ -58,13 +59,26 @@ const defaultValues: SettingsFormData = {
 };
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsPageInner />
+    </Suspense>
+  );
+}
+
+function SettingsPageInner() {
   const router = useRouter();
   const toast = useToast();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const initialTab =
+    tabParam === 'contact' || tabParam === 'analytics' ? tabParam : 'general';
   const form = useForm<SettingsFormData>({
     resolver: zodResolver(settingsSchema),
     defaultValues,
     mode: 'onBlur',
   });
+
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -147,7 +161,8 @@ export default function SettingsPage() {
       </div>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card className="space-y-6">
-          <Tabs defaultTab="general">
+          <Tabs defaultTab={initialTab}>
+
             <TabsList>
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="contact">Contact & Social</TabsTrigger>

@@ -29,3 +29,8 @@ export {
   type QuestionTurnInput,
   type QuestionTurnResult,
 } from './service';
+
+export {
+  extractSingleShotBrief,
+  EmptyPromptError,
+} from './single-shot-brief';

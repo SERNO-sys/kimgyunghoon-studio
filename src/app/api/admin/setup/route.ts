@@ -96,9 +96,11 @@ export async function POST(request: Request) {
       maintenance: false,
       isPublished: false,
       deployVersion: '',
+      revision: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
 
     await createSite(db, site);
 

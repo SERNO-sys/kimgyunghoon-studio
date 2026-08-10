@@ -27,11 +27,16 @@ export interface Site {
   maintenance: boolean;
   isPublished: boolean;
   deployVersion: string;
+  /**
+   * K.2 Decision Layer — optimistic concurrency token.
+   * Monotonic integer incremented on every draft write. The DecisionEngine
+   * uses `updateIf` to guarantee that a stale AI draft can never overwrite a
+   * newer one (last-writer-wins is forbidden for the AI decision surface).
+   */
+  revision: number;
   createdAt: string;
   updatedAt: string;
 }
-
-
 
 export interface Domain {
   id: string;
@@ -69,7 +74,6 @@ export interface Post {
   createdAt: string;
   updatedAt: string;
 }
-
 
 export interface Media {
   id: string;
@@ -134,9 +138,15 @@ export interface Table<T extends { id: string }> {
   findByPrefix(prefix: string): Promise<T[]>;
   insert(data: T): Promise<T>;
   update(id: string, data: Partial<T>): Promise<T | null>;
+  /**
+   * K.2 Decision Layer — optimistic concurrency update.
+   * Only applies the update if the current row still matches `expected`.
+   * Returns the updated row on success, or `null` when the precondition
+   * fails (stale write). Used to prevent lost-update races on the AI draft.
+   */
+  updateIf(id: string, expected: Partial<T>, data: Partial<T>): Promise<T | null>;
   delete(id: string): Promise<boolean>;
 }
-
 
 export interface Db {
   users: Table<User>;

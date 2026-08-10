@@ -141,7 +141,45 @@ export function createD1Table<T extends { id: string }>(
       return updated ? (fromRow(updated as Record<string, unknown>) as T) : null;
     },
 
+    updateIf: async (id, expected, data) => {
+      const expectedRow = toRow(expected as Record<string, unknown>);
+      const expectedClauses = Object.keys(expectedRow).map((key) => `${key} = ?`);
+      const expectedValues = Object.values(expectedRow);
+
+      const row = toRow(data as Record<string, unknown>);
+      const setClauses = Object.keys(row).map((key) => `${key} = ?`);
+      const setValues = Object.values(row);
+
+      if (setClauses.length === 0) {
+        const existing = await d1
+          .prepare(`SELECT * FROM ${tableName} WHERE id = ?`)
+          .bind(id)
+          .first();
+        return existing ? (fromRow(existing as Record<string, unknown>) as T) : null;
+      }
+
+      const whereClause =
+        expectedClauses.length > 0
+          ? `WHERE id = ? AND ${expectedClauses.join(' AND ')}`
+          : `WHERE id = ?`;
+      const sql = `UPDATE ${tableName} SET ${setClauses.join(', ')} ${whereClause}`;
+      const { meta } = await d1
+        .prepare(sql)
+        .bind(...setValues, id, ...expectedValues)
+        .run();
+
+      // Precondition failed (stale write) — no row was updated.
+      if ((meta?.changes ?? 0) === 0) return null;
+
+      const updated = await d1
+        .prepare(`SELECT * FROM ${tableName} WHERE id = ?`)
+        .bind(id)
+        .first();
+      return updated ? (fromRow(updated as Record<string, unknown>) as T) : null;
+    },
+
     delete: async (id) => {
+
       const { meta } = await d1
         .prepare(`DELETE FROM ${tableName} WHERE id = ?`)
         .bind(id)

@@ -36,7 +36,19 @@ function createTable<T extends { id: string }>(): Table<T> {
       rows[index] = { ...rows[index], ...data } as T;
       return rows[index];
     },
+    updateIf: async (id, expected, data) => {
+      const index = rows.findIndex((row) => row.id === id);
+      if (index === -1) return null;
+      // Precondition: every expected field must match the current row.
+      const preconditionMet = (Object.keys(expected) as (keyof T)[]).every(
+        (key) => rows[index][key] === expected[key]
+      );
+      if (!preconditionMet) return null;
+      rows[index] = { ...rows[index], ...data } as T;
+      return rows[index];
+    },
     delete: async (id) => {
+
       const index = rows.findIndex((row) => row.id === id);
       if (index === -1) return false;
       rows.splice(index, 1);

@@ -1,0 +1,24 @@
+-- AWIE V2 - Phase K.2: Decision Layer - Optimistic Concurrency Revision.
+--
+-- Adds the `revision` column to the sites table. This is the optimistic
+-- concurrency token that guards the AI decision surface: a stale AI draft can
+-- never silently overwrite a newer one (no last-writer-wins).
+--
+-- ARCHITECTURAL MANDATES:
+--
+--   1. OPTIMISTIC CONCURRENCY
+--      Every AI draft commit is guarded by `revision`. The write only succeeds
+--      if the current revision still equals the draft's base revision, and the
+--      revision is incremented atomically on success.
+--
+--   2. PURE INFRASTRUCTURE
+--      This column is plain persistence bookkeeping. It NEVER renders, NEVER
+--      decides, and NEVER touches ThemeConfig. It is Application-layer
+--      concurrency control only.
+--
+--   3. BACKWARD COMPATIBLE
+--      Existing rows default to revision 0, so pre-existing sites are treated
+--      as revision 0 and the first AI commit moves them to revision 1.
+
+-- Add the optimistic concurrency token to the sites table.
+ALTER TABLE sites ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;

@@ -218,4 +218,27 @@ export class AiInformationExtractor {
     patch.confidence = { [question.slot]: 0.9 };
     return patch;
   }
+
+  /**
+   * Deterministic, AI-free slot extraction.
+   *
+   * STRICTLY ADDITIVE: exposes the existing private `fallback()` logic so the
+   * single-shot input adapter can reuse it WITHOUT invoking the AI engine and
+   * WITHOUT changing the turn-based `extract()` behavior. This is the only
+   * reason this method exists; it is not part of the guided Question Engine
+   * flow.
+   *
+   * It preserves only information deterministically derivable from the raw
+   * text for the given slot. It never invents facts.
+   */
+  extractFallback(slot: SlotKey, text: string): BusinessBriefPatch {
+    const question: Question = {
+      id: 'single-shot',
+      slot,
+      text: '',
+      intent: 'single-shot-input',
+    };
+    const answer: UserAnswer = { questionId: 'single-shot', text };
+    return this.fallback(question, answer);
+  }
 }

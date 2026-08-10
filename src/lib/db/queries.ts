@@ -50,9 +50,32 @@ export async function updateSite(db: Db, id: string, data: Partial<Site>): Promi
   return await db.sites.update(id, { ...data, updatedAt: new Date().toISOString() });
 }
 
+/**
+ * K.2 Decision Layer — optimistic concurrency write for the AI draft surface.
+ *
+ * Only applies the update if the site's current `revision` still equals
+ * `expectedRevision`. On success the revision is incremented atomically, so a
+ * stale AI draft can never overwrite a newer one (last-writer-wins is
+ * forbidden for the AI decision surface). Returns `null` when the precondition
+ * fails — the caller must treat that as a conflict, not a silent overwrite.
+ */
+export async function updateSiteIfRevision(
+  db: Db,
+  id: string,
+  expectedRevision: number,
+  data: Partial<Site>
+): Promise<Site | null> {
+  return await db.sites.updateIf(
+    id,
+    { revision: expectedRevision },
+    { ...data, revision: expectedRevision + 1, updatedAt: new Date().toISOString() }
+  );
+}
+
 export async function deleteSite(db: Db, id: string): Promise<boolean> {
   return await db.sites.delete(id);
 }
+
 
 /**
  * Phase 20.5: Duplicate Project.
@@ -91,9 +114,11 @@ export async function duplicateSite(
     maintenance: false,
     isPublished: false,
     deployVersion: '',
+    revision: 0,
     createdAt: now,
     updatedAt: now,
   };
+
 
   await db.sites.insert(copy);
   return copy;

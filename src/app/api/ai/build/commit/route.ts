@@ -103,12 +103,22 @@ function toLegacyThemeConfig(v2: V2ThemeConfig): LegacyThemeConfig {
   return legacy;
 }
 
-/** Maps v2 pages into the legacy SitePage navigation shape. */
+/**
+ * Maps v2 pages into the legacy SitePage navigation shape.
+ *
+ * STEP 15-E — Preserve the legacy navigation while connecting AWIE output.
+ *
+ * The legacy V2.6 navigation is HOME / DIARY / ABOUT / CONTACT. AWIE's
+ * `resources.pages` frequently contains only a HOME entry (Gallery/Products
+ * live in `resources.sections`), so replacing the defaults with
+ * `resources.pages` would drop the core menu and leave the header with only a
+ * HOME link. Instead we START from the legacy defaults and APPEND AWIE
+ * pages/menu entries whose path is not already present. This preserves
+ * HOME/DIARY/ABOUT/CONTACT and surfaces AWIE-generated entries (Gallery,
+ * Products, etc.) as real navigation items.
+ */
 function toSitePages(v2: V2ThemeConfig, siteName: string): SitePage[] {
   const v2Pages = v2.resources?.pages ?? [];
-  if (v2Pages.length === 0) {
-    return getDefaultPages(siteName);
-  }
 
   const typeByRoute: Record<string, SitePage['type']> = {
     '/': 'home',
@@ -117,20 +127,32 @@ function toSitePages(v2: V2ThemeConfig, siteName: string): SitePage[] {
     '/contact': 'contact',
   };
 
-  return v2Pages.map((page, index) => {
-    const type = typeByRoute[page.route] ?? 'custom';
-    const label = page.title || page.route.replace(/^\//, '') || 'New Page';
-    return {
+  // Start from the legacy defaults so the core HOME/DIARY/ABOUT/CONTACT menu
+  // is always preserved, then append AWIE pages whose path is not already used.
+  const generatedPages: SitePage[] = getDefaultPages(siteName);
+  const seenPaths = new Set(generatedPages.map((p) => p.path));
+
+  for (const page of v2Pages) {
+    const path = page.route || '/';
+    if (seenPaths.has(path)) continue;
+    seenPaths.add(path);
+
+    const type = typeByRoute[path] ?? 'custom';
+    const label = page.title || path.replace(/^\//, '') || 'New Page';
+    generatedPages.push({
       id: page.id || crypto.randomUUID(),
       label: label.toUpperCase(),
-      path: page.route,
+      path,
       type,
       visible: !page.hidden,
-      order: index,
+      order: generatedPages.length,
       content: page.description ?? '',
-    };
-  });
+    });
+  }
+
+  return generatedPages;
 }
+
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -205,9 +227,11 @@ export async function POST(request: Request) {
       maintenance: false,
       isPublished: false,
       deployVersion: '',
+      revision: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
 
     await createSite(db, site);
 
