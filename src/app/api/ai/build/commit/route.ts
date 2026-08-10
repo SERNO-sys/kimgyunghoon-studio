@@ -13,7 +13,9 @@ import {
 import { getDefaultPages } from '@/lib/site-context';
 import type { ThemeConfig as V2ThemeConfig } from '@/lib/theme-config/v2/types';
 import type { ThemeConfig as LegacyThemeConfig } from '@/types/site';
+import type { ThemeResources } from '@/lib/theme-config/v2/types';
 import type { Site, SiteSettings, User, Post, SitePage } from '@/lib/db/types';
+
 
 export const runtime = 'edge';
 
@@ -100,8 +102,24 @@ function toLegacyThemeConfig(v2: V2ThemeConfig): LegacyThemeConfig {
     },
   };
 
-  return legacy;
+  // CRITICAL: Preserve the v2 `resources` object on the persisted legacy config.
+  //
+  // The legacy renderer adapter (src/lib/renderer/legacy-adapter.ts) reads
+  // `(legacy as { resources?: ThemeResources }).resources` and, when present,
+  // treats it as the single source of truth — lifting the Design Intelligence
+  // decisions (hero variant, section variants, image treatment, CTA priority,
+  // palette, typography, menus, pages) directly to the renderer.
+  //
+  // Without this, the commit path drops `resources` and every generated site
+  // falls back to a CENTERED hero with no section variants — the Design
+  // Intelligence output never reaches the renderer. The legacy fields above
+  // continue to work exactly as before; `resources` is additive.
+  const legacyWithResources = legacy as LegacyThemeConfig & { resources?: ThemeResources };
+  legacyWithResources.resources = v2.resources;
+
+  return legacyWithResources;
 }
+
 
 /**
  * Maps v2 pages into the legacy SitePage navigation shape.
