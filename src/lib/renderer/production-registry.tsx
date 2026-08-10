@@ -19,9 +19,17 @@
  * STRICT CONSTRAINT: This module MUST NOT contain business logic. It renders
  * whatever the ThemeConfig describes. It never branches on industry, intent, or
  * business semantics.
+ *
+ * CLIENT COMPONENT: This module exports React components (HeroSection, etc.)
+ * and a registry factory that returns them. It MUST be a Client Component so
+ * the components can be rendered by the Client RenderEngine. Client Components
+ * are still server-rendered for the initial HTML, so the Edge runtime and SSR
+ * output are preserved.
  */
+'use client';
 
 import * as React from 'react';
+
 import type { SectionProps, SectionComponent } from './types';
 import type { SectionRegistry } from './registry';
 import { DefaultSectionRegistry } from './registry';

@@ -13,9 +13,16 @@
  * layout spacing.
  *
  * STRICT CONSTRAINT: This module MUST NOT contain any business logic.
+ *
+ * CLIENT COMPONENT: This module exports a React component. It MUST be a Client
+ * Component so it can be rendered by the Client RenderEngine. Client Components
+ * are still server-rendered for the initial HTML, so the Edge runtime and SSR
+ * output are preserved.
  */
+'use client';
 
 import * as React from 'react';
+
 import type { SectionProps } from './types';
 import { RendererTelemetryEventType } from './types';
 

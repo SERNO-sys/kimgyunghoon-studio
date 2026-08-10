@@ -12,9 +12,17 @@
  * STRICT CONSTRAINT: This module MUST NOT contain any business logic. It maps
  * data shapes only — it does NOT branch on industry, intent, or any business
  * semantics.
+ *
+ * CLIENT COMPONENT: This module uses React Context (createContext/useContext)
+ * and exports a React component. It MUST be a Client Component so it can be
+ * imported by Server Component pages (which pass the serializable ThemeConfig
+ * down as props). Client Components are still server-rendered for the initial
+ * HTML, so the Edge runtime and SSR output are preserved.
  */
+'use client';
 
 import * as React from 'react';
+
 import type { ThemeConfig } from '../theme-config/v2';
 import type { ThemeTokens } from './types';
 import { PRESETS, FONT_PAIRINGS, DEFAULT_PRESET } from '../../constants/presets';

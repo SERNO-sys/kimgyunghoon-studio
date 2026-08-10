@@ -16,9 +16,17 @@
  * invokes them when provided, but they are optional and never required.
  *
  * STRICT CONSTRAINT: This module MUST NOT contain any business logic.
+ *
+ * CLIENT COMPONENT: This module uses React hooks (useMemo) and exports the
+ * RenderEngine component. It MUST be a Client Component so it can be imported
+ * by Server Component pages (which pass the serializable ThemeConfig down as
+ * props). Client Components are still server-rendered for the initial HTML, so
+ * the Edge runtime and SSR output are preserved.
  */
+'use client';
 
 import * as React from 'react';
+
 import type { PageConfig, ThemeConfig } from '../theme-config/v2';
 import type {
   PostRenderHook,
