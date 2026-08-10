@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 
 import { getSiteData } from '@/lib/site-data';
 import { resolveSiteConfig } from '@/lib/site-context';
-import { RenderEngine, ThemeProvider, resolveThemeTokens } from '@/lib/renderer';
+import { RenderEngine, ThemeProvider } from '@/lib/renderer';
+import { resolveThemeTokens } from '@/lib/renderer/theme-tokens';
 import { adaptLegacyThemeConfig } from '@/lib/renderer/legacy-adapter';
 
 import type { SitePage } from '@/lib/db/types';
