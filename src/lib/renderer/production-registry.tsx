@@ -20,19 +20,18 @@
  * whatever the ThemeConfig describes. It never branches on industry, intent, or
  * business semantics.
  *
- * CLIENT COMPONENT: This module exports React components (HeroSection, etc.)
- * and a registry factory that returns them. It MUST be a Client Component so
- * the components can be rendered by the Client RenderEngine. Client Components
- * are still server-rendered for the initial HTML, so the Edge runtime and SSR
- * output are preserved.
+ * SERVER COMPONENTS: The section components in this module are pure
+ * presentational components — they use no hooks and only consume `section` and
+ * `theme` props. They are valid Server Components and are server-rendered for
+ * the initial HTML (Edge runtime + SSR preserved). The server-safe registry
+ * factory lives in production-registry.ts and references these components.
  */
-'use client';
-
 import * as React from 'react';
 
-import type { SectionProps, SectionComponent } from './types';
+import type { SectionComponent } from './types';
 import type { SectionRegistry } from './registry';
 import { DefaultSectionRegistry } from './registry';
+
 
 
 /** A small helper to read a string from a section's content record. */
@@ -80,7 +79,7 @@ const DEFAULT_HERO_VARIANT = 'CENTERED';
  * body, ctaLabel, ctaHref, imageUrl). Each variant produces a structurally
  * different hero so different businesses do not look identical.
  */
-const HeroSection: SectionComponent = ({ section, theme }) => {
+export const HeroSection: SectionComponent = ({ section, theme }) => {
   const variant = str(section.settings?.variant as string | undefined, DEFAULT_HERO_VARIANT);
 
   const title = str(section.content.title, '환영합니다');
@@ -273,7 +272,7 @@ const HeroSection: SectionComponent = ({ section, theme }) => {
  *
  * Renders a heading + body. Consumes `section.content` (title, body).
  */
-const TextSection: SectionComponent = ({ section, theme }) => {
+export const TextSection: SectionComponent = ({ section, theme }) => {
   const title = str(section.content.title, '소개');
   const body = str(section.content.body, section.content.text);
   return (
@@ -305,7 +304,7 @@ const TextSection: SectionComponent = ({ section, theme }) => {
  * and `section.content` (title, items[]). Each variant lays out the images
  * differently.
  */
-const GallerySection: SectionComponent = ({ section, theme }) => {
+export const GallerySection: SectionComponent = ({ section, theme }) => {
   const variant = str(section.settings?.variant as string | undefined, 'GRID');
 
   const title = str(section.content.title, 'Gallery');
@@ -384,7 +383,7 @@ const GallerySection: SectionComponent = ({ section, theme }) => {
  * Consumes `section.settings.variant` (CARD_GRID / LIST / FEATURED) and
  * `section.content` (title, items[]).
  */
-const FeaturesSection: SectionComponent = ({ section, theme }) => {
+export const FeaturesSection: SectionComponent = ({ section, theme }) => {
   const variant = str(section.settings?.variant, 'CARD_GRID');
   const title = str(section.content.title, 'Services');
   const items = itemArray(section.content.items);
@@ -446,7 +445,7 @@ const FeaturesSection: SectionComponent = ({ section, theme }) => {
  *
  * Consumes `section.content` (title, items[]).
  */
-const TestimonialsSection: SectionComponent = ({ section, theme }) => {
+export const TestimonialsSection: SectionComponent = ({ section, theme }) => {
   const title = str(section.content.title, '고객 이야기');
   const items = itemArray(section.content.items);
   return (
@@ -499,7 +498,7 @@ const TestimonialsSection: SectionComponent = ({ section, theme }) => {
  * Consumes `section.settings.variant` (CTA / BOOKING_CARD / PROMINENT_ACTION)
  * and `section.content` (title, body, ctaLabel, ctaHref).
  */
-const CtaSection: SectionComponent = ({ section, theme }) => {
+export const CtaSection: SectionComponent = ({ section, theme }) => {
   const variant = str(section.settings?.variant as string | undefined, 'CTA');
 
   const title = str(section.content.title, '지금 시작하세요');
@@ -555,7 +554,7 @@ const CtaSection: SectionComponent = ({ section, theme }) => {
  * Consumes `section.settings.variant` (INFO / FORM / INFO_FORM) and
  * `section.content` (title, body, email, phone, address).
  */
-const ContactSection: SectionComponent = ({ section, theme }) => {
+export const ContactSection: SectionComponent = ({ section, theme }) => {
   const variant = str(section.settings?.variant as string | undefined, 'INFO_FORM');
 
   const title = str(section.content.title, 'Contact');
@@ -663,7 +662,7 @@ const ContactSection: SectionComponent = ({ section, theme }) => {
  *
  * Consumes `section.content` (title, body).
  */
-const FooterSection: SectionComponent = ({ section, theme }) => {
+export const FooterSection: SectionComponent = ({ section, theme }) => {
   const title = str(section.content.title, 'Footer');
   const body = str(section.content.body, '');
   return (
@@ -690,6 +689,9 @@ const FooterSection: SectionComponent = ({ section, theme }) => {
  *
  * Registers every section type the ThemeConfig can describe. Unknown types fall
  * back to GenericSection (which preserves layout spacing and never white-screens).
+ *
+ * This module is server-safe (no 'use client', no hooks), so this factory can be
+ * invoked directly from Server Components (the public site pages).
  */
 export function createProductionRegistry(): SectionRegistry {
   const registry = new DefaultSectionRegistry();
@@ -703,3 +705,4 @@ export function createProductionRegistry(): SectionRegistry {
   registry.register('footer', FooterSection, { version: '1.0.0', capabilities: ['a11y'] });
   return registry;
 }
+
