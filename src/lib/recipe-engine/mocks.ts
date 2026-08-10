@@ -175,5 +175,185 @@ export const MODERN_BISTRO_RECIPE: RecipeBlueprint = {
   },
 };
 
+/**
+ * AWIE V2 - Concrete Mock Recipe: Counseling Center.
+ *
+ * A reusable blueprint for the Counseling industry. It maps the counseling
+ * profile's capabilities/requirements (consultation form, portfolio, address,
+ * contact form, team profile) to semantic features. The `gallery` feature
+ * expresses the `discovery` capability that the Brain Decision Engine fires
+ * for a counseling business, so a counseling input no longer fails with
+ * NO_COMPATIBLE_RECIPE.
+ *
+ * STRICT CONSTRAINT: This module MUST NOT contain any business logic. It is
+ * pure presentation data.
+ */
+export const COUNSELING_CENTER_RECIPE: RecipeBlueprint = {
+  recipeId: 'counseling-center',
+  supportedIndustries: ['counseling'],
+  strategy: {
+    intent: ['authority', 'conversion'],
+    cta: {
+      primaryLabel: '상담 예약하기',
+
+      primaryTarget: '/contact',
+      secondaryLabel: '상담사 소개',
+      secondaryTarget: '/about',
+    },
+    hero: {
+      layout: 'centered',
+      headline: '마음의 안정을 찾는 여정을 함께합니다',
+      subheadline: '전문 심리상담사가 당신의 이야기를 경청합니다.',
+    },
+  },
+  content: {
+    pages: [
+      {
+        id: 'home',
+        route: '/',
+        title: 'Home',
+        isHome: true,
+        sectionIds: ['hero', 'about', 'team', 'gallery', 'contact'],
+      },
+      {
+        id: 'about',
+        route: '/about',
+        title: 'About',
+        sectionIds: ['about', 'team'],
+      },
+    ],
+    sections: [
+      {
+        id: 'hero',
+        type: 'hero',
+        layout: 'centered',
+        content: {
+          headline: '마음의 안정을 찾는 여정을 함께합니다',
+          subheadline: '전문 심리상담사가 당신의 이야기를 경청합니다.',
+        },
+        assetIds: ['hero-bg'],
+      },
+      {
+        id: 'about',
+        type: 'text',
+        layout: 'centered',
+        content: {
+          body: '신뢰와 공감을 바탕으로 한 전문 심리상담 서비스.',
+        },
+      },
+      {
+        id: 'team',
+        type: 'features',
+        layout: 'grid',
+        content: {
+          heading: '상담사 소개',
+        },
+      },
+      {
+        id: 'gallery',
+        type: 'gallery',
+        layout: 'grid',
+        content: {
+          heading: '센터 소개',
+        },
+      },
+      {
+        id: 'contact',
+        type: 'contact',
+        layout: 'split',
+        content: {
+          heading: '상담 문의',
+        },
+        formId: 'consultation',
+      },
+    ],
+    defaultContent: {
+      title: '심리상담센터',
+      tagline: '전문 심리상담 서비스',
+      description: '전문 심리상담사가 제공하는 신뢰 기반의 심리상담 서비스.',
+      locale: 'ko',
+    },
+  },
+  presentation: {
+    preferredLayout: {
+      headerType: 'sticky',
+      footerType: 'minimal',
+      maxWidth: 'lg',
+    },
+    preferredSkin: {
+      colorPalette: '#4C6B8A',
+      fontPairing: 'sans',
+      buttonStyle: 'rounded',
+    },
+    preferredSkeleton: {
+      headerType: 'sticky',
+      heroType: 'centered',
+    },
+    preferredTypography: {
+      fontPairing: 'sans',
+      baseSize: 'md',
+      headingWeight: '600',
+    },
+  },
+  assets: {
+    assets: [
+      {
+        id: 'hero-bg',
+        url: '/images/counseling-hero.jpg',
+        mimeType: 'image/jpeg',
+        alt: 'A calm, welcoming counseling center space',
+      },
+    ],
+  },
+  mapping: {
+    capabilityFeatures: [
+      { capability: 'supportsConsultationForm', feature: Feature.Contact },
+      { capability: 'supportsPortfolio', feature: Feature.Gallery },
+      { capability: 'requiresAddress', feature: Feature.Address },
+      { capability: 'requiresContactForm', feature: Feature.Contact },
+      { capability: 'requiresTeamProfile', feature: Feature.Team },
+    ],
+    sectionMappings: [
+      {
+        feature: Feature.Gallery,
+        sectionType: 'gallery',
+        layout: 'grid',
+        page: 'home',
+        order: 3,
+        required: false,
+      },
+      {
+        feature: Feature.Team,
+        sectionType: 'features',
+        layout: 'grid',
+        page: 'home',
+        order: 2,
+        required: true,
+      },
+      {
+        feature: Feature.Address,
+        sectionType: 'text',
+        layout: 'two-column',
+        page: 'home',
+        order: 4,
+        required: true,
+      },
+      {
+        feature: Feature.Contact,
+        sectionType: 'contact',
+        layout: 'split',
+        page: 'home',
+        order: 5,
+        required: true,
+      },
+    ],
+  },
+};
+
 /** All mock recipes, for convenience. */
-export const MOCK_RECIPES: RecipeBlueprint[] = [MODERN_BISTRO_RECIPE];
+export const MOCK_RECIPES: RecipeBlueprint[] = [
+  MODERN_BISTRO_RECIPE,
+  COUNSELING_CENTER_RECIPE,
+];
+
+
