@@ -15,7 +15,8 @@
 
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { RenderEngine, resolveThemeTokens } from '../src/lib/renderer';
+import { RenderEngine } from '../src/lib/renderer';
+import { resolveThemeTokens } from '../src/lib/renderer/theme-tokens';
 import type { ThemeConfig } from '../src/lib/theme-config/v2';
 
 

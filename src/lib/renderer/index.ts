@@ -35,8 +35,6 @@ export {
 
 export { buildResourceMap } from './resource-map';
 
-export { resolveThemeTokens } from './theme-tokens';
-
 export {
   ThemeContext,
   ThemeProvider,
