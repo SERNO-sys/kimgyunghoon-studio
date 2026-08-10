@@ -3,8 +3,11 @@ import { notFound } from 'next/navigation';
 
 import { getSiteData } from '@/lib/site-data';
 import { resolveSiteConfig } from '@/lib/site-context';
-import { renderPostContent } from '@/lib/markdown';
+import { RenderEngine, ThemeProvider, resolveThemeTokens } from '@/lib/renderer';
+import { createProductionRegistry } from '@/lib/renderer/production-registry';
+import { adaptLegacyThemeConfig } from '@/lib/renderer/legacy-adapter';
 import type { SitePage } from '@/lib/db/types';
+
 
 export const runtime = 'edge';
 
@@ -14,11 +17,21 @@ interface CustomPageProps {
 
 /**
  * Resolves an AWIE-generated custom page (themeConfig.pages) by its route path.
+ *
  * The layout merges legacy navigation pages with `themeConfig.pages`; custom
- * pages (Gallery, Products, Services, ...) carry `type: 'custom'` and render
- * their `content` (markdown) here. Legacy ABOUT/DIARY/CONTACT routes are
- * handled by their dedicated tenant pages, so this catch-all only serves the
- * AI-generated custom pages.
+ * pages (Gallery, Products, Services, ...) carry `type: 'custom'` and are
+ * rendered here through the real RenderEngine + ThemeProvider pipeline.
+ *
+ *   DESIGN DECISION → ThemeConfig → RENDER
+ *
+ * The RenderEngine matches the requested route against `themeConfig.resources.pages`,
+ * resolves each sectionId from `themeConfig.resources.sections`, and renders the
+ * section through the production registry (hero, gallery, features, cta, ...).
+ * The ThemeProvider converts the ThemeConfig settings into concrete tokens
+ * (colors, spacing, typography, radius) that the section components consume.
+ *
+ * Legacy ABOUT / DIARY / CONTACT routes are handled by their dedicated tenant
+ * pages, so this catch-all only serves the AI-generated custom pages.
  */
 function findCustomPage(pages: SitePage[], path: string): SitePage | undefined {
   const flat: SitePage[] = [];
@@ -63,32 +76,29 @@ export default async function CustomPage({ params }: CustomPageProps) {
     notFound();
   }
 
-  const contentHtml = page.content
-    ? await renderPostContent(page.content)
-    : '';
+  // The site's persisted themeConfig uses the legacy shape. The adapter lifts
+  // it into the v2 ThemeConfig the Renderer consumes (metadata, resources,
+  // policies). It makes no design decisions — it only maps existing values.
+  const themeConfig = adaptLegacyThemeConfig(
+    config.themeConfig,
+    config.name,
+    config.themeConfig.pages ?? [],
+  );
+
+  // The production registry maps ThemeConfig section types to real, visible
+  // React components. It is created once per render.
+  const registry = createProductionRegistry();
 
   return (
-    <main className="bg-[#fffdf8] py-12 sm:py-20">
-      <article className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        <header className="border-b border-stone-200 pb-10 sm:pb-12">
-          <p className="text-xs font-semibold tracking-[0.2em] text-amber-900">
-            {config.name}
-          </p>
-          <h1 className="mt-4 font-serif text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl">
-            {page.label}
-          </h1>
-        </header>
-        {contentHtml ? (
-          <div
-            className="markdown-content mt-12 max-w-none text-[1.0625rem] leading-8 text-stone-700"
-            dangerouslySetInnerHTML={{ __html: contentHtml }}
-          />
-        ) : (
-          <div className="mt-12 rounded-lg border border-dashed border-stone-300 p-12 text-center text-stone-400">
-            이 페이지의 콘텐츠가 아직 준비되지 않았습니다.
-          </div>
-        )}
-      </article>
-    </main>
+    <ThemeProvider config={themeConfig}>
+      <RenderEngine
+        config={themeConfig}
+        registry={registry}
+        theme={resolveThemeTokens(themeConfig)}
+        route={path}
+      />
+    </ThemeProvider>
   );
 }
+
+

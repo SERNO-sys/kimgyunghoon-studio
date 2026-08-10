@@ -152,11 +152,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // V2.6 execution boundary: the existing RecipeMerger consumes the bridge
-    // result directly. The orchestrator does NOT construct ThemeConfig itself.
-    const merger = new RecipeMerger();
-    const mergeResult = merger.merge(pipeline.mergeInput);
+    // V2.6 execution boundary: the orchestrator feeds the validated MergeInput
+    // to the existing RecipeMerger, then applies Design Intelligence (HOW).
+    //
+    // Design Intelligence consumes the Brain outputs (BusinessMeaning,
+    // DecisionPlan, ContentPlan) and produces a VisualDesignDecision (hero
+    // variant, section order, section variants, archetype, palette, typography,
+    // spacing, CTA priority, image treatment). The ThemeConfig Bridge writes
+    // that decision into the renderer-facing ThemeConfig.
+    //
+    // This is the ONLY place the Design Intelligence decisions are materialized
+    // into the persisted ThemeConfig. Without it, the site would render only the
+    // RecipeMerger's default sections and never reflect the AI's design intent.
+    const mergeResult = goldenPath.execute(pipeline);
     const v2Config = mergeResult.config;
+
 
     // Derive the site metadata from the V2.6 ThemeConfig (the single source of
     // truth produced by the Golden Path). The DB persists this config as JSON.
