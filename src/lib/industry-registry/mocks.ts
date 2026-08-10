@@ -90,6 +90,68 @@ export const LAW_FIRM_PROFILE: IndustryProfile = {
   },
 };
 
+/**
+ * The Counseling / Mental Health profile.
+ *
+ * This profile exists so that a counseling business (e.g. a Korean
+ * 심리상담센터) resolves to a dedicated industry instead of silently falling
+ * back to the generic profile. It includes both English and Korean aliases.
+ * The Korean aliases are the common ways a user describes this business in a
+ * one-line prompt (상담, 심리상담, 상담센터, 심리상담센터, 카운슬링).
+ */
+export const COUNSELING_PROFILE: IndustryProfile = {
+  industryId: 'counseling',
+  aliases: [
+    'counseling',
+    'counselor',
+    'counselling',
+    'therapy',
+    'therapist',
+    'mental health',
+    'psychology',
+    'psychologist',
+    '상담',
+    '심리상담',
+    '상담센터',
+    '심리상담센터',
+    '카운슬링',
+    '심리치료',
+  ],
+  intent: {
+    primary: 'attract_clients',
+    secondary: ['build_trust', 'show_expertise'],
+  },
+  capabilities: {
+    supportsConsultationForm: true,
+    supportsPortfolio: true,
+  },
+  requirements: {
+    requiresAddress: true,
+    requiresContactForm: true,
+    requiresTeamProfile: true,
+  },
+  constraints: {
+    localOnly: true,
+  },
+  validationProfile: {
+    requiredFields: ['businessType', 'services', 'contactPreference'],
+    forbiddenFields: [],
+  },
+  confidenceHints: {
+    prioritySlots: ['businessType', 'services', 'contactPreference'],
+    suggestedQuestions: {
+      businessType: ['What type of counseling do you provide?'],
+      services: ['What counseling services do you offer?'],
+      contactPreference: ['How should clients reach you?'],
+    },
+  },
+  metadata: {
+    version: 1,
+    updatedAt: '2026-08-05T00:00:00.000Z',
+    source: 'mock',
+  },
+};
+
 /** The Generic / Unknown fallback profile. */
 export const GENERIC_PROFILE: IndustryProfile = {
   industryId: 'generic',
@@ -125,5 +187,6 @@ export const GENERIC_PROFILE: IndustryProfile = {
 export const MOCK_INDUSTRY_PROFILES: IndustryProfile[] = [
   RESTAURANT_PROFILE,
   LAW_FIRM_PROFILE,
+  COUNSELING_PROFILE,
   GENERIC_PROFILE,
 ];

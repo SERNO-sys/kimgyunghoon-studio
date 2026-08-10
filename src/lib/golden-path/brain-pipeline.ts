@@ -222,8 +222,34 @@ export class BrainGoldenPath {
     };
     const plan = buildDecisionPlan(plannerInput);
 
-    // 5. Recipe Integration: DecisionPlan → compatible RecipeBlueprint.
-    const integration = this.recipeIntegration.select(plan, MOCK_RECIPES);
+    // 5. Resolve the base IndustryProfile from the brief's business type.
+    //    This MUST happen before Recipe selection so the resolved industry can
+    //    act as a SAFETY BOUNDARY: a recipe scoped to a specific industry
+    //    (e.g. "restaurant") is never selected for a DIFFERENT industry.
+    //
+    //    IMPORTANT: the boundary is only enforced when the input actually
+    //    MATCHED a registered industry. When the input is unresolved (falls
+    //    back to the generic profile), we do NOT know the industry, so we
+    //    preserve the legacy behavior and allow any compatible recipe. This
+    //    keeps the golden path working for businesses that are not yet in the
+    //    registry while still preventing a known industry (e.g. counseling)
+    //    from receiving a recipe scoped to a different industry (e.g.
+    //    restaurant).
+    const rawBusinessType = brief.businessType?.primary ?? '';
+    const baseResolution = this.industryResolver.resolve(rawBusinessType);
+    const baseProfile = baseResolution.profile;
+    const industryBoundary = baseResolution.matched
+      ? baseProfile.industryId
+      : undefined;
+
+    // 6. Recipe Integration: DecisionPlan → compatible RecipeBlueprint.
+    //    The resolved industry is passed to select() as the safety boundary.
+    const integration = this.recipeIntegration.select(
+      plan,
+      MOCK_RECIPES,
+      industryBoundary,
+    );
+
     if (!integration) {
       return {
         ok: false,
@@ -244,16 +270,16 @@ export class BrainGoldenPath {
       };
     }
 
-    // 6. ContentPlan: DecisionPlan → content requirements for AI #2.
+    // 7. ContentPlan: DecisionPlan → content requirements for AI #2.
     const contentPlan = buildContentPlan(plan);
 
-    // 7. AI #2: ContentPlan → generated content (expression only).
+    // 8. AI #2: ContentPlan → generated content (expression only).
     const content = this.copywriter.generate({
       contentPlan,
       config: { tone: 'professional', language: 'ko' },
     });
 
-    // 8. Fact Validator: generated content must PASS before the bridge.
+    // 9. Fact Validator: generated content must PASS before the bridge.
     const factValidation = validateFacts({
       contentPlan,
       items: content.items,
@@ -267,10 +293,6 @@ export class BrainGoldenPath {
         },
       };
     }
-
-    // 9. Resolve the base IndustryProfile for the bridge adapter.
-    const rawBusinessType = brief.businessType?.primary ?? '';
-    const baseProfile = this.industryResolver.resolve(rawBusinessType).profile;
 
     // 10. ThemeConfig Bridge: Brain output → V2.6-compatible MergeInput.
     const bridge = this.bridge.build({

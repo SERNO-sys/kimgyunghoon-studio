@@ -199,18 +199,45 @@ export class RecipeIntegration {
    * Iterates the provided recipes in order, keeps only COMPATIBLE ones, and
    * returns the first (deterministic order). Returns undefined if no recipe is
    * compatible.
+   *
+   * SAFETY BOUNDARY (industry compatibility):
+   * When an `industryId` is provided, a recipe is eligible ONLY if its
+   * `supportedIndustries` includes that industry. A recipe scoped to a specific
+   * industry (e.g. "restaurant") MUST NEVER be selected for a different or
+   * unresolved industry (e.g. "generic", "counseling", "healthcare") merely
+   * because its capabilities happen to match the DecisionPlan. If no recipe
+   * matches the resolved industry, this returns undefined so the caller can
+   * fall back to its existing safe default path (e.g. NO_COMPATIBLE_RECIPE).
    */
   select(
     plan: DecisionPlan,
     recipes: readonly RecipeBlueprint[],
+    industryId?: string,
   ): RecipeIntegrationResult | undefined {
     for (const recipe of recipes) {
+      if (industryId !== undefined && !this.supportsIndustry(recipe, industryId)) {
+        continue;
+      }
       const result = this.evaluate(plan, recipe);
       if (result.verdict === 'COMPATIBLE') {
         return result;
       }
     }
     return undefined;
+  }
+
+  /**
+   * Determines whether a recipe explicitly supports the resolved industry.
+   *
+   * A recipe is eligible only when its `supportedIndustries` contains the
+   * resolved industry. The unresolved/generic fallback industry is never
+   * implicitly matched: a recipe must explicitly declare support for it.
+   */
+  private supportsIndustry(
+    recipe: RecipeBlueprint,
+    industryId: string,
+  ): boolean {
+    return recipe.supportedIndustries.includes(industryId);
   }
 
   /**
