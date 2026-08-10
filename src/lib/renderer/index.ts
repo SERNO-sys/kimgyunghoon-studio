@@ -35,13 +35,15 @@ export {
 
 export { buildResourceMap } from './resource-map';
 
+export { resolveThemeTokens } from './theme-tokens';
+
 export {
   ThemeContext,
   ThemeProvider,
   useTheme,
-  resolveThemeTokens,
   type ThemeProviderProps,
 } from './theme-provider';
+
 
 export { GenericSection } from './GenericSection';
 

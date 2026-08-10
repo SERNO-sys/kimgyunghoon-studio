@@ -44,13 +44,13 @@ import { buildResourceMap } from './resource-map';
 import { GenericSection } from './GenericSection';
 import { trackRender } from './telemetry';
 import type { SectionRegistry } from './registry';
+import { createProductionRegistry } from './production-registry';
+
 
 /** Props for the RenderEngine. */
 export interface RenderEngineProps {
   /** The immutable ThemeConfig. */
   config: ThemeConfig;
-  /** The section registry used to resolve section components. */
-  registry: SectionRegistry;
   /** The resolved theme tokens. */
   theme: ThemeTokens;
   /** The route to render (e.g. "/", "/about"). */
@@ -76,10 +76,15 @@ export interface RenderEngineProps {
  *
  * Renders the page that matches the given route. If no page matches, it emits
  * a ROUTE_NOT_FOUND telemetry event and renders nothing.
+ *
+ * The section registry is built internally via createProductionRegistry(). It
+ * is NOT accepted as a prop because the registry is a class instance (with
+ * methods and a Map) that cannot be serialized across the Server → Client
+ * component boundary. Building it here keeps the RenderEngine self-contained
+ * and SSR-safe.
  */
 export function RenderEngine({
   config,
-  registry,
   theme,
   route,
   telemetry = noopRendererTelemetry,
@@ -90,8 +95,14 @@ export function RenderEngine({
   tenant,
   preview,
 }: RenderEngineProps): React.ReactElement | null {
+  // The production registry maps ThemeConfig section types to real, visible
+  // React components. It is built once per render on the client side so it is
+  // never serialized across the Server → Client boundary.
+  const registry = React.useMemo(() => createProductionRegistry(), []);
+
   // Build the indexed ResourceMap once per render.
   const resources = React.useMemo(() => buildResourceMap(config), [config]);
+
 
   // Route Match: find the page by route using the Map (never Array.find).
   const page = findPageByRoute(resources, route);

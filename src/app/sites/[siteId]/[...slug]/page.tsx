@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation';
 import { getSiteData } from '@/lib/site-data';
 import { resolveSiteConfig } from '@/lib/site-context';
 import { RenderEngine, ThemeProvider, resolveThemeTokens } from '@/lib/renderer';
-import { createProductionRegistry } from '@/lib/renderer/production-registry';
 import { adaptLegacyThemeConfig } from '@/lib/renderer/legacy-adapter';
+
 import type { SitePage } from '@/lib/db/types';
 
 
@@ -85,20 +85,16 @@ export default async function CustomPage({ params }: CustomPageProps) {
     config.themeConfig.pages ?? [],
   );
 
-  // The production registry maps ThemeConfig section types to real, visible
-  // React components. It is created once per render.
-  const registry = createProductionRegistry();
-
   return (
     <ThemeProvider config={themeConfig}>
       <RenderEngine
         config={themeConfig}
-        registry={registry}
         theme={resolveThemeTokens(themeConfig)}
         route={path}
       />
     </ThemeProvider>
   );
+
 }
 
 
