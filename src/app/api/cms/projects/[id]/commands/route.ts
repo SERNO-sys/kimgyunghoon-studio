@@ -64,9 +64,15 @@ import {
   type GoldenPathOrchestrator,
 } from '@/lib/golden-path';
 
+// This route is Cloudflare Edge-compatible: it uses only Web-standard APIs
+// (NextResponse/NextRequest), Cloudflare-native D1 via getRequestContext(), and
+// Edge-safe in-memory services. Declaring the Edge runtime enables Cloudflare
+// Pages Production deployment.
+export const runtime = 'edge';
 
 // ---------------------------------------------------------------------------
 // Server-side singletons (in-memory for this milestone).
+
 //
 // The PreviewSessionStore holds the Draft ThemeConfig (the working copy) and
 // the PreviewSession metadata. The ServerSideOrchestrator wires the Application

@@ -31,8 +31,15 @@ import type { NextRequest } from 'next/server';
 import { requireAdmin, guardError } from '@/lib/security';
 import { DeliveryMetrics } from '@/lib/editor-integration/server/delivery-metrics';
 
+// This route is Cloudflare Edge-compatible: it uses only Web-standard APIs
+// (NextResponse/NextRequest), Cloudflare-native D1 via getRequestContext(), and
+// Edge-safe in-memory services. Declaring the Edge runtime enables Cloudflare
+// Pages Production deployment.
+export const runtime = 'edge';
+
 /**
  * The Metrics API.
+
  *
  * Returns a snapshot of the Delivery Layer metrics. It NEVER executes business
  * logic.

@@ -56,8 +56,14 @@ import {
 import { requireSiteOwnership, guardError } from '@/lib/security';
 import { getDb } from '@/lib/db/client';
 
+// This route is Cloudflare Edge-compatible: it uses only Web-standard APIs
+// (NextResponse/NextRequest), Cloudflare-native D1 via getRequestContext(), and
+// Edge-safe in-memory services. Declaring the Edge runtime enables Cloudflare
+// Pages Production deployment.
+export const runtime = 'edge';
 
 // The GoldenPathOrchestrator is constructed once from the frozen registries.
+
 // It is stateless and deterministic, so a singleton is safe. It is required by
 // the VersionHistoryService contract (used by the detail view); the list view
 // simply does not invoke renderPage.

@@ -58,9 +58,15 @@ import {
 } from '@/lib/security';
 import { getDb } from '@/lib/db/client';
 
+// This route is Cloudflare Edge-compatible: it uses only Web-standard APIs
+// (NextResponse/NextRequest), Cloudflare-native D1 via getRequestContext(), and
+// Edge-safe in-memory services. Declaring the Edge runtime enables Cloudflare
+// Pages Production deployment.
+export const runtime = 'edge';
 
 /**
  * The Publish Workflow API.
+
  *
  * Receives a Publish intent from the Dumb Client, executes the Publish Workflow
  * via the PublishOrchestrator, and returns the PublishResult metadata.

@@ -90,8 +90,14 @@ import {
 } from '@/lib/editor-integration/server';
 import { isValidId, isValidPageId } from '@/lib/security';
 
+// This route is Cloudflare Edge-compatible: it uses only Web-standard APIs
+// (NextResponse/NextRequest), Cloudflare-native D1 via getRequestContext(), and
+// Edge-safe in-memory services. Declaring the Edge runtime enables Cloudflare
+// Pages Production deployment.
+export const runtime = 'edge';
 
 // The GoldenPathOrchestrator is constructed once from the frozen registries.
+
 // It is stateless and deterministic, so a singleton is safe.
 const goldenPath: GoldenPathOrchestrator = new DefaultGoldenPathOrchestrator(
   buildGoldenPathRegistries(),

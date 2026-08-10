@@ -28,8 +28,15 @@ import { NextResponse } from 'next/server';
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import { AuditLogRepository } from '@/lib/editor-integration/server/audit-log-repository';
 
+// This route is Cloudflare Edge-compatible: it uses only Web-standard APIs
+// (NextResponse), Cloudflare-native D1 via getRequestContext(), and Edge-safe
+// in-memory services. Declaring the Edge runtime enables Cloudflare Pages
+// Production deployment.
+export const runtime = 'edge';
+
 /**
  * The Health API.
+
  *
  * Reports the liveness of the Delivery Layer. Returns a snapshot of D1 health
  * and audit-trail writability. It NEVER executes business logic.

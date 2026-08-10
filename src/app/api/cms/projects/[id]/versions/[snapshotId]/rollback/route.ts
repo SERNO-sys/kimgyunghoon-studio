@@ -60,9 +60,15 @@ import {
 } from '@/lib/security';
 import { getDb } from '@/lib/db/client';
 
+// This route is Cloudflare Edge-compatible: it uses only Web-standard APIs
+// (NextResponse/NextRequest), Cloudflare-native D1 via getRequestContext(), and
+// Edge-safe in-memory services. Declaring the Edge runtime enables Cloudflare
+// Pages Production deployment.
+export const runtime = 'edge';
 
 /**
  * The Version Rollback API.
+
  *
  * Rolls a Project back to a specific VersionSnapshot by re-pointing the Release
  * Pointer. The client NEVER receives or holds the ThemeConfig.
