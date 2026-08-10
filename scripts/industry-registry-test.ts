@@ -78,10 +78,11 @@ function run(): void {
       registry.register(profile);
     }
 
-    check('R1: registry has 3 profiles', registry.size === 3);
+    check('R1: registry has 4 profiles', registry.size === 4);
     check('R2: has("restaurant")', registry.has('restaurant') === true);
     check('R3: get("law_firm") returns profile', registry.get('law_firm')?.industryId === 'law_firm');
-    check('R4: list() returns 3 profiles', registry.list().length === 3);
+    check('R4: list() returns 4 profiles', registry.list().length === 4);
+
     check('R5: get("unknown") returns undefined', registry.get('unknown') === undefined);
 
     // Duplicate registration throws.
@@ -138,6 +139,37 @@ function run(): void {
     check('F3: empty input falls back to generic', r2.profile.industryId === 'generic');
     check('F4: empty input matched = false', r2.matched === false);
   }
+
+  // ---------------------------------------------------------------------------
+  section('Resolver: Korean spacing variants (production regression)');
+  {
+    const registry = new IndustryRegistry();
+    for (const profile of MOCK_INDUSTRY_PROFILES) {
+      registry.register(profile);
+    }
+    const resolver = new IndustryResolver(registry, GENERIC_PROFILE);
+
+    // Exact production input that previously fell back to generic and rendered
+    // the wrong (modern-bistro) theme. Must now resolve to counseling.
+    const productionInput =
+      '강남역 인근에서 2030 직장인을 대상으로 야간 진료를 진행하는 프라이빗 심리 상담 센터입니다';
+    const r1 = resolver.resolve(productionInput);
+    check('K1: production input resolves to counseling', r1.profile.industryId === 'counseling');
+    check('K2: production input matched = true', r1.matched === true);
+
+    // Compact (no-space) form of the same business must also resolve.
+    const r2 = resolver.resolve('프라이빗 심리상담센터입니다');
+    check('K3: compact form resolves to counseling', r2.profile.industryId === 'counseling');
+
+    // Short exact alias still resolves (existing behavior preserved).
+    const r3 = resolver.resolve('상담');
+    check('K4: "상담" resolves to counseling', r3.profile.industryId === 'counseling');
+
+    // Latin aliases are NOT subject to broad substring matching.
+    const r4 = resolver.resolve('I run a coffee shop in Seoul');
+    check('K5: Latin sentence does not substring-match restaurant', r4.profile.industryId === 'generic');
+  }
+
 
   // ---------------------------------------------------------------------------
   section('Profiles: no presentation fields');

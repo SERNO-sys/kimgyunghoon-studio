@@ -49,8 +49,13 @@ export class Normalizer {
       .replace(/[-_/]/g, ' ')
       .replace(/[^\p{L}\p{N}\s]/gu, '')
       .replace(/\s+/g, ' ')
+      // Remove whitespace between Hangul characters so Korean spacing variants
+      // ("심리 상담 센터") normalize to the same compact form as the alias
+      // ("심리상담센터"). Latin and other scripts are unaffected.
+      .replace(/(\p{Script=Hangul})\s+(\p{Script=Hangul})/gu, '$1$2')
       .trim();
   }
+
 
 }
 
@@ -85,7 +90,25 @@ export class IndustryResolver {
 
     for (const profile of this.registry.list()) {
       for (const alias of profile.aliases) {
-        if (this.normalizer.normalize(alias) === normalized) {
+        const normalizedAlias = this.normalizer.normalize(alias);
+
+        // 1. Exact match. Preserves the existing behavior for short inputs
+        //    (e.g. "상담", "cafe", "Coffee-Shop!").
+        if (normalizedAlias === normalized) {
+          return { profile, matched: true, normalized };
+        }
+
+        // 2. Restricted containment for Korean (Hangul) aliases only.
+        //    Handles Korean spacing variants inside a longer sentence
+        //    (e.g. "심리 상담 센터" → "심리상담센터") WITHOUT introducing
+        //    broad substring matching for Latin aliases. Aliases shorter than
+        //    3 Hangul syllables are excluded to avoid false positives (e.g. the
+        //    generic "상담" matching "법률상담" legal consultation).
+        if (
+          normalizedAlias.length >= 3 &&
+          /^\p{Script=Hangul}+$/u.test(normalizedAlias) &&
+          normalized.includes(normalizedAlias)
+        ) {
           return { profile, matched: true, normalized };
         }
       }
@@ -94,3 +117,5 @@ export class IndustryResolver {
     return { profile: this.fallback, matched: false, normalized };
   }
 }
+
+
