@@ -360,10 +360,14 @@ export class BrainGoldenPath {
     });
 
     // ThemeConfig Bridge: write the decision into the renderer-facing config.
+    // The selected recipe is passed so the bridge can lift recipe-level CTA
+    // copy into the renderer-facing ctaLabel / ctaHref content fields.
     const bridged = new DesignThemeConfigBridge().build({
       decision,
       config: merged.config,
+      recipe: result.recipe,
     });
+
 
     if (!bridged.ok) {
       return {

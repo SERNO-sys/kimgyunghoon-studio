@@ -25,8 +25,11 @@
  * deterministic adapter over the existing ThemeConfig v2 contract.
  */
 
-import type { ThemeConfig } from '../theme-config/v2/types';
+import type { SectionConfig, ThemeConfig } from '../theme-config/v2/types';
+import type { RecipeBlueprint } from '../recipe-engine/types';
 import type { VisualDesignDecision } from './types';
+
+
 
 /** The default menu that is ALWAYS preserved. */
 export const DEFAULT_MENU = [
@@ -48,7 +51,15 @@ export interface DesignThemeConfigBridgeInput {
   decision: VisualDesignDecision;
   /** The ThemeConfig produced by the existing RecipeMerger. */
   config: ThemeConfig;
+  /**
+   * The selected RecipeBlueprint (optional). When present, the bridge lifts
+   * recipe-level CTA copy (strategy.cta) into the renderer-facing
+   * ctaLabel / ctaHref content fields. It is never used to re-interpret the
+   * user's input.
+   */
+  recipe?: RecipeBlueprint;
 }
+
 
 /**
  * The ThemeConfig Bridge result.
@@ -75,7 +86,7 @@ export class DesignThemeConfigBridge {
    * section settings index signature, menus, pages).
    */
   build(input: DesignThemeConfigBridgeInput): DesignThemeConfigBridgeResult {
-    const { decision, config } = input;
+    const { decision, config, recipe } = input;
 
     // 1. Write the full design decision into settings.design.
     const settings = {
@@ -94,7 +105,9 @@ export class DesignThemeConfigBridge {
     };
 
     // 2. Apply hero variant + image treatment to the hero section, and the
-    //    section variant to each matching section.
+    //    section variant to each matching section. Also lift the recipe's
+    //    content into the renderer-facing content contract (title / subtitle /
+    //    body / ctaLabel / ctaHref / images) so the Renderer can consume it.
     const sections = config.resources.sections.map((section) => {
       const sectionSettings = { ...(section.settings ?? {}) };
 
@@ -110,22 +123,39 @@ export class DesignThemeConfigBridge {
         sectionSettings.imageTreatment = decision.imageTreatment;
       }
 
-      return { ...section, settings: sectionSettings };
+      const content = this.normalizeContent(
+        section,
+        recipe,
+        config.resources.assets,
+      );
+
+      return { ...section, content, settings: sectionSettings };
     });
+
 
     // 3. Preserve the default menu and append custom menus.
     const menus = this.buildMenus(decision, config);
 
-    // 4. Preserve default pages and append custom pages.
-    const pages = this.buildPages(decision, config);
+    // 4. Preserve default pages and append custom pages. Custom pages must
+    //    reference sections that actually exist in resources.sections, so the
+    //    sections array is passed through and any missing referenced section is
+    //    materialized as a real definition.
+    const { pages, missingSections } = this.buildPages(decision, config, sections);
+
+    // Merge any materialized sections into the sections collection so every
+    // page reference resolves to a real, renderable section definition.
+    const allSections = missingSections.length > 0
+      ? [...sections, ...missingSections]
+      : sections;
 
     const resources = {
       ...config.resources,
       settings,
-      sections,
+      sections: allSections,
       menus,
       pages,
     };
+
 
     return {
       ok: true,
@@ -208,11 +238,24 @@ export class DesignThemeConfigBridge {
    * Preserves all existing pages and appends custom pages (menu → page →
    * route) derived from the decision's section plan. Each custom page is a
    * real page definition with a route and a section reference.
+   *
+   * SECTION-REFERENCE INVARIANT: every custom page's `sectionIds` entry must
+   * resolve to a section that actually exists in `resources.sections`. The
+   * section-mapper keys sections by their feature id (e.g. `team`, `gallery`),
+   * which may differ from the section type (e.g. `features`). If a referenced
+   * section is missing, a minimal definition is materialized so the renderer
+   * can always resolve the page. This keeps the Recipe → ThemeConfig →
+   * Renderer contract consistent.
    */
   private buildPages(
     decision: VisualDesignDecision,
     config: ThemeConfig,
-  ): ThemeConfig['resources']['pages'] {
+    sections: SectionConfig[],
+  ): {
+    pages: ThemeConfig['resources']['pages'];
+    missingSections: SectionConfig[];
+  } {
+
     const existing = config.resources.pages ?? [];
 
     const customPages = decision.sections
@@ -231,8 +274,33 @@ export class DesignThemeConfigBridge {
       })
       .filter((page): page is NonNullable<typeof page> => page !== null);
 
-    return [...existing, ...customPages];
+    // Materialize any section referenced by a custom page that does not yet
+    // exist in resources.sections. The section id equals the section type so
+    // the page reference resolves, and the type is a valid registered
+    // SectionType so the renderer can render it.
+    const existingIds = new Set(sections.map((section) => section.id));
+    const missingSections: SectionConfig[] = [];
+    for (const page of customPages) {
+      for (const sectionId of page.sectionIds) {
+        if (!existingIds.has(sectionId)) {
+          missingSections.push({
+            id: sectionId,
+            type: sectionId as SectionConfig['type'],
+            content: {},
+            settings: {},
+          });
+          existingIds.add(sectionId);
+        }
+      }
+    }
+
+    return {
+      pages: [...existing, ...customPages],
+      missingSections,
+    };
   }
+
+
 
   /**
    * Maps a section type + label to a real route.
@@ -334,4 +402,81 @@ export class DesignThemeConfigBridge {
         return 'default';
     }
   }
+
+  /**
+   * Normalizes a section's content into the renderer-facing content contract.
+   *
+   * The RecipeMerger copies the recipe's content verbatim into
+   * `section.content` using recipe-contract field names (headline /
+   * subheadline / heading / body / items / images). The Renderer consumes a
+   * different, stable content contract (title / subtitle / body / ctaLabel /
+   * ctaHref / images). This method is a pure, deterministic ADAPTER that lifts
+   * the recipe content into the renderer contract WITHOUT inventing copy:
+   *
+   *   - title    ← existing title, else headline, else heading
+   *   - subtitle ← existing subtitle, else subheadline
+   *   - body     ← existing body, else description, else text
+   *   - ctaLabel / ctaHref ← existing values, else the recipe's strategy.cta
+   *   - imageUrl / images  ← resolved from the section's assetIds
+   *
+   * Existing renderer-contract values are ALWAYS preserved. Nothing is
+   * removed, and no business copy is fabricated.
+   */
+  private normalizeContent(
+    section: SectionConfig,
+    recipe: RecipeBlueprint | undefined,
+    assets: ThemeConfig['resources']['assets'],
+  ): Record<string, unknown> {
+    const content = { ...(section.content ?? {}) } as Record<string, unknown>;
+
+    // Title: prefer an existing renderer title, else recipe headline/heading.
+    if (content.title === undefined) {
+      const title = content.headline ?? content.heading;
+      if (title !== undefined) {
+        content.title = title;
+      }
+    }
+
+    // Subtitle: prefer an existing subtitle, else recipe subheadline.
+    if (content.subtitle === undefined && content.subheadline !== undefined) {
+      content.subtitle = content.subheadline;
+    }
+
+    // Body: prefer an existing body, else recipe description/text.
+    if (content.body === undefined) {
+      const body = content.description ?? content.text;
+      if (body !== undefined) {
+        content.body = body;
+      }
+    }
+
+    // CTA: prefer existing ctaLabel/ctaHref, else the recipe's strategy.cta.
+    if (recipe?.strategy?.cta) {
+      if (content.ctaLabel === undefined && recipe.strategy.cta.primaryLabel) {
+        content.ctaLabel = recipe.strategy.cta.primaryLabel;
+      }
+      if (content.ctaHref === undefined && recipe.strategy.cta.primaryTarget) {
+        content.ctaHref = recipe.strategy.cta.primaryTarget;
+      }
+    }
+
+    // Images: resolve the section's assetIds to concrete asset URLs.
+    if (section.assetIds && section.assetIds.length > 0) {
+      const urls = section.assetIds
+        .map((id) => assets.find((asset) => asset.id === id)?.url)
+        .filter((url): url is string => Boolean(url));
+      if (urls.length > 0) {
+        if (section.type === 'hero' && content.imageUrl === undefined) {
+          content.imageUrl = urls[0];
+        }
+        if (content.images === undefined) {
+          content.images = urls;
+        }
+      }
+    }
+
+    return content;
+  }
 }
+
+
