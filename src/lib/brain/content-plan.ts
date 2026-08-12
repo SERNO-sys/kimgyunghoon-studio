@@ -93,6 +93,54 @@ export const contentRequirementTypeSchema = z.enum(
 );
 
 /**
+ * The semantic content SHAPE vocabulary.
+ *
+ * A shape describes the STRUCTURE of the semantic content AI #2 must produce
+ * for a requirement. It is SEMANTIC — it is NOT a UI section name, NOT a
+ * renderer variant, and NOT a ThemeConfig field. It only tells the model which
+ * semantic fields are required so it can generate real, structured website
+ * copy instead of a single generic body string.
+ *
+ * The agreed shapes are:
+ *   hero    → headline, subheadline, cta
+ *   text    → title, body
+ *   list    → title, items[{ name, description }]
+ *   grid    → title, items[{ name, role, bio }]
+ *   contact → title, body, cta
+ */
+export const ContentShape = {
+  Hero: 'hero',
+  Text: 'text',
+  List: 'list',
+  Grid: 'grid',
+  Contact: 'contact',
+} as const;
+
+/** The union of all valid ContentShape values. */
+export type ContentShapeValue = (typeof ContentShape)[keyof typeof ContentShape];
+
+/** Zod schema for a ContentShape value. */
+export const contentShapeSchema = z.enum(
+  Object.values(ContentShape) as [ContentShapeValue, ...ContentShapeValue[]]
+);
+
+/**
+ * The semantic fields required by each ContentShape.
+ *
+ * This is the exact field vocabulary the model must fill for each shape. It is
+ * the ONLY place that maps a shape to its required semantic fields. It MUST NOT
+ * expose renderer / ThemeConfig / layout vocabulary.
+ */
+export const CONTENT_SHAPE_FIELDS: Record<ContentShapeValue, string[]> = {
+  [ContentShape.Hero]: ['headline', 'subheadline', 'cta'],
+  [ContentShape.Text]: ['title', 'body'],
+  [ContentShape.List]: ['title', 'items'],
+  [ContentShape.Grid]: ['title', 'items'],
+  [ContentShape.Contact]: ['title', 'body', 'cta'],
+};
+
+
+/**
  * The Fact Availability vocabulary.
  *
  * Describes whether concrete facts are available for a content requirement.
@@ -145,6 +193,22 @@ export interface ContentPlanRequirement {
   type: ContentRequirementTypeValue;
   /** A semantic description of the required content. */
   description: string;
+  /**
+   * The semantic content SHAPE AI #2 must produce for this requirement.
+   *
+   * This is SEMANTIC structure (hero/text/list/grid/contact), NOT a UI section
+   * name, renderer variant, or ThemeConfig field. It tells the model which
+   * semantic fields to fill so it generates real structured copy.
+   */
+  shape: ContentShapeValue;
+  /**
+   * The exact semantic fields required for this requirement's shape.
+   *
+   * Derived deterministically from `shape` via CONTENT_SHAPE_FIELDS. It is the
+   * field vocabulary the model must fill. It MUST NOT expose renderer /
+   * ThemeConfig / layout vocabulary.
+   */
+  fields: string[];
   /** Whether this content is required or optional. */
   required: boolean;
   /** Whether concrete facts are available for this requirement. */
@@ -175,6 +239,8 @@ export const contentPlanRequirementSchema = z.object({
   ),
   type: contentRequirementTypeSchema,
   description: z.string().min(1),
+  shape: contentShapeSchema,
+  fields: z.array(z.string()),
   required: z.boolean(),
   factAvailability: factAvailabilitySchema,
   genericAllowed: z.boolean(),
@@ -184,6 +250,7 @@ export const contentPlanRequirementSchema = z.object({
   evidenceRefs: z.array(z.string()),
   mustNotInvent: z.array(z.string()),
 });
+
 
 /**
  * Dormant content metadata.
@@ -291,6 +358,14 @@ interface ContentRequirementTemplate {
   type: ContentRequirementTypeValue;
   /** A semantic description of the required content. */
   description: string;
+  /**
+   * The semantic content SHAPE AI #2 must produce for this requirement.
+   *
+   * This is SEMANTIC structure (hero/text/list/grid/contact), NOT a UI section
+   * name, renderer variant, or ThemeConfig field. It tells the model which
+   * semantic fields to fill so it generates real structured copy.
+   */
+  shape: ContentShapeValue;
   /** Whether this content is required. */
   required: boolean;
   /** The evidence subject that would make this requirement factual. */
@@ -298,6 +373,7 @@ interface ContentRequirementTemplate {
   /** What must never be invented for this requirement. */
   mustNotInvent: string[];
 }
+
 
 /**
  * The declarative capability → content requirement mapping.
@@ -314,6 +390,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     type: ContentRequirementType.Factual,
     description:
       'Content describing the business offerings (products/services) so users can discover what is available.',
+    shape: ContentShape.Hero,
     required: true,
     evidenceSubject: 'offering',
     mustNotInvent: [
@@ -326,6 +403,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     type: ContentRequirementType.Factual,
     description:
       'Content describing what can be purchased and how, enabling a purchase decision.',
+    shape: ContentShape.Text,
     required: true,
     evidenceSubject: 'offering',
     mustNotInvent: [
@@ -338,6 +416,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     type: ContentRequirementType.Factual,
     description:
       'Content describing how to book an appointment, slot, or resource.',
+    shape: ContentShape.Text,
     required: true,
     evidenceSubject: 'schedule',
     mustNotInvent: ['specific dates', 'specific venues', 'specific times'],
@@ -346,6 +425,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     type: ContentRequirementType.Generic,
     description:
       'Content describing how users can contact or submit an inquiry.',
+    shape: ContentShape.Contact,
     required: true,
     mustNotInvent: [
       'specific phone numbers',
@@ -357,6 +437,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     type: ContentRequirementType.Generic,
     description:
       'Content describing the lead capture offer and how to engage.',
+    shape: ContentShape.Text,
     required: true,
     mustNotInvent: ['specific offers', 'specific incentives'],
   },
@@ -364,6 +445,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     type: ContentRequirementType.Factual,
     description:
       'Content describing the physical location and how to find it.',
+    shape: ContentShape.Text,
     required: true,
     evidenceSubject: 'address',
     mustNotInvent: ['specific street address', 'specific coordinates'],
@@ -372,6 +454,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     type: ContentRequirementType.EvidenceBacked,
     description:
       'Content that builds trust through methodology, credentials, or evidence.',
+    shape: ContentShape.Grid,
     required: true,
     evidenceSubject: 'testimonial',
     mustNotInvent: [
@@ -382,6 +465,7 @@ export const CAPABILITY_CONTENT_REQUIREMENTS: Record<
     ],
   },
 };
+
 
 /**
  * Builds a ContentPlan from an already-decided DecisionPlan.
@@ -471,6 +555,8 @@ function buildRequirement(
     capability,
     type: template.type,
     description: template.description,
+    shape: template.shape,
+    fields: [...CONTENT_SHAPE_FIELDS[template.shape]],
     required: template.required,
     factAvailability: availability,
     genericAllowed: template.type !== ContentRequirementType.Unavailable,
@@ -479,6 +565,7 @@ function buildRequirement(
     mustNotInvent: [...template.mustNotInvent],
   };
 }
+
 
 
 /**

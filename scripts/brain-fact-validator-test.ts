@@ -58,6 +58,8 @@ function makeContentPlan(overrides?: Partial<ContentPlan>): ContentPlan {
       provenance: 'cms',
       evidenceRefs: ['ev-offering-1'],
       mustNotInvent: ['specific product names', 'specific prices'],
+      shape: 'text',
+      fields: ['body'],
     },
     {
       id: 'content-inquiry',
@@ -69,7 +71,10 @@ function makeContentPlan(overrides?: Partial<ContentPlan>): ContentPlan {
       genericAllowed: true,
       evidenceRefs: [],
       mustNotInvent: ['specific phone numbers', 'specific email addresses'],
+      shape: 'contact',
+      fields: ['body'],
     },
+
   ];
 
   return {

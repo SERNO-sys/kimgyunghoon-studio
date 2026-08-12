@@ -222,6 +222,22 @@ export interface PromptInstruction {
   requirementId: string;
   /** The writing objective (from the ContentPlan requirement description). */
   objective: string;
+  /**
+   * The semantic content SHAPE the model must produce for this requirement.
+   *
+   * This is SEMANTIC structure (hero/text/list/grid/contact), NOT a UI section
+   * name, renderer variant, or ThemeConfig field. It tells the model which
+   * semantic fields to fill so it generates real structured copy.
+   */
+  shape: string;
+  /**
+   * The exact semantic fields the model must fill for this requirement.
+   *
+   * Derived deterministically from the ContentPlan requirement's `shape`. It is
+   * the field vocabulary the model must fill. It MUST NOT expose renderer /
+   * ThemeConfig / layout vocabulary.
+   */
+  fields: string[];
   /** The tone/expression constraint. */
   tone: ToneConstraintValue;
   /** Whether the content must remain generic-safe (no concrete facts). */
@@ -236,11 +252,14 @@ export interface PromptInstruction {
 export const promptInstructionSchema = z.object({
   requirementId: z.string().min(1),
   objective: z.string().min(1),
+  shape: z.string().min(1),
+  fields: z.array(z.string()),
   tone: toneConstraintSchema,
   genericSafe: z.boolean(),
   allowedEvidenceRefs: z.array(z.string()),
   prohibitedInventions: z.array(z.string()),
 });
+
 
 /**
  * The prompt contract — the deterministic output of the prompt builder.

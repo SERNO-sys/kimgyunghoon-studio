@@ -93,9 +93,13 @@ export function buildInstruction(
   return {
     requirementId: requirement.id,
     objective: requirement.description,
+    shape: requirement.shape,
+    fields: [...requirement.fields],
     tone: config.tone,
     genericSafe,
     allowedEvidenceRefs: genericSafe ? [] : [...requirement.evidenceRefs],
     prohibitedInventions: [...requirement.mustNotInvent],
   };
 }
+
+

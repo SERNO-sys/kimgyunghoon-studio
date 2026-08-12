@@ -101,6 +101,11 @@ function buildMockItem(
  * The body is derived from the requirement's semantic description and the tone
  * constraint. It is deliberately generic — it does NOT contain prices, dates,
  * addresses, names, testimonials, or any concrete business fact.
+ *
+ * The requirement's SHAPE and FIELDS are carried in the PromptContract (the
+ * prompt layer), NOT in the generated content body. The generated body is pure
+ * generic-safe expression text and MUST NOT leak semantic structure or any
+ * UI / layout / ThemeConfig vocabulary.
  */
 function buildMockBody(
   requirement: ContentPlanRequirement,
@@ -108,3 +113,6 @@ function buildMockBody(
 ): string {
   return `[${tone}] ${requirement.description}`;
 }
+
+
+
