@@ -349,7 +349,17 @@ export class BrainGoldenPath {
    *   ThemeConfig Bridge → enriched ThemeConfig
    */
   execute(result: Extract<GoldenPathResult, { ok: true }>): MergeResult {
-    const merged = this.recipeMerger.merge(result.mergeInput);
+    // Thread the AI #2 generated content + ContentPlan into the MergeInput so
+    // the RecipeMerger can write the generated copy into the semantic sections
+    // (Brain Step 08 → ThemeConfig). The bridge's MergeInput carries the
+    // recipe/industry/brief; the content is attached here from the pipeline
+    // outputs. This is pure plumbing — no business logic.
+    const merged = this.recipeMerger.merge({
+      ...result.mergeInput,
+      content: result.content,
+      contentPlan: result.contentPlan,
+    });
+
 
     // Design Intelligence: consume the Brain outputs (WHAT) and produce the
     // VisualDesignDecision (HOW). This NEVER re-interprets the user's input.

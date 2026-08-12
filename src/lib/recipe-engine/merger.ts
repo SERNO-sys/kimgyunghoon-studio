@@ -27,8 +27,11 @@ import type {
   ThemeResources,
 } from '../theme-config/v2/types';
 import type { RecipeBlueprint, FeatureId } from './types';
+import type { ContentPlan } from '../brain/content-plan';
+import type { GeneratedContentSet } from '../brain/copywriter';
 import { PriorityResolver } from './priority-resolver';
 import { SectionMapper } from './section-mapper';
+
 
 /** User preferences that override recipe defaults. */
 export interface UserPreferences {
@@ -58,7 +61,19 @@ export interface MergeInput {
   brief: BusinessBrief;
   /** User preferences (highest priority). */
   userPreferences?: UserPreferences;
+  /**
+   * The AI #2 generated content set (Brain Step 08). When present, the merger
+   * threads the generated copy into the matching semantic sections so the
+   * produced ThemeConfig carries real content instead of empty placeholders.
+   */
+  content?: GeneratedContentSet;
+  /**
+   * The ContentPlan (Brain Step 07). Used to map each generated content item
+   * back to its semantic capability so it can be routed to the correct section.
+   */
+  contentPlan?: ContentPlan;
 }
+
 
 /** The result of merging. */
 export interface MergeResult {
@@ -135,9 +150,28 @@ export class RecipeMerger {
     const sections = mapped.sections;
 
     // -------------------------------------------------------------------------
+    // 2b. Thread the AI #2 generated content into the semantic sections.
+    //     The Brain pipeline produces a GeneratedContentSet (Step 08) that is
+    //     keyed by ContentPlan requirement id (`content-<capability>`). We map
+    //     each generated item back to its capability via the ContentPlan and
+    //     write the copy into the matching section's content. This is the ONLY
+    //     place generated copy enters the ThemeConfig; without it the sections
+    //     would render as empty placeholders.
+    // -------------------------------------------------------------------------
+    if (input.content && input.contentPlan) {
+      this.applyGeneratedContent(
+        sections,
+        input.content,
+        input.contentPlan,
+        decisions,
+      );
+    }
+
+    // -------------------------------------------------------------------------
     // 3. Build the pages, injecting any required sections that were missing.
     // -------------------------------------------------------------------------
     const pages = this.buildPages(recipe, sections, decisions);
+
 
     // -------------------------------------------------------------------------
     // 4. Resolve metadata (title/tagline/description/locale) by priority.
@@ -318,8 +352,62 @@ export class RecipeMerger {
 
 
   // ---------------------------------------------------------------------------
+  // Generated content threading (Brain Step 08 → ThemeConfig)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Threads the AI #2 generated content into the semantic sections.
+   *
+   * Each generated item is keyed by a ContentPlan requirement id
+   * (`content-<capability>`). We resolve the requirement back to its semantic
+   * capability, then route the generated body into the section(s) that serve
+   * that capability. This is a pure, deterministic mapping — it never invents
+   * content and never changes the section structure.
+   */
+  private applyGeneratedContent(
+    sections: SectionConfig[],
+    content: GeneratedContentSet,
+    contentPlan: ContentPlan,
+    decisions: string[],
+  ): void {
+    // Build requirementId -> capability lookup from the ContentPlan.
+    const capabilityByRequirement = new Map<string, string>();
+    for (const requirement of contentPlan.requirements) {
+      capabilityByRequirement.set(requirement.id, requirement.capability);
+    }
+
+    for (const item of content.items) {
+      const capability = capabilityByRequirement.get(item.requirementId);
+      if (!capability) {
+        continue;
+      }
+      // Route the generated body to every section that serves this capability.
+      // Sections are keyed by feature id; the capability maps to a feature via
+      // the recipe's capability->feature mapping. We match by the section id
+      // (feature id) OR by the semantic capability name itself.
+      const targets = sections.filter(
+        (s) => s.id === capability || s.id === item.requirementId,
+      );
+      if (targets.length === 0) {
+        continue;
+      }
+      for (const section of targets) {
+        section.content = {
+          ...section.content,
+          body: item.body,
+        };
+        decisions.push(
+          `Generated content "${item.id}" applied to section "${section.id}" (capability "${capability}").`,
+        );
+      }
+    }
+  }
+
+
+  // ---------------------------------------------------------------------------
   // Page building
   // ---------------------------------------------------------------------------
+
 
   /** Builds the pages, injecting required sections into the appropriate page. */
   private buildPages(

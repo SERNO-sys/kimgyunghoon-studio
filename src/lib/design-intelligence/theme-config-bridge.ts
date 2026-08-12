@@ -258,26 +258,43 @@ export class DesignThemeConfigBridge {
 
     const existing = config.resources.pages ?? [];
 
+    // SECTION-REFERENCE RESOLUTION:
+    // The section-mapper keys sections by their FEATURE id (e.g. `team`,
+    // `services`, `about`), which may differ from the section TYPE (e.g.
+    // `features`, `text`). A custom page references a section by type, so we
+    // must resolve that type to the REAL section id before emitting the page.
+    // We build a type -> id lookup from the existing sections so a page
+    // reference resolves to the actual, content-bearing section instead of a
+    // dangling or duplicated empty one.
+    const sectionIdByType = new Map<string, string>();
+    for (const section of sections) {
+      if (!sectionIdByType.has(section.type)) {
+        sectionIdByType.set(section.type, section.id);
+      }
+    }
+
     const customPages = decision.sections
       .map((section) => {
         const route = this.routeForSection(section.type, section.label);
         if (!route) {
           return null;
         }
+        // Resolve the section type to a real section id when possible.
+        const resolvedId = sectionIdByType.get(section.type) ?? section.type;
         return {
           id: `page-${section.type}`,
           route,
           title: section.label,
-          sectionIds: [section.type],
+          sectionIds: [resolvedId],
           hidden: false,
         };
       })
       .filter((page): page is NonNullable<typeof page> => page !== null);
 
-    // Materialize any section referenced by a custom page that does not yet
-    // exist in resources.sections. The section id equals the section type so
-    // the page reference resolves, and the type is a valid registered
-    // SectionType so the renderer can render it.
+    // Materialize any section referenced by a custom page that still does not
+    // resolve to an existing section. This only happens when the recipe has no
+    // section of that type at all; we then create a minimal definition so the
+    // page reference always resolves and the renderer can render it.
     const existingIds = new Set(sections.map((section) => section.id));
     const missingSections: SectionConfig[] = [];
     for (const page of customPages) {
@@ -299,6 +316,7 @@ export class DesignThemeConfigBridge {
       missingSections,
     };
   }
+
 
 
 
