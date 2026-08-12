@@ -1,12 +1,49 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { getSiteData } from '@/lib/site-data';
 import { resolveSiteConfig } from '@/lib/site-context';
+import { RenderEngine, ThemeProvider } from '@/lib/renderer';
+import { resolveThemeTokens } from '@/lib/renderer/theme-tokens';
+import { adaptLegacyThemeConfig } from '@/lib/renderer/legacy-adapter';
 
 export const runtime = 'edge';
 
 interface AboutPageProps {
   params: Promise<{ siteId: string }>;
+}
+
+/**
+ * AWIE V2 — About page renderer.
+ *
+ * The about page is rendered through the SAME pipeline as every other page:
+ *
+ *   DESIGN DECISION → ThemeConfig → RENDER
+ *
+ * The persisted ThemeConfig (which carries the Design Intelligence decisions:
+ * about copy, section order, section variants, palette, typography, spacing) is
+ * lifted into the v2 shape by the legacy adapter, then consumed by the
+ * RenderEngine + ThemeProvider + production registry.
+ *
+ * The RenderEngine matches the "/about" route against
+ * `themeConfig.resources.pages`, resolves each sectionId from
+ * `themeConfig.resources.sections`, and renders the section through the
+ * production registry (about → TextSection, team → FeaturesSection,
+ * services → FeaturesSection, ...).
+ *
+ * The Renderer NEVER judges. It consumes the ThemeConfig. The Design
+ * Intelligence decisions (which about variant, which section order, which
+ * section variants) are already baked into the persisted ThemeConfig.
+ */
+export async function generateMetadata({
+  params,
+}: AboutPageProps): Promise<Metadata> {
+  const { siteId } = await params;
+  const data = await getSiteData(siteId);
+  if (!data) return { title: 'Not Found' };
+
+  const config = resolveSiteConfig(data.site, data.settings);
+  return { title: `About | ${config.name}` };
 }
 
 export default async function AboutPage({ params }: AboutPageProps) {
@@ -17,76 +54,23 @@ export default async function AboutPage({ params }: AboutPageProps) {
   }
 
   const config = resolveSiteConfig(data.site, data.settings);
-  const aboutText = config.aboutBio;
-  const profileImage =
-    (data.settings
-      ? JSON.parse(data.settings.general || '{}').profile_image
-      : undefined) || '';
-  const subHeading = config.bannerTitle || config.heroTitle;
-  const philosophyText = config.aboutPhilosophy;
 
-  const philosophyBlocks = philosophyText
-    .split(/\n\s*\n/)
-    .filter(Boolean)
-    .map((block: string) => {
-      const [title, ...body] = block.split('\n');
-      return {
-        title: title.trim(),
-        body: body.join('\n').trim(),
-      };
-    });
+  // The site's persisted themeConfig uses the legacy shape. The adapter lifts
+  // it into the v2 ThemeConfig the Renderer consumes (metadata, resources,
+  // policies). It makes no design decisions — it only maps existing values.
+  const themeConfig = adaptLegacyThemeConfig(
+    config.themeConfig,
+    config.name,
+    config.themeConfig.pages ?? [],
+  );
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-16 space-y-20">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-        <div className="md:col-span-7 space-y-6">
-          <span className="text-xs font-bold tracking-widest text-amber-800 uppercase">
-            PROFILE & BIOGRAPHY
-          </span>
-          <h1 className="text-4xl font-serif text-stone-900 font-bold">
-            {subHeading}
-          </h1>
-          <p className="text-stone-600 leading-relaxed whitespace-pre-line">
-            {aboutText}
-          </p>
-        </div>
-        <div className="md:col-span-5">
-          <div className="relative aspect-4/3 rounded-lg overflow-hidden shadow-md bg-stone-200">
-            {profileImage ? (
-              <img
-                src={profileImage}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-stone-400">
-                Profile Image Area
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-8 border-t border-stone-200 pt-16">
-        <span className="text-xs font-bold tracking-widest text-amber-800 uppercase">
-          PHILOSOPHY
-        </span>
-        <div className="flex flex-wrap gap-6">
-          {philosophyBlocks.map(
-            (block: { title: string; body: string }, index: number) => (
-              <div
-                key={index}
-                className="min-w-full flex-1 p-6 bg-stone-50 border border-stone-200/60 rounded-lg space-y-2 md:min-w-[calc(50%-0.75rem)] lg:min-w-[calc(33.333%-1rem)]"
-              >
-                <h3 className="font-bold text-stone-800">{block.title}</h3>
-                <p className="text-sm text-stone-600 whitespace-pre-line">
-                  {block.body}
-                </p>
-              </div>
-            )
-          )}
-        </div>
-      </div>
-    </div>
+    <ThemeProvider config={themeConfig}>
+      <RenderEngine
+        config={themeConfig}
+        theme={resolveThemeTokens(themeConfig)}
+        route="/about"
+      />
+    </ThemeProvider>
   );
 }

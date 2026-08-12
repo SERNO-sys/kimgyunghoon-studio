@@ -697,8 +697,11 @@ export function createProductionRegistry(): SectionRegistry {
   const registry = new DefaultSectionRegistry();
   registry.register('hero', HeroSection, { version: '1.0.0', capabilities: ['a11y'] });
   registry.register('text', TextSection, { version: '1.0.0', capabilities: ['a11y'] });
+  registry.register('about', TextSection, { version: '1.0.0', capabilities: ['a11y'] });
   registry.register('gallery', GallerySection, { version: '1.0.0', capabilities: ['a11y'] });
   registry.register('features', FeaturesSection, { version: '1.0.0', capabilities: ['a11y'] });
+  registry.register('team', FeaturesSection, { version: '1.0.0', capabilities: ['a11y'] });
+  registry.register('services', FeaturesSection, { version: '1.0.0', capabilities: ['a11y'] });
   registry.register('testimonials', TestimonialsSection, { version: '1.0.0', capabilities: ['a11y'] });
   registry.register('cta', CtaSection, { version: '1.0.0', capabilities: ['a11y'] });
   registry.register('contact', ContactSection, { version: '1.0.0', capabilities: ['a11y'] });
