@@ -43,6 +43,7 @@ function assert(cond: boolean, label: string): void {
   }
 }
 
+async function main(): Promise<void> {
 console.log('\n# AWIE V2 — REAL PRODUCTION INPUT TEST (counseling center)\n');
 console.log(`INPUT: ${INPUT}\n`);
 
@@ -69,7 +70,7 @@ console.log('## 1. IndustryResolver');
 // ---------------------------------------------------------------------------
 console.log('\n## 2. BrainGoldenPath.run + execute (production autobuild path)');
 const gp = new BrainGoldenPath();
-const pipeline = gp.run(INPUT);
+const pipeline = await gp.run(INPUT);
 if (!pipeline.ok) {
   console.error(`  FAIL  Golden Path failed: ${pipeline.error.code} — ${pipeline.error.message}`);
   process.exit(1);
@@ -77,8 +78,9 @@ if (!pipeline.ok) {
 passed++;
 console.log('  PASS  Golden Path returned ok');
 
-const mergeResult = gp.execute(pipeline);
+const mergeResult = await gp.execute(pipeline);
 const config = mergeResult.config;
+
 
 // ---------------------------------------------------------------------------
 // 3. RecipeIntegration
@@ -156,3 +158,9 @@ console.log('  PASS  No Modern Bistro / bistro / restaurant content in generated
 
 console.log(`\n# Result: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

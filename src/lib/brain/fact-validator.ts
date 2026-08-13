@@ -66,7 +66,8 @@ import {
   type ContentPlanRequirement,
 } from './content-plan';
 import type { ProvenanceValue } from './evidence';
-
+import type { GeneratedContentFields } from './copywriter/types';
+import { generatedContentFieldsSchema } from './copywriter/types';
 
 /**
  * A single generated content item produced by AI #2.
@@ -78,10 +79,29 @@ import type { ProvenanceValue } from './evidence';
 export interface GeneratedContentItem {
   /** A stable identifier for this generated content item. */
   id: string;
+
   /** The ContentPlan requirement id this content serves. */
   requirementId: string;
   /** The generated content body (text). */
   body: string;
+  /**
+   * The structured semantic fields of the generated content item.
+   *
+   * This is OPTIONAL for backward compatibility with legacy callers that only
+   * provide a flat `body`. When present, the Validator recursively extracts all
+   * string values from these fields and runs the `mustNotInvent` pattern checks
+   * against them too, so invented facts hidden in structured fields are caught.
+   *
+   * These fields are SEMANTIC (headline, subheadline, title, body, cta, items).
+   * They are NOT renderer / ThemeConfig / layout vocabulary.
+   *
+   * The type is the SAME canonical `GeneratedContentFields` used by the
+   * copywriter contract, so AI #2 output (`GeneratedContent.fields`) is directly
+   * assignable to the Validator's `GeneratedContentItem.fields` without any
+   * unsafe cast or `any`.
+   */
+  fields?: GeneratedContentFields;
+
   /**
    * The concrete fact references this content claims to use.
    *
@@ -97,8 +117,11 @@ export const generatedContentItemSchema = z.object({
   id: z.string().min(1),
   requirementId: z.string().min(1),
   body: z.string().min(1),
+  fields: generatedContentFieldsSchema.optional(),
   factReferences: z.array(z.string()),
 });
+
+
 
 /**
  * A fact reference that is permitted by the ContentPlan.
@@ -310,6 +333,39 @@ export function detectInventedFacts(body: string): string[] {
 }
 
 /**
+ * Recursively extracts all textual content from a generated value.
+ *
+ * This ensures the Fact Validator inspects EVERY string the model produced,
+ * not just the flattened top-level `body`. It handles:
+ *   - string → the string itself
+ *   - number / boolean → String(value)
+ *   - array → concatenation of each element's extracted text
+ *   - object → concatenation of each own enumerable value's extracted text
+ *   - null / undefined → empty string
+ *
+ * This is a pure, deterministic, side-effect-free helper. It does NOT mutate
+ * the input and does NOT infer any business facts.
+ */
+export function extractText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) {
+    return value.map((v) => extractText(v)).join(' ');
+  }
+  if (typeof value === 'object') {
+    const parts: string[] = [];
+    for (const key of Object.keys(value as Record<string, unknown>)) {
+      parts.push(extractText((value as Record<string, unknown>)[key]));
+    }
+    return parts.join(' ');
+  }
+  return '';
+}
+
+/**
  * Resolves the permitted fact references for a ContentPlan requirement.
  *
  * A concrete fact is allowed ONLY when it is backed by an explicitly available
@@ -323,6 +379,7 @@ export function detectInventedFacts(body: string): string[] {
 export function resolveAllowedFactReferences(
   requirement: ContentPlanRequirement
 ): AllowedFactReference[] {
+
   const allowed: AllowedFactReference[] = [];
   for (const evidenceId of requirement.evidenceRefs) {
     allowed.push({
@@ -425,7 +482,14 @@ export function validateFacts(
 
 
     // 4. mustNotInvent pattern check (bounded, deterministic).
-    const invented = detectInventedFacts(item.body);
+    //
+    // The check runs against the flattened top-level `body` AND every nested
+    // string inside the structured `fields` (headline, subheadline, title,
+    // body, cta, items[], nested objects/arrays). This ensures an invented fact
+    // hidden in a structured field is caught even when the flattened `body`
+    // does not contain it.
+    const combinedText = [item.body, extractText(item.fields)].join(' ');
+    const invented = detectInventedFacts(combinedText);
     for (const label of invented) {
       violations.push({
         itemId: item.id,
@@ -434,6 +498,7 @@ export function validateFacts(
         message: `Generated content contains an invented ${label} that is not backed by permitted evidence.`,
       });
     }
+
 
     // 5. Concrete fact reference enforcement.
     const allowed = resolveAllowedFactReferences(requirement);

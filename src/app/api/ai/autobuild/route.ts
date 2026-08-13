@@ -13,6 +13,7 @@ import {
 import { getCurrentUserTier, TIER_LIMITS } from '@/lib/config/tiers';
 import { getDefaultPages } from '@/lib/site-context';
 import { BrainGoldenPath } from '@/lib/golden-path/brain-pipeline';
+import { GeminiCopywriterProvider } from '@/lib/brain/copywriter';
 import { RecipeMerger } from '@/lib/recipe-engine';
 import type { ThemeConfig } from '@/types/site';
 import type { Site, SiteSettings, User, Post, SitePage } from '@/lib/db/types';
@@ -143,8 +144,14 @@ export async function POST(request: Request) {
     // There is NO legacy AI decision path here. If the Golden Path fails, we
     // return a structured failure — we never silently fall back to the old
     // direct-LLM autobuild decision engine.
-    const goldenPath = new BrainGoldenPath();
-    const pipeline = goldenPath.run(trimmed);
+    //
+    // AI #2 (copywriter) is injected at the composition root. The Gemini
+    // provider uses the existing getAiEngine()/generateStructured() infra and
+    // transparently falls back to the deterministic mock when GEMINI_API_KEY is
+    // not configured, so the pipeline stays deterministic in tests and local
+    // dev while using real Gemini in production.
+    const goldenPath = new BrainGoldenPath(new GeminiCopywriterProvider());
+    const pipeline = await goldenPath.run(trimmed);
     if (!pipeline.ok) {
       return NextResponse.json(
         { success: false, message: `Golden Path failed: ${pipeline.error.code} — ${pipeline.error.message}` },

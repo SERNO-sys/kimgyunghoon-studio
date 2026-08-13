@@ -54,7 +54,7 @@ function assertEqual<T>(actual: T, expected: T, label: string): void {
   }
 }
 
-function assertOk(result: ReturnType<BrainGoldenPath['run']>): Extract<ReturnType<BrainGoldenPath['run']>, { ok: true }> {
+function assertOk(result: Awaited<ReturnType<BrainGoldenPath['run']>>): Extract<Awaited<ReturnType<BrainGoldenPath['run']>>, { ok: true }> {
   if (!result.ok) {
     failed++;
     console.error(`  FAIL  expected ok result, got error ${result.error.code}: ${result.error.message}`);
@@ -65,6 +65,7 @@ function assertOk(result: ReturnType<BrainGoldenPath['run']>): Extract<ReturnTyp
   return result;
 }
 
+async function main(): Promise<void> {
 console.log('\n# Step 14 — Golden Path Integration Test\n');
 
 // ---------------------------------------------------------------------------
@@ -73,7 +74,7 @@ console.log('\n# Step 14 — Golden Path Integration Test\n');
 console.log('## 1. Full chain: "카페"');
 {
   const gp = new BrainGoldenPath();
-  const result = gp.run('카페');
+  const result = await gp.run('카페');
   const ok = assertOk(result);
 
   // BusinessBrief boundary: first operation is extractSingleShotBrief.
@@ -113,8 +114,8 @@ console.log('## 1. Full chain: "카페"');
 console.log('\n## 2. Deterministic execution');
 {
   const gp = new BrainGoldenPath();
-  const a = gp.run('카페');
-  const b = gp.run('카페');
+  const a = await gp.run('카페');
+  const b = await gp.run('카페');
   assert(a.ok && b.ok, 'both runs ok');
   if (a.ok && b.ok) {
     assertEqual(
@@ -141,12 +142,12 @@ console.log('\n## 2. Deterministic execution');
 console.log('\n## 3. No mutation of DecisionPlan / ContentPlan');
 {
   const gp = new BrainGoldenPath();
-  const result = gp.run('카페');
+  const result = await gp.run('카페');
   const ok = assertOk(result);
   const planSnapshot = JSON.stringify(ok.plan);
   const contentPlanSnapshot = JSON.stringify(ok.contentPlan);
   // Re-run and compare — the orchestrator must not mutate its inputs.
-  const result2 = gp.run('카페');
+  const result2 = await gp.run('카페');
   const ok2 = assertOk(result2);
   assertEqual(JSON.stringify(ok2.plan), planSnapshot, 'DecisionPlan not mutated');
   assertEqual(JSON.stringify(ok2.contentPlan), contentPlanSnapshot, 'ContentPlan not mutated');
@@ -158,7 +159,7 @@ console.log('\n## 3. No mutation of DecisionPlan / ContentPlan');
 console.log('\n## 4. GENERIC / DORMANT / DROP preservation');
 {
   const gp = new BrainGoldenPath();
-  const result = gp.run('카페');
+  const result = await gp.run('카페');
   const ok = assertOk(result);
 
   // The bridge translates ACTIVE/GENERIC → enabled and DORMANT/DROP → disabled.
@@ -193,7 +194,7 @@ console.log('\n## 4. GENERIC / DORMANT / DROP preservation');
 console.log('\n## 5. AI #2 does not create capabilities');
 {
   const gp = new BrainGoldenPath();
-  const result = gp.run('카페');
+  const result = await gp.run('카페');
   const ok = assertOk(result);
   // AI #2 output is content only; it must not carry capability decisions.
   const contentKeys = Object.keys(ok.content);
@@ -209,7 +210,7 @@ console.log('\n## 6. Fact Validator failure stops the pipeline');
   // A prompt that produces content that fails validation must yield a
   // structured FACT_VALIDATION_FAILED error, never a silent pass.
   const gp = new BrainGoldenPath();
-  const result = gp.run('카페');
+  const result = await gp.run('카페');
   // We cannot force a failure through the deterministic mock without a
   // provider seam. Instead, verify the orchestrator's failure branch exists
   // and is reachable by checking the error code vocabulary is wired.
@@ -243,7 +244,7 @@ console.log('\n## 7. Legacy autobuild decision path is not called');
 console.log('\n## 8. Empty prompt rejected');
 {
   const gp = new BrainGoldenPath();
-  const result = gp.run('');
+  const result = await gp.run('');
   assert(!result.ok, 'empty prompt rejected');
   if (!result.ok) {
     assertEqual(result.error.code, GoldenPathErrorCode.EmptyPrompt, 'EmptyPrompt error code');
@@ -254,3 +255,9 @@ console.log(`\n# Result: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) {
   process.exit(1);
 }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -13,3 +13,4 @@
 export * from './types';
 export * from './prompt-builder';
 export * from './mock-provider';
+export * from './gemini-provider';

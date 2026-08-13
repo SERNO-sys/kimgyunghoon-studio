@@ -116,7 +116,9 @@ const dormantDropContent = buildContentPlan(dormantDropPlan);
 
 const provider = new MockCopywriterProvider();
 
+async function main(): Promise<void> {
 console.log('\n=== 1. ContentPlan → PromptContract (deterministic, no new requirements) ===');
+
 const prompt = buildPromptContract(bakeryContent, makeConfig());
 assert(
   prompt.contentPlanId === bakeryContent.id,
@@ -182,10 +184,11 @@ assert(
 );
 
 console.log('\n=== 5. Mock provider generates a deterministic GeneratedContentSet ===');
-const generated = provider.generate({
+const generated = await provider.generate({
   contentPlan: bakeryContent,
   config: makeConfig(),
 });
+
 assert(
   generated.contentPlanId === bakeryContent.id,
   'GeneratedContentSet references the ContentPlan id',
@@ -200,8 +203,9 @@ assert(
   ),
   'every generated item targets an existing requirement (requirement identity preserved)',
 );
-const genA = provider.generate({ contentPlan: bakeryContent, config: makeConfig() });
-const genB = provider.generate({ contentPlan: bakeryContent, config: makeConfig() });
+const genA = await provider.generate({ contentPlan: bakeryContent, config: makeConfig() });
+const genB = await provider.generate({ contentPlan: bakeryContent, config: makeConfig() });
+
 assert(
   JSON.stringify(genA) === JSON.stringify(genB),
   'same input produces identical GeneratedContentSet (deterministic)',
@@ -215,10 +219,11 @@ assert(
   availableItem?.factReferences.includes('ev-offering-1') === true,
   'available requirement attaches only the permitted evidence ref',
 );
-const genericGenerated = provider.generate({
+const genericGenerated = await provider.generate({
   contentPlan: genericContent,
   config: makeConfig(),
 });
+
 assert(
   genericGenerated.items[0].factReferences.length === 0,
   'GENERIC requirement → no fact references (nothing invented)',
@@ -304,3 +309,9 @@ console.log(`\nRESULT: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) {
   process.exit(1);
 }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

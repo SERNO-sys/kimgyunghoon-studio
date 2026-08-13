@@ -19,12 +19,12 @@ const TEST_BUSINESSES = [
   '지역 공방',
 ];
 
-function run() {
+async function run() {
   const pipeline = new BrainGoldenPath();
   const results: Array<{ input: string; summary: unknown; ok: boolean }> = [];
 
   for (const input of TEST_BUSINESSES) {
-    const result = pipeline.run(input);
+    const result = await pipeline.run(input);
     if (!result.ok) {
       results.push({ input, ok: false, summary: result.error });
       continue;
@@ -38,7 +38,8 @@ function run() {
     });
 
     // The ThemeConfig Bridge writes the decision into the renderer-facing config.
-    const merged = pipeline.execute(result);
+    const merged = await pipeline.execute(result);
+
 
     results.push({
       input,

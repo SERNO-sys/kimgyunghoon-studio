@@ -66,6 +66,7 @@ import {
 import { buildContentPlan, type ContentPlan } from '../brain/content-plan';
 import {
   MockCopywriterProvider,
+  type CopywriterProvider,
   type GeneratedContentSet,
 } from '../brain/copywriter';
 import { validateFacts, type FactValidationResult } from '../brain/fact-validator';
@@ -157,12 +158,17 @@ export type GoldenPathResult =
  */
 export class BrainGoldenPath {
   private readonly recipeIntegration: RecipeIntegration;
-  private readonly copywriter: MockCopywriterProvider;
+  private readonly copywriter: CopywriterProvider;
   private readonly bridge: ThemeConfigBridge;
   private readonly recipeMerger: RecipeMerger;
   private readonly industryResolver: IndustryResolver;
 
-  constructor() {
+  /**
+   * @param copywriter The AI #2 provider. Defaults to the deterministic mock.
+   *   The COMPOSITION ROOT (the autobuild route) injects the real Gemini
+   *   provider when configured; the Brain itself stays provider-agnostic.
+   */
+  constructor(copywriter: CopywriterProvider = new MockCopywriterProvider()) {
     // Build the industry registry from the existing design-only mocks.
     const industryRegistry = new IndustryRegistry();
     for (const profile of MOCK_INDUSTRY_PROFILES) {
@@ -175,8 +181,8 @@ export class BrainGoldenPath {
     // and the V2.6 RecipeBridge drives the compatibility verdict.
     this.recipeIntegration = new RecipeIntegration();
 
-    // AI #2 uses the existing deterministic mock provider (no external AI).
-    this.copywriter = new MockCopywriterProvider();
+    // AI #2 uses the injected provider (mock by default, Gemini in production).
+    this.copywriter = copywriter;
 
     // The ThemeConfig Bridge is the ONLY Brain → V2.6 boundary.
     this.bridge = new ThemeConfigBridge();
@@ -192,7 +198,7 @@ export class BrainGoldenPath {
    * The pipeline stops on any validation failure. It never falls back to a
    * legacy AI decision path.
    */
-  run(prompt: string): GoldenPathResult {
+  async run(prompt: string): Promise<GoldenPathResult> {
     // 1. Input boundary: raw prompt → BusinessBrief.
     let brief: BusinessBrief;
     try {
@@ -274,7 +280,7 @@ export class BrainGoldenPath {
     const contentPlan = buildContentPlan(plan);
 
     // 8. AI #2: ContentPlan → generated content (expression only).
-    const content = this.copywriter.generate({
+    const content = await this.copywriter.generate({
       contentPlan,
       config: { tone: 'professional', language: 'ko' },
     });

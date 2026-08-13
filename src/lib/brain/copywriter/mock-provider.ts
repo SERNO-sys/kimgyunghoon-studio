@@ -36,8 +36,10 @@ import type {
   CopywriterProvider,
   CopywriterRequest,
   GeneratedContent,
+  GeneratedContentFields,
   GeneratedContentSet,
 } from './types';
+
 
 /**
  * The deterministic mock provider.
@@ -54,8 +56,11 @@ export class MockCopywriterProvider implements CopywriterProvider {
    * This is a pure, side-effect-free function. It NEVER mutates the ContentPlan.
    * It NEVER invents business facts. It NEVER adds capabilities, sections,
    * components, layouts, or design choices.
+   *
+   * It is async to satisfy the provider-independent `CopywriterProvider`
+   * interface, but it performs no I/O and resolves deterministically.
    */
-  generate(request: CopywriterRequest): GeneratedContentSet {
+  async generate(request: CopywriterRequest): Promise<GeneratedContentSet> {
     const { contentPlan, config } = request;
     const items: GeneratedContent[] = [];
 
@@ -70,6 +75,7 @@ export class MockCopywriterProvider implements CopywriterProvider {
     };
   }
 }
+
 
 /**
  * Builds a single deterministic mock content item for a requirement.
@@ -90,10 +96,56 @@ function buildMockItem(
   return {
     id: `content-${requirement.id}`,
     requirementId: requirement.id,
+    shape: requirement.shape,
+    fields: buildMockFields(requirement),
     body: buildMockBody(requirement, tone),
     factReferences: factAvailable ? [...requirement.evidenceRefs] : [],
   };
 }
+
+/**
+ * Builds deterministic structured semantic fields for a requirement.
+ *
+ * The fields mirror the requirement's semantic SHAPE (hero/text/list/grid/
+ * contact). They are SEMANTIC — they are NOT renderer / ThemeConfig / layout
+ * vocabulary. The mock fills each field with generic-safe placeholder text
+ * derived from the requirement's own description so the RecipeMerger can map
+ * them into ThemeConfig sections deterministically.
+ */
+function buildMockFields(
+  requirement: ContentPlanRequirement
+): GeneratedContentFields {
+  const description = requirement.description;
+  const fields: GeneratedContentFields = {};
+
+  switch (requirement.shape) {
+    case 'hero':
+      fields.headline = description;
+      fields.subheadline = description;
+      fields.cta = description;
+      break;
+    case 'text':
+      fields.title = description;
+      fields.body = description;
+      break;
+    case 'list':
+      fields.title = description;
+      fields.items = [{ name: description, description }];
+      break;
+    case 'grid':
+      fields.title = description;
+      fields.items = [{ name: description, role: description, bio: description }];
+      break;
+    case 'contact':
+      fields.title = description;
+      fields.body = description;
+      fields.cta = description;
+      break;
+  }
+
+  return fields;
+}
+
 
 /**
  * Builds a deterministic, generic-safe mock body.

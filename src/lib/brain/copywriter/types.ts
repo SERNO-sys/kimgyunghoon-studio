@@ -54,8 +54,75 @@
  */
 
 import { z } from 'zod';
+import {
+  ContentShape,
+  contentShapeSchema,
+  type ContentShapeValue,
+} from '../content-plan';
 import type { ContentPlan } from '../content-plan';
 import type { ProvenanceValue } from '../evidence';
+
+// Re-export the canonical semantic content-shape vocabulary.
+//
+// `content-plan.ts` is the SINGLE canonical owner of the semantic content-shape
+// vocabulary (ContentShape / ContentShapeValue / contentShapeSchema). The
+// copywriter contract re-exports it so consumers of the copywriter public API
+// keep a stable surface WITHOUT duplicating the vocabulary. Duplicating it here
+// would create an ambiguous re-export (TS2308) when both modules are re-exported
+// from the brain barrel.
+export { ContentShape, contentShapeSchema };
+export type { ContentShapeValue };
+
+
+/**
+ * The structured semantic fields of a generated content item.
+ *
+ * These are the exact semantic fields the model fills for a requirement's shape.
+ * They are SEMANTIC — they are NOT renderer / ThemeConfig / layout vocabulary.
+ * The RecipeMerger maps these fields into ThemeConfig section content.
+ */
+export interface GeneratedContentFields {
+  /** A headline (hero / text shapes). */
+  headline?: string;
+  /** A subheadline (hero shape). */
+  subheadline?: string;
+  /** A title (text / list / grid / contact shapes). */
+  title?: string;
+  /** A body paragraph (text / contact shapes). */
+  body?: string;
+  /** A call-to-action label (hero / contact shapes). */
+  cta?: string;
+  /** A list of items (list / grid shapes). */
+  items?: Array<{
+    /** The item name (list / grid shapes). */
+    name: string;
+    /** A short description (list shape). */
+    description?: string;
+    /** A role (grid shape). */
+    role?: string;
+    /** A short bio (grid shape). */
+    bio?: string;
+  }>;
+}
+
+/** Zod schema for GeneratedContentFields. */
+export const generatedContentFieldsSchema = z.object({
+  headline: z.string().optional(),
+  subheadline: z.string().optional(),
+  title: z.string().optional(),
+  body: z.string().optional(),
+  cta: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        role: z.string().optional(),
+        bio: z.string().optional(),
+      })
+    )
+    .optional(),
+});
 
 /**
  * A single generated content item produced by AI #2.
@@ -66,13 +133,39 @@ import type { ProvenanceValue } from '../evidence';
  *
  * Each item MUST identify the ContentPlan requirement it satisfies
  * (`requirementId`). It carries NO UI / layout / component / theme information.
+ *
+ * STRUCTURED OUTPUT:
+ *   Each item carries the semantic `shape` and the structured `fields` the model
+ *   filled for that shape (matching the ContentPlan requirement's shape/fields).
+ *   `body` is retained as a flattened text representation of the fields so the
+ *   Fact Validator's text-based checks and any legacy consumers keep working.
  */
 export interface GeneratedContent {
   /** A stable identifier for this generated content item. */
   id: string;
   /** The ContentPlan requirement id this content satisfies. */
   requirementId: string;
-  /** The generated content body (expression/text only). */
+  /**
+   * The semantic content SHAPE of this generated item.
+   *
+   * This is SEMANTIC structure (hero/text/list/grid/contact), NOT a UI section
+   * name, renderer variant, or ThemeConfig field.
+   */
+  shape: ContentShapeValue;
+  /**
+   * The structured semantic fields the model filled for this item's shape.
+   *
+   * These are SEMANTIC fields (headline, subheadline, title, body, cta, items).
+   * They are NOT renderer / ThemeConfig / layout vocabulary.
+   */
+  fields: GeneratedContentFields;
+  /**
+   * The generated content body (expression/text only).
+   *
+   * This is a flattened text representation of the structured `fields`. It is
+   * retained for backward compatibility with the Fact Validator's text-based
+   * checks and any legacy consumers.
+   */
   body: string;
   /**
    * The concrete fact references this content claims to use.
@@ -88,9 +181,12 @@ export interface GeneratedContent {
 export const generatedContentSchema = z.object({
   id: z.string().min(1),
   requirementId: z.string().min(1),
+  shape: contentShapeSchema,
+  fields: generatedContentFieldsSchema,
   body: z.string().min(1),
   factReferences: z.array(z.string()),
 });
+
 
 /**
  * The AI #2 output — a collection of generated content items.
@@ -188,10 +284,9 @@ export const copywriterRequestSchema = z.object({
  * A future LLM adapter implements this interface. The Brain depends on this
  * interface, NOT on any specific AI vendor.
  *
- * The `generate` method is intentionally synchronous and deterministic in
- * contract: it returns a `GeneratedContentSet`. A real LLM adapter would be
- * async; the interface is kept minimal here. The mock provider is synchronous
- * and deterministic.
+ * The `generate` method is async so that a real LLM adapter (e.g. Gemini) can
+ * await an external API call. The mock provider remains deterministic and
+ * simply resolves with its precomputed output.
  */
 export interface CopywriterProvider {
   /** A stable identifier for the provider (e.g. 'mock', 'gemini', 'openai'). */
@@ -202,8 +297,9 @@ export interface CopywriterProvider {
    * MUST NOT mutate the ContentPlan. MUST NOT invent business facts. MUST NOT
    * add capabilities, sections, components, layouts, or design choices.
    */
-  generate(request: CopywriterRequest): GeneratedContentSet;
+  generate(request: CopywriterRequest): Promise<GeneratedContentSet>;
 }
+
 
 /**
  * A single prompt instruction for a future LLM.
