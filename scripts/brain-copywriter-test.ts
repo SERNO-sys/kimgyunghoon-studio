@@ -242,10 +242,13 @@ assert(before === after, 'ContentPlan is unchanged after generate + buildPromptC
 
 console.log('\n=== 8. AI #2 NEVER adds capabilities, sections, components, layouts, or design ===');
 const generatedJson = JSON.stringify(generated);
+// NOTE: The canonical semantic ContentShape vocabulary (hero / text / list /
+// grid / contact) is EXPLICITLY ALLOWED in the AI #2 content contract — it is
+// semantic structure, NOT a UI/component/layout/theme concept. Only actual
+// presentation concepts (React/component identifiers, renderer component names,
+// ThemeConfig, layout IDs, CSS, visual design tokens) are forbidden here.
 const uiConcepts = [
-  'Hero',
   'ProductGrid',
-  'grid',
   'px',
   'column',
   'css',
@@ -263,6 +266,7 @@ for (const concept of uiConcepts) {
   }
 }
 assert(!uiLeak, 'GeneratedContentSet contains no UI/component/layout/theme/recipe concepts');
+
 
 console.log('\n=== 9. Schema validation accepts valid output ===');
 const validSet = generatedContentSetSchema.safeParse(generated);

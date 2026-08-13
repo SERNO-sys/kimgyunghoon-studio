@@ -35,9 +35,11 @@ import {
 import {
   GeminiCopywriterProvider,
   generatedContentSetSchema,
+  llmGeneratedContentSetSchema,
   ToneConstraint,
   type CopywriterConfig,
 } from '../src/lib/brain/copywriter';
+
 
 let passed = 0;
 let failed = 0;
@@ -202,7 +204,89 @@ async function main(): Promise<void> {
     console.log('  (skipped — GEMINI_API_KEY not set; offline error-path verified above)');
   }
 
+  console.log('\n=== 5. TWO-SCHEMA BOUNDARY (system-owned identifiers) ===');
+  // The RAW LLM output schema must require ONLY AI-owned semantic content
+  // (`items[].fields`). It MUST NOT require the system-owned identifiers
+  // (`id`, `contentPlanId`, `requirementId`, `shape`, `factReferences`) because
+  // the model must never invent them.
+  const rawValid = llmGeneratedContentSetSchema.safeParse({
+    items: [
+      {
+        fields: {
+          headline: 'Artisan Bakery',
+          subheadline: 'Fresh bread daily',
+          cta: 'Visit us',
+        },
+      },
+    ],
+  });
+  assert(rawValid.success, 'raw LLM output with ONLY fields passes llmGeneratedContentSetSchema');
+  const rawWithSystemIds = llmGeneratedContentSetSchema.safeParse({
+    items: [
+      {
+        id: 'content-discovery',
+        requirementId: 'content-discovery',
+        shape: 'hero',
+        factReferences: ['ev-offering-1'],
+        fields: { headline: 'Artisan Bakery' },
+      },
+    ],
+  });
+  assert(
+    rawWithSystemIds.success,
+    'raw LLM output MAY carry extra system-owned keys without failing (schema is a minimum contract)',
+  );
+  // The FINAL GeneratedContentSet schema MUST require the system-owned
+  // identifiers — they are injected by the provider, never invented by the model.
+  const missingSystemIds = generatedContentSetSchema.safeParse({
+    id: 'generated-bakery',
+    contentPlanId: 'bakery',
+    items: [{ fields: { headline: 'Artisan Bakery' } }],
+  });
+  assert(
+    !missingSystemIds.success,
+    'final GeneratedContentSet schema REJECTS items missing system-owned identifiers',
+  );
+
+  if (hasGeminiKey) {
+    console.log('\n=== 6. REAL generation injects system-owned identifiers from ContentPlan ===');
+    const generated = await provider.generate({
+      contentPlan: bakeryContent,
+      config: makeConfig(),
+    });
+    const req = bakeryContent.requirements[0];
+    const item = generated.items[0];
+    assert(
+      item.requirementId === req.id,
+      'provider injects requirementId from ContentPlan (model never invents it)',
+    );
+    assert(
+      item.shape === req.shape,
+      'provider injects shape from ContentPlan (model never invents it)',
+    );
+    assert(
+      JSON.stringify(item.factReferences) === JSON.stringify(req.evidenceRefs),
+      'provider injects factReferences from ContentPlan evidenceRefs (model never invents them)',
+    );
+    assert(
+      item.id === `content-${req.id}`,
+      'provider injects a stable item id derived from the requirement',
+    );
+    assert(
+      generated.id === `generated-${bakeryContent.id}`,
+      'provider injects a stable GeneratedContentSet id',
+    );
+    assert(
+      typeof item.body === 'string' && item.body.length > 0,
+      'provider derives a non-empty flattened body from the model fields',
+    );
+  } else {
+    console.log('\n=== 6. REAL generation injects system-owned identifiers ===');
+    console.log('  (skipped — GEMINI_API_KEY not set; schema boundary verified above)');
+  }
+
   console.log(`\nRESULT: ${passed} passed, ${failed} failed\n`);
+
 
   if (failed > 0) {
     process.exit(1);

@@ -125,6 +125,45 @@ export const generatedContentFieldsSchema = z.object({
 });
 
 /**
+ * A single RAW LLM output item.
+ *
+ * This is the AI-owned semantic content ONLY. It deliberately does NOT carry
+ * `id`, `requirementId`, `shape`, or `factReferences` — those are SYSTEM-OWNED
+ * identifiers that the program already knows from the ContentPlan and MUST NOT
+ * be invented by the model. The provider injects them during normalization.
+ */
+export interface LLMGeneratedContent {
+  /** The structured semantic fields the model filled for this item. */
+  fields: GeneratedContentFields;
+}
+
+/** Zod schema for a RAW LLM output item. */
+export const llmGeneratedContentSchema = z.object({
+  fields: generatedContentFieldsSchema,
+});
+
+/**
+ * The RAW LLM output — the AI-owned semantic content set.
+ *
+ * This is the schema `generateStructured()` validates the model output against.
+ * It contains ONLY AI-owned semantic content (`items[].fields`). It does NOT
+ * require the system-owned identifiers (`id`, `contentPlanId`, `requirementId`,
+ * `shape`, `factReferences`) because the model must not invent them. The
+ * provider assembles the final `GeneratedContentSet` from this raw output plus
+ * the authoritative ContentPlan.
+ */
+export interface LLMGeneratedContentSet {
+  /** The AI-owned semantic content items, in ContentPlan requirement order. */
+  items: LLMGeneratedContent[];
+}
+
+/** Zod schema for the RAW LLM output. */
+export const llmGeneratedContentSetSchema = z.object({
+  items: z.array(llmGeneratedContentSchema),
+});
+
+
+/**
  * A single generated content item produced by AI #2.
  *
  * This is the OUTPUT contract. It is intentionally structurally compatible with

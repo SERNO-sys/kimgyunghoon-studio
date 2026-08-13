@@ -6,14 +6,27 @@
  * (`getAiEngine()` + `generateStructured()`) to produce a schema-validated
  * `GeneratedContentSet` from a `ContentPlan`.
  *
+ * TWO-SCHEMA BOUNDARY (system-owned identifiers):
+ *   The model is asked to produce ONLY AI-owned semantic content. It is NEVER
+ *   asked to invent system identifiers (`id`, `contentPlanId`, `requirementId`,
+ *   `shape`, `factReferences`). The provider therefore validates the RAW LLM
+ *   output against `llmGeneratedContentSetSchema` (which requires only
+ *   `items[].fields`), then assembles the FINAL `GeneratedContentSet` by
+ *   injecting the system-owned identifiers from the authoritative ContentPlan,
+ *   and finally validates the complete result against the canonical
+ *   `generatedContentSetSchema`.
+ *
+ *   LLM output schema
+ *     → system normalization/assembly (inject system-owned identifiers)
+ *     → final GeneratedContentSet schema
+ *
  * ARCHITECTURAL BOUNDARY (Architecture Brain Freeze v1.0):
  *   - This provider is EXPRESSION ONLY. It NEVER decides capabilities, states,
  *     business models, sections, components, layouts, recipes, or themes.
  *   - It NEVER invents business facts. It receives the ContentPlan (the
  *     authoritative instruction boundary) and the deterministic PromptContract
  *     built from it. The prompt instructs the model to fill ONLY the semantic
- *     fields the ContentPlan requires, and to attach ONLY the permitted
- *     evidence refs.
+ *     fields the ContentPlan requires.
  *   - It NEVER mutates the ContentPlan.
  *   - It NEVER leaks UI / component / layout / ThemeConfig vocabulary into the
  *     output. The output is validated against `generatedContentSetSchema`.
@@ -34,10 +47,13 @@ import type { ContentPlan } from '../content-plan';
 import { buildPromptContract } from './prompt-builder';
 import {
   generatedContentSetSchema,
+  llmGeneratedContentSetSchema,
   type CopywriterConfig,
   type CopywriterProvider,
   type CopywriterRequest,
+  type GeneratedContent,
   type GeneratedContentSet,
+  type LLMGeneratedContentSet,
 } from './types';
 
 /**
@@ -54,9 +70,11 @@ export class GeminiCopywriterProvider implements CopywriterProvider {
    * Generates a schema-validated GeneratedContentSet for the request.
    *
    * The prompt is derived deterministically from the ContentPlan via
-   * `buildPromptContract`. The engine validates the model output against
-   * `generatedContentSetSchema`; a schema mismatch is reported as a structured
-   * failure (never a silent pass).
+   * `buildPromptContract`. The engine validates the RAW model output against
+   * `llmGeneratedContentSetSchema` (AI-owned semantic content only). The
+   * provider then assembles the FINAL `GeneratedContentSet` by injecting the
+   * system-owned identifiers from the ContentPlan, and validates the complete
+   * result against the canonical `generatedContentSetSchema`.
    *
    * This is async because it awaits an external LLM call through the engine.
    */
@@ -68,7 +86,7 @@ export class GeminiCopywriterProvider implements CopywriterProvider {
     const prompt = buildPromptContract(contentPlan, config);
 
     const engine = getAiEngine();
-    const result = await engine.generateStructured(generatedContentSetSchema, {
+    const result = await engine.generateStructured(llmGeneratedContentSetSchema, {
       flow: 'brain-copywriter',
       model: 'general-default',
       system: buildSystemPrompt(config),
@@ -85,8 +103,99 @@ export class GeminiCopywriterProvider implements CopywriterProvider {
       );
     }
 
-    return result.data;
+    // Assemble the FINAL GeneratedContentSet by injecting the system-owned
+    // identifiers from the authoritative ContentPlan.
+    const assembled = assembleGeneratedContentSet(contentPlan, result.data);
+
+    // Validate the complete result against the canonical schema. This is the
+    // final contract boundary — it is NEVER weakened.
+    const finalValidation = generatedContentSetSchema.safeParse(assembled);
+    if (!finalValidation.success) {
+      throw new Error(
+        `AI #2 copywriter assembly failed (schema_mismatch): ${finalValidation.error.issues
+          .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+          .join('; ')}`
+      );
+    }
+
+    return finalValidation.data;
   }
+}
+
+/**
+ * Assembles the FINAL `GeneratedContentSet` from the RAW LLM output and the
+ * authoritative ContentPlan.
+ *
+ * The model supplies ONLY the AI-owned semantic `fields`. Every system-owned
+ * identifier is injected deterministically from the ContentPlan:
+ *   - GeneratedContentSet.id        = `generated-${contentPlan.id}`
+ *   - GeneratedContentSet.contentPlanId = contentPlan.id
+ *   - item.id                       = `content-${requirement.id}`
+ *   - item.requirementId            = requirement.id
+ *   - item.shape                    = requirement.shape
+ *   - item.factReferences           = requirement.evidenceRefs (permitted refs)
+ *   - item.fields                   = model fields
+ *   - item.body                     = deterministic flattening of item.fields
+ *
+ * The number of generated items MUST exactly equal the number of ContentPlan
+ * requirements, and they are matched by index (the prompt instructs the model
+ * to emit one item per requirement, in order). A mismatch is a hard contract
+ * error — never a silent pass.
+ */
+function assembleGeneratedContentSet(
+  contentPlan: ContentPlan,
+  raw: LLMGeneratedContentSet
+): GeneratedContentSet {
+  const requirements = contentPlan.requirements;
+
+  if (raw.items.length !== requirements.length) {
+    throw new Error(
+      `AI #2 copywriter assembly failed (item_count_mismatch): expected ${requirements.length} items for ContentPlan requirements, got ${raw.items.length}`
+    );
+  }
+
+  const items: GeneratedContent[] = raw.items.map((rawItem, index) => {
+    const requirement = requirements[index];
+    return {
+      id: `content-${requirement.id}`,
+      requirementId: requirement.id,
+      shape: requirement.shape,
+      fields: rawItem.fields,
+      body: flattenFields(rawItem.fields),
+      factReferences: [...requirement.evidenceRefs],
+    };
+  });
+
+  return {
+    id: `generated-${contentPlan.id}`,
+    contentPlanId: contentPlan.id,
+    items,
+  };
+}
+
+/**
+ * Deterministically flattens the structured semantic fields into a single text
+ * string. This is the compatibility `body` field retained for the Fact
+ * Validator's text-based checks and any legacy consumers. It is derived purely
+ * from the model's own fields — it never invents content.
+ */
+function flattenFields(fields: GeneratedContent['fields']): string {
+  const parts: string[] = [];
+  if (fields.headline) parts.push(fields.headline);
+  if (fields.subheadline) parts.push(fields.subheadline);
+  if (fields.title) parts.push(fields.title);
+  if (fields.body) parts.push(fields.body);
+  if (fields.cta) parts.push(fields.cta);
+  if (fields.items && fields.items.length > 0) {
+    for (const item of fields.items) {
+      const itemParts: string[] = [item.name];
+      if (item.description) itemParts.push(item.description);
+      if (item.role) itemParts.push(item.role);
+      if (item.bio) itemParts.push(item.bio);
+      parts.push(itemParts.join(' '));
+    }
+  }
+  return parts.join(' ');
 }
 
 /**
@@ -118,7 +227,9 @@ function buildSystemPrompt(config: CopywriterConfig): string {
  *
  * The contract carries requirement identity, semantic shape/fields, tone,
  * generic-safe flags, allowed evidence refs, and prohibited inventions. The
- * model fills ONLY these fields.
+ * model fills ONLY the semantic `fields`. It is explicitly told NOT to emit any
+ * system-owned identifiers (`id`, `contentPlanId`, `requirementId`, `shape`,
+ * `factReferences`) — those are injected by the provider.
  */
 function buildUserPrompt(
   prompt: ReturnType<typeof buildPromptContract>
@@ -128,15 +239,22 @@ function buildUserPrompt(
     `Language: ${prompt.language}`,
     `Tone: ${prompt.tone}`,
     '',
-    'For each requirement, produce a content item with:',
-    '  - id: a stable unique id',
-    '  - requirementId: the requirement id (exact match)',
-    '  - shape: the exact shape given for the requirement',
-    '  - fields: an object whose keys are the exact semantic fields for that shape, filled with the generated copy',
-    '  - body: a single flattened text string that concatenates the generated fields (used for validation)',
-    '  - factReferences: ONLY the allowed evidence refs, or [] when none are allowed',
+    'Return ONLY a JSON object with this exact shape:',
+    '{',
+    '  "items": [',
+    '    {',
+    '      "fields": {',
+    '        ...',
+    '      }',
+    '    }',
+    '  ]',
+    '}',
     '',
-    'The `fields` object MUST use ONLY these semantic keys, matching the shape:',
+    'Produce EXACTLY ONE item per requirement below, in the same order.',
+    'Do NOT include id, contentPlanId, requirementId, shape, factReferences, or any "contents" wrapper.',
+    'The system supplies those identifiers itself.',
+    '',
+    'For each item, the `fields` object MUST use ONLY these semantic keys, matching the shape:',
     '  - hero:    { headline, subheadline, cta }',
     '  - text:    { title, body }',
     '  - list:    { title, items: [{ name, description }] }',
