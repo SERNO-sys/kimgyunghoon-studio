@@ -15,9 +15,11 @@ import { getDefaultPages } from '@/lib/site-context';
 import { BrainGoldenPath } from '@/lib/golden-path/brain-pipeline';
 import { GeminiCopywriterProvider } from '@/lib/brain/copywriter';
 import { RecipeMerger } from '@/lib/recipe-engine';
+import { EnrichmentService } from '@/lib/enrichment';
 import type { ThemeConfig } from '@/types/site';
 import type { Site, SiteSettings, User, Post, SitePage } from '@/lib/db/types';
 import type { ThemeConfig as V2ThemeConfig } from '@/lib/theme-config/v2/types';
+
 
 /**
  * STEP 15-C — Minimum V2.6 Renderer Adapter.
@@ -359,10 +361,44 @@ export async function POST(request: Request) {
     };
     await createPost(db, welcomePost);
 
+    // AWIE V2 — Optional Enrichment (Gap Analysis).
+    //
+    // The initial site is ALWAYS generated immediately (above). Enrichment is
+    // OPTIONAL and NEVER blocks one-line generation. Here we run the
+    // provider-independent Gap Analyzer against the pipeline's semantic outputs
+    // (DecisionPlan, ContentPlan, evidence) to detect high-value information
+    // gaps. When gaps exist, we return a small set (max 3–5) of enrichment
+    // questions the UI may offer AFTER the site is built. The client can answer,
+    // skip, or finish later — the site already exists either way.
+    //
+    // SAFETY: only safe, semantic question metadata is returned to the client.
+    // No internal Brain structures, no ThemeConfig, no Renderer concepts.
+    const enrichment = new EnrichmentService().analyze({
+      decisionPlan: pipeline.plan,
+      contentPlan: pipeline.contentPlan,
+      evidence: pipeline.meaning.evidence,
+    });
+
+    // The enrichment metadata is OPTIONAL and never blocks the initial build.
+    // When no gaps exist, enrichmentReady is false and the response shape is
+    // unchanged from the canonical one-line path (the client can ignore it).
     return NextResponse.json({
       success: true,
       siteId,
+      enrichment: {
+        enrichmentReady: enrichment.enrichmentReady,
+        priority: enrichment.priority,
+        questions: enrichment.questions.map((q) => ({
+          id: q.id,
+          slot: q.slot,
+          text: q.text,
+          intent: q.intent,
+          gapCapability: q.gapCapability,
+        })),
+      },
     });
+
+
   } catch (error) {
     // Log the real error (e.g. the underlying SQLITE_ERROR) so it is visible in
     // the server logs instead of being swallowed by a generic 500 response.

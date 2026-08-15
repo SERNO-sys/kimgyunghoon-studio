@@ -51,8 +51,11 @@ import {
 import type { DecisionContext } from '../brain/decision-context';
 import {
   DECISION_RULES,
+  SemanticTraitKey,
   type CapabilityCandidate,
 } from '../brain/decision-rules';
+import { Provenance, type EvidenceSet } from '../brain/evidence';
+
 import { evaluateRules } from '../brain/decision-rule-engine';
 import {
   buildDecisionPlan,
@@ -71,7 +74,13 @@ import {
 } from '../brain/copywriter';
 import { validateFacts, type FactValidationResult } from '../brain/fact-validator';
 import { ThemeConfigBridge, type ThemeConfigBridgeResult } from '../brain/theme-config-bridge';
-import { IndustryResolver, GENERIC_PROFILE, MOCK_INDUSTRY_PROFILES, IndustryRegistry } from '../industry-registry';
+import {
+  IndustryResolver,
+  GENERIC_PROFILE,
+  MOCK_INDUSTRY_PROFILES,
+  IndustryRegistry,
+  type IndustryProfile,
+} from '../industry-registry';
 import { RecipeMerger, MOCK_RECIPES, type MergeResult } from '../recipe-engine';
 import {
   buildVisualDesignDecision,
@@ -197,8 +206,21 @@ export class BrainGoldenPath {
    * The first operation on the raw input is ALWAYS `extractSingleShotBrief`.
    * The pipeline stops on any validation failure. It never falls back to a
    * legacy AI decision path.
+   *
+   * OPTIONAL ENRICHMENT (AWIE V2):
+   *   `options.evidence` is an optional list of additional semantic evidence
+   *   (e.g. user answers from the enrichment flow). When provided, it is merged
+   *   into the BusinessMeaning's evidence and passed to the Decision Planner so
+   *   the Decision Engine can re-evaluate capability states (GENERIC → ACTIVE)
+   *   based on the newly available scoped evidence. This is a NON-BREAKING
+   *   extension: the existing `run(prompt)` call is unchanged and the canonical
+   *   one-line generation path is unaffected when no evidence is supplied.
    */
-  async run(prompt: string): Promise<GoldenPathResult> {
+  async run(
+    prompt: string,
+    options?: { evidence?: EvidenceSet[] }
+  ): Promise<GoldenPathResult> {
+
     // 1. Input boundary: raw prompt → BusinessBrief.
     let brief: BusinessBrief;
     try {
@@ -213,25 +235,11 @@ export class BrainGoldenPath {
       };
     }
 
-    // 2. Semantic normalization: BusinessBrief → BusinessMeaning.
-    const meaning = this.buildMeaning(brief);
-
-    // 3. Decision Rule Engine: BusinessMeaning → Capability candidates.
-    const ruleResult = evaluateRules(meaning);
-    const candidates = this.reconstructCandidates(ruleResult.firedRuleIds);
-
-    // 4. Decision Planner: candidates → DecisionPlan.
-    const plannerInput: PlannerInput = {
-      meaning,
-      evidence: meaning.evidence,
-      candidates,
-    };
-    const plan = buildDecisionPlan(plannerInput);
-
-    // 5. Resolve the base IndustryProfile from the brief's business type.
-    //    This MUST happen before Recipe selection so the resolved industry can
-    //    act as a SAFETY BOUNDARY: a recipe scoped to a specific industry
-    //    (e.g. "restaurant") is never selected for a DIFFERENT industry.
+    // 2. Resolve the base IndustryProfile from the brief's business type.
+    //    This MUST happen BEFORE Semantic Normalization so the resolved
+    //    industry can enrich the BusinessMeaning with canonical semantic
+    //    traits (see buildMeaning). It also acts as a SAFETY BOUNDARY for
+    //    Recipe selection (see step 6).
     //
     //    IMPORTANT: the boundary is only enforced when the input actually
     //    MATCHED a registered industry. When the input is unresolved (falls
@@ -247,6 +255,33 @@ export class BrainGoldenPath {
     const industryBoundary = baseResolution.matched
       ? baseProfile.industryId
       : undefined;
+
+    // 3. Semantic normalization: BusinessBrief + IndustryProfile → BusinessMeaning.
+    const meaning = this.buildMeaning(brief, baseProfile);
+
+    // 4. Decision Rule Engine: BusinessMeaning → Capability candidates.
+    const ruleResult = evaluateRules(meaning);
+    const candidates = this.reconstructCandidates(ruleResult.firedRuleIds);
+
+    // 5. Decision Planner: candidates → DecisionPlan.
+    //
+    //    OPTIONAL ENRICHMENT: when additional semantic evidence is supplied
+    //    (e.g. user answers from the enrichment flow), it is merged with the
+    //    meaning's own evidence and passed to the Decision Planner. This lets
+    //    the Decision Engine re-evaluate capability states (GENERIC → ACTIVE)
+    //    from the newly available scoped evidence. When no evidence is
+    //    supplied, this is exactly the canonical one-line path (evidence = []).
+    const plannerEvidence = [
+      ...meaning.evidence,
+      ...(options?.evidence ?? []),
+    ];
+    const plannerInput: PlannerInput = {
+      meaning,
+      evidence: plannerEvidence,
+      candidates,
+    };
+    const plan = buildDecisionPlan(plannerInput);
+
 
     // 6. Recipe Integration: DecisionPlan → compatible RecipeBlueprint.
     //    The resolved industry is passed to select() as the safety boundary.
@@ -407,15 +442,19 @@ export class BrainGoldenPath {
 
 
   /**
-   * Builds a minimal, deterministic BusinessMeaning from the BusinessBrief.
+   * Builds a deterministic BusinessMeaning from the BusinessBrief, enriched by
+   * the resolved IndustryProfile.
    *
    * This is a pure mapping of already-known brief slots into the semantic
-   * meaning contract. It NEVER invents facts: unspecified brief slots remain
-   * unspecified. The primary intent is derived from the brief's primary goal
+   * meaning contract, PLUS canonical semantic traits derived from the resolved
+   * industry. It NEVER invents facts: unspecified brief slots remain
+   * unspecified, and industry traits are only emitted when the profile actually
+   * supports them. The primary intent is derived from the brief's primary goal
    * when present, otherwise it defaults to `inform` (the most conservative
-   * semantic intent).
+   * semantic intent). Explicit user goals remain authoritative — industry
+   * intelligence enriches traits but never overrides the resolved intent.
    */
-  private buildMeaning(brief: BusinessBrief): BusinessMeaning {
+  private buildMeaning(brief: BusinessBrief, profile: IndustryProfile): BusinessMeaning {
     const traits: BusinessTrait[] = [];
 
     if (brief.businessType?.primary) {
@@ -437,6 +476,11 @@ export class BrainGoldenPath {
       });
     }
 
+    // Enrich with canonical semantic traits derived from the resolved
+    // IndustryProfile. These are industry-agnostic SemanticTraitKey signals,
+    // never industry IDs or hard-coded industry names.
+    this.enrichIndustryTraits(profile, traits);
+
     const primaryIntent = this.resolveIntent(brief.goals?.primary);
 
     return {
@@ -446,6 +490,96 @@ export class BrainGoldenPath {
       impliedCapabilities: [],
       evidence: [],
     };
+  }
+
+  /**
+   * Derives canonical semantic traits from a resolved IndustryProfile.
+   *
+   * This maps generic, industry-agnostic profile signals (capabilities,
+   * requirements, constraints, intent) onto the canonical SemanticTraitKey
+   * vocabulary. It NEVER branches on industry IDs or hard-coded industry
+   * names, so any registered industry benefits. Each derived trait carries
+   * evidence with `imported` provenance (system-provided industry knowledge),
+   * preserving the provenance distinction without claiming user assertion or
+   * system verification. Duplicate SemanticTraitKey values are suppressed.
+   */
+  private enrichIndustryTraits(profile: IndustryProfile, traits: BusinessTrait[]): void {
+    const add = (key: string, claim: string): void => {
+      // Avoid duplicate SemanticTraitKey values.
+      if (traits.some((t) => t.key === key)) return;
+      traits.push({
+        key,
+        value: 'true',
+        evidence: {
+          subject: key,
+          items: [
+            {
+              id: `industry.${profile.industryId}.${key}`,
+              provenance: Provenance.imported,
+              claim,
+            },
+          ],
+        },
+      });
+    };
+
+    const { capabilities, requirements, constraints, intent } = profile;
+
+    // physical presence
+    if (constraints.requiresPhysicalLocation || requirements.requiresAddress) {
+      add(
+        SemanticTraitKey.physical_presence,
+        'The business has a physical presence visitors may need to find.',
+      );
+    }
+
+    // appointment / booking
+    if (capabilities.supportsReservation) {
+      add(
+        SemanticTraitKey.appointment,
+        'The business operates by appointment or scheduled slots.',
+      );
+    }
+
+    // inquiry / contact
+    if (requirements.requiresContactForm || capabilities.supportsConsultationForm) {
+      add(
+        SemanticTraitKey.inquiry,
+        'The business expects customer-initiated contact or questions.',
+      );
+    }
+
+    // trust
+    if (intent.secondary.includes('build_trust') || requirements.requiresTeamProfile) {
+      add(
+        SemanticTraitKey.trust_requirement,
+        'Trust formation is important to the business.',
+      );
+    }
+
+    // discovery
+    if (capabilities.supportsPortfolio || capabilities.supportsMenu) {
+      add(
+        SemanticTraitKey.discovery_requirement,
+        'The business needs visitors to discover its offerings.',
+      );
+    }
+
+    // lead generation
+    if (intent.primary === 'attract_clients' || intent.primary === 'convert') {
+      add(
+        SemanticTraitKey.lead_generation,
+        'The business captures leads for follow-up.',
+      );
+    }
+
+    // transaction
+    if (capabilities.supportsOnlineOrdering) {
+      add(
+        SemanticTraitKey.transaction,
+        'The business sells a product or service for money.',
+      );
+    }
   }
 
   /**
