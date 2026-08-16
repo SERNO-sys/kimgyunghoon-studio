@@ -7,9 +7,11 @@
  */
 
 import { AiEngine } from './engine';
+import { DeepSeekProvider } from './providers/deepseek';
 import { GeminiProvider } from './providers/gemini';
 import { MockProvider } from './providers/mock';
 import type { AiProvider, AiProviderId } from './types';
+
 
 // Re-exported helpers used by existing V1 consumers (e.g. autobuild route).
 export { parseJsonResponse } from './sanitize';
@@ -26,8 +28,10 @@ export function getAiEngine(): AiEngine {
 
   const providers: Partial<Record<AiProviderId, AiProvider>> = {
     gemini: new GeminiProvider(),
+    deepseek: new DeepSeekProvider(),
     mock: new MockProvider(),
   };
+
 
   cachedEngine = new AiEngine(providers);
   return cachedEngine;

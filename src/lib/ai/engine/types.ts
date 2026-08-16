@@ -8,7 +8,8 @@
  */
 
 /** Provider identifiers supported by the V1 engine. */
-export type AiProviderId = 'gemini' | 'mock';
+export type AiProviderId = 'gemini' | 'deepseek' | 'mock';
+
 
 /** A normalized provider request. */
 export interface ProviderRequest {

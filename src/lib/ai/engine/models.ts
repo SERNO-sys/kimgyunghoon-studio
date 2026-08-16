@@ -20,11 +20,12 @@ export const MODELS: Record<string, ModelInfo> = {
   },
   /** General-purpose model for drafts, redesign and copy generation. */
   'general-default': {
-    provider: 'gemini',
-    model: 'gemini-flash-latest',
-    inputCostPerMTok: 0.3,
-    outputCostPerMTok: 2.5,
+    provider: 'deepseek',
+    model: 'deepseek-chat',
+    inputCostPerMTok: 0.27,
+    outputCostPerMTok: 1.1,
   },
+
 };
 
 export const DEFAULT_MODEL_KEY = 'general-default';
