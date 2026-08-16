@@ -150,14 +150,17 @@ export class EnrichmentRegenerator {
     const { updateSite } = await import('../db/queries');
     const { getDb } = await import('../db/client');
     const db = getDb();
+    // The V2 config is the single source of truth. It is persisted NESTED
+    // inside the existing `theme_config` JSON blob (the legacy ThemeConfig
+    // produced by toLegacyThemeConfig() already carries the full V2 shape —
+    // metadata, intent, resources, seo, policies — plus the legacy content and
+    // sections fields). The DB column is a JSON blob; it must NEVER be
+    // flattened into top-level Site columns (there is no `metadata` column).
     return updateSite(db, site.id, {
       themeConfig: legacyConfig,
-      // The V2 config is the single source of truth; persist it alongside the
-      // legacy shape so the renderer-facing config and the canonical config
-      // stay in sync. The DB column is a JSON blob.
-      ...(v2Config as unknown as Record<string, unknown>),
     });
   }
+
 
   /**
    * Maps the V2 ThemeConfig into the legacy ThemeConfig shape the existing

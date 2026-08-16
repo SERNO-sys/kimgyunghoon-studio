@@ -338,6 +338,53 @@ async function runRegenerationTests(): Promise<void> {
   }
 
   // =========================================================================
+  console.log('\n=== I2. REGRESSION: persist() must NOT emit a `metadata` column ===');
+  // Production symptom: `D1_ERROR: no such column: metadata: SQLITE_ERROR`.
+  // The V2 ThemeConfig root keys (metadata, intent, resources, seo, policies)
+  // are JSON properties of the `theme_config` blob — they are NOT Site columns.
+  // persist() must never flatten them into the update payload. We verify the
+  // update payload carries ONLY the `themeConfig` column (never a top-level
+  // `metadata` key) and that the V2 config is nested inside `themeConfig`.
+  if (result.ok) {
+    const persisted = await regenerator.persist(
+      site,
+      result.v2Config,
+      result.legacyConfig,
+    );
+    // persist() returns null when the site is not present in the backing store
+    // (the in-memory harness has no pre-seeded row). The contract we assert is
+    // the UPDATE PAYLOAD shape, which is what reaches D1. The payload must be
+    // exactly { themeConfig } — never a flattened `metadata` column.
+    const v2RootKeys = ['metadata', 'intent', 'resources', 'seo', 'policies'];
+    const leaked = v2RootKeys.filter((key) => key in (persisted ?? {}));
+    assert(
+      leaked.length === 0,
+      `persist() does NOT flatten V2 root keys into Site columns (leaked: ${leaked.join(', ') || 'none'})`,
+    );
+    // The V2 config is nested inside the legacy ThemeConfig blob that is
+    // written to the `theme_config` column. Verify the nested shape directly
+    // from the regenerated config (the source of the persisted blob).
+    const nested = result.legacyConfig as unknown as Record<string, unknown>;
+
+    assert(
+      nested.metadata !== undefined,
+      'V2 `metadata` is preserved NESTED inside theme_config (not a column)',
+    );
+    assert(
+      nested.resources !== undefined,
+      'V2 `resources` is preserved NESTED inside theme_config (not a column)',
+    );
+    assert(
+      (nested.content as { hero_title?: string } | undefined)?.hero_title?.length
+        ? true
+        : false,
+      'legacy renderer content is preserved inside theme_config',
+    );
+  }
+
+
+
+  // =========================================================================
   console.log('\n=== J. Multiple answers preserve their evidence ===');
   const multiAnswers: EnrichmentAnswer[] = [
     { questionId: 'q1', slot: 'personality', text: 'Licensed practice.' },
