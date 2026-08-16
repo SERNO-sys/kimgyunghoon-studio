@@ -242,20 +242,21 @@ export class BrainGoldenPath {
     //    traits (see buildMeaning). It also acts as a SAFETY BOUNDARY for
     //    Recipe selection (see step 6).
     //
-    //    IMPORTANT: the boundary is only enforced when the input actually
-    //    MATCHED a registered industry. When the input is unresolved (falls
-    //    back to the generic profile), we do NOT know the industry, so we
-    //    preserve the legacy behavior and allow any compatible recipe. This
-    //    keeps the golden path working for businesses that are not yet in the
-    //    registry while still preventing a known industry (e.g. counseling)
-    //    from receiving a recipe scoped to a different industry (e.g.
-    //    restaurant).
+    //    IMPORTANT: the boundary is ALWAYS enforced. When the input MATCHED a
+    //    registered industry, the boundary is that industry's id. When the
+    //    input is UNRESOLVED (falls back to the generic profile), the boundary
+    //    is the generic profile's id. Passing `undefined` would silently
+    //    bypass the RecipeIntegration safety boundary and let the first
+    //    capability-compatible recipe (e.g. modern-bistro) be selected for an
+    //    unrelated business (e.g. a photographer), producing a wrong
+    //    ThemeConfig. Because no recipe declares support for the generic
+    //    industry, an unresolved input deterministically returns
+    //    NO_COMPATIBLE_RECIPE instead of a mismatched recipe.
     const rawBusinessType = brief.businessType?.primary ?? '';
     const baseResolution = this.industryResolver.resolve(rawBusinessType);
     const baseProfile = baseResolution.profile;
-    const industryBoundary = baseResolution.matched
-      ? baseProfile.industryId
-      : undefined;
+    const industryBoundary = baseProfile.industryId;
+
 
     // 3. Semantic normalization: BusinessBrief + IndustryProfile → BusinessMeaning.
     const meaning = this.buildMeaning(brief, baseProfile);

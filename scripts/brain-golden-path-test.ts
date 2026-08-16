@@ -69,16 +69,17 @@ async function main(): Promise<void> {
 console.log('\n# Step 14 — Golden Path Integration Test\n');
 
 // ---------------------------------------------------------------------------
-// 1. Full chain for "카페" (cafe)
+// 1. Full chain for "cafe" (matched restaurant industry)
 // ---------------------------------------------------------------------------
-console.log('## 1. Full chain: "카페"');
+console.log('\n## 1. Full chain: "cafe"');
 {
   const gp = new BrainGoldenPath();
-  const result = await gp.run('카페');
+  const result = await gp.run('cafe');
   const ok = assertOk(result);
 
   // BusinessBrief boundary: first operation is extractSingleShotBrief.
-  const brief = extractSingleShotBrief('카페');
+  const brief = extractSingleShotBrief('cafe');
+
   assertEqual(ok.brief.businessType?.primary, brief.businessType?.primary, 'brief businessType preserved');
 
   // DecisionPlan present and non-empty.
@@ -114,8 +115,9 @@ console.log('## 1. Full chain: "카페"');
 console.log('\n## 2. Deterministic execution');
 {
   const gp = new BrainGoldenPath();
-  const a = await gp.run('카페');
-  const b = await gp.run('카페');
+  const a = await gp.run('cafe');
+  const b = await gp.run('cafe');
+
   assert(a.ok && b.ok, 'both runs ok');
   if (a.ok && b.ok) {
     assertEqual(
@@ -142,12 +144,13 @@ console.log('\n## 2. Deterministic execution');
 console.log('\n## 3. No mutation of DecisionPlan / ContentPlan');
 {
   const gp = new BrainGoldenPath();
-  const result = await gp.run('카페');
+  const result = await gp.run('cafe');
   const ok = assertOk(result);
   const planSnapshot = JSON.stringify(ok.plan);
   const contentPlanSnapshot = JSON.stringify(ok.contentPlan);
   // Re-run and compare — the orchestrator must not mutate its inputs.
-  const result2 = await gp.run('카페');
+  const result2 = await gp.run('cafe');
+
   const ok2 = assertOk(result2);
   assertEqual(JSON.stringify(ok2.plan), planSnapshot, 'DecisionPlan not mutated');
   assertEqual(JSON.stringify(ok2.contentPlan), contentPlanSnapshot, 'ContentPlan not mutated');
@@ -159,10 +162,11 @@ console.log('\n## 3. No mutation of DecisionPlan / ContentPlan');
 console.log('\n## 4. GENERIC / DORMANT / DROP preservation');
 {
   const gp = new BrainGoldenPath();
-  const result = await gp.run('카페');
+  const result = await gp.run('cafe');
   const ok = assertOk(result);
 
   // The bridge translates ACTIVE/GENERIC → enabled and DORMANT/DROP → disabled.
+
   // DORMANT and DROP must NEVER appear in the enabled list.
   const enabled = ok.bridge.enabledCapabilities;
   const disabled = ok.bridge.disabledCapabilities;
@@ -194,9 +198,10 @@ console.log('\n## 4. GENERIC / DORMANT / DROP preservation');
 console.log('\n## 5. AI #2 does not create capabilities');
 {
   const gp = new BrainGoldenPath();
-  const result = await gp.run('카페');
+  const result = await gp.run('cafe');
   const ok = assertOk(result);
   // AI #2 output is content only; it must not carry capability decisions.
+
   const contentKeys = Object.keys(ok.content);
   assert(!contentKeys.includes('capabilities'), 'AI #2 output has no capabilities field');
   assert(!contentKeys.includes('sections'), 'AI #2 output has no sections field');
@@ -210,8 +215,9 @@ console.log('\n## 6. Fact Validator failure stops the pipeline');
   // A prompt that produces content that fails validation must yield a
   // structured FACT_VALIDATION_FAILED error, never a silent pass.
   const gp = new BrainGoldenPath();
-  const result = await gp.run('카페');
+  const result = await gp.run('cafe');
   // We cannot force a failure through the deterministic mock without a
+
   // provider seam. Instead, verify the orchestrator's failure branch exists
   // and is reachable by checking the error code vocabulary is wired.
   assert(
@@ -250,6 +256,54 @@ console.log('\n## 8. Empty prompt rejected');
     assertEqual(result.error.code, GoldenPathErrorCode.EmptyPrompt, 'EmptyPrompt error code');
   }
 }
+
+// ---------------------------------------------------------------------------
+// 9. Unmatched industry must NOT fall through to a mismatched recipe
+// ---------------------------------------------------------------------------
+console.log('\n## 9. Unmatched industry is rejected (no mismatched recipe)');
+{
+  // A business type that is NOT in the industry registry (e.g. a photographer)
+  // resolves to the generic profile. The industry safety boundary must remain
+  // ACTIVE so the pipeline returns NO_COMPATIBLE_RECIPE instead of silently
+  // selecting the first capability-compatible recipe (e.g. modern-bistro) and
+  // producing a wrong ThemeConfig. This is the regression guard for the
+  // production enrichment failure where a photographer received a bistro
+  // ThemeConfig whose metadata was then persisted to D1.
+  const gp = new BrainGoldenPath();
+  const result = await gp.run('사진작가');
+  assert(!result.ok, 'unmatched industry does not produce a recipe');
+  if (!result.ok) {
+    assertEqual(
+      result.error.code,
+      GoldenPathErrorCode.NoCompatibleRecipe,
+      'unmatched industry returns NO_COMPATIBLE_RECIPE',
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 10. Matched industries still resolve to their dedicated recipe
+// ---------------------------------------------------------------------------
+console.log('\n## 10. Matched industries resolve to dedicated recipes');
+{
+  const gp = new BrainGoldenPath();
+  const cafe = await gp.run('cafe');
+  assert(cafe.ok, 'cafe (restaurant) resolves ok');
+  if (cafe.ok) {
+    assertEqual(cafe.recipe.recipeId, 'modern-bistro', 'cafe selects modern-bistro');
+  }
+
+  // "counseling" is a registered alias of the COUNSELING_PROFILE (industryId
+  // "counseling"), which maps to the counseling-center recipe.
+  const counseling = await gp.run('counseling');
+
+  assert(counseling.ok, 'counseling center resolves ok');
+  if (counseling.ok) {
+    assertEqual(counseling.recipe.recipeId, 'counseling-center', 'counseling selects counseling-center');
+  }
+
+}
+
 
 console.log(`\n# Result: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) {
