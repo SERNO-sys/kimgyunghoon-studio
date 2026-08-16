@@ -218,8 +218,9 @@ export class BrainGoldenPath {
    */
   async run(
     prompt: string,
-    options?: { evidence?: EvidenceSet[] }
+    options?: { evidence?: EvidenceSet[]; language?: string }
   ): Promise<GoldenPathResult> {
+
 
     // 1. Input boundary: raw prompt → BusinessBrief.
     let brief: BusinessBrief;
@@ -317,8 +318,9 @@ export class BrainGoldenPath {
     // 8. AI #2: ContentPlan → generated content (expression only).
     const content = await this.copywriter.generate({
       contentPlan,
-      config: { tone: 'professional', language: 'ko' },
+      config: { tone: 'professional', language: options?.language ?? 'ko' },
     });
+
 
     // 9. Fact Validator: generated content must PASS before the bridge.
     const factValidation = validateFacts({

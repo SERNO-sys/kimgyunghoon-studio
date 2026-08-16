@@ -100,9 +100,11 @@ export class EnrichmentRegenerator {
    */
   async regenerate(
     prompt: string,
-    evidence: EvidenceSet[]
+    evidence: EvidenceSet[],
+    language?: string
   ): Promise<RegenerationResult> {
-    const pipeline = await this.goldenPath.run(prompt, { evidence });
+    const pipeline = await this.goldenPath.run(prompt, { evidence, language });
+
     if (!pipeline.ok) {
       return {
         ok: false,

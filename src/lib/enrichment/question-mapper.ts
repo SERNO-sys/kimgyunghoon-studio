@@ -10,6 +10,9 @@
  *   - It NEVER creates a new Question Engine architecture.
  *   - It NEVER branches on industry names.
  *   - It produces questions that target canonical slots/intents only.
+ *   - The question SLOT and INTENT are ALWAYS canonical Question Engine
+ *     identifiers. Only the human-readable display TEXT is localized via the
+ *     canonical language module (18 supported languages).
  *
  * STRICT CONSTRAINT: This module MUST NOT import React, HTML, CSS, Renderer,
  * ThemeConfig, or any UI concept.
@@ -17,29 +20,9 @@
 
 import type { SlotKey } from '../question-engine/brief';
 import type { CapabilityId } from '../brain/capability';
+import { localizeQuestionText } from '../language';
+import { DEFAULT_LANGUAGE, type LanguageCodeValue } from '../language/types';
 import type { EnrichmentGap, EnrichmentQuestion } from './types';
-
-/**
- * The canonical question text templates, keyed by Question Engine slot.
- *
- * Each template is a function that produces a human-readable question targeting
- * the given slot. The text is semantic (what information is missing), not a UI
- * instruction. It is industry-agnostic.
- */
-const SLOT_QUESTION_TEMPLATES: Record<SlotKey, (capability: CapabilityId) => string> = {
-  businessType: () =>
-    'What type of business is this? (e.g. the primary offering or service)',
-  goals: () => 'What is the primary goal for this website?',
-  audience: () => 'Who is the primary audience you want to reach?',
-  personality: () =>
-    'What tone or personality should the site convey to build trust?',
-  services: () =>
-    'What specific products or services should be highlighted?',
-  contactPreference: () =>
-    'What is the preferred way for customers to contact you?',
-  optionalPreferences: () =>
-    'Are there any additional details (hours, location, booking) you would like to include?',
-};
 
 /**
  * The semantic intent for each Question Engine slot.
@@ -62,20 +45,29 @@ const SLOT_INTENTS: Record<SlotKey, string> = {
  *
  * Maps a prioritized list of enrichment gaps to a list of enrichment questions
  * that target existing Question Engine slots. It is deterministic and pure.
+ *
+ * The question text is localized into the resolved language (defaulting to the
+ * canonical default). The slot and intent remain canonical Question Engine
+ * identifiers so the answer-ingestion bridge can re-enter the Brain pipeline.
  */
 export class QuestionMapper {
   /**
    * Maps enrichment gaps to enrichment questions.
    *
    * @param gaps The prioritized enrichment gaps (already capped at 3–5).
+   * @param language The canonical language for the question display text.
+   *   Defaults to the canonical default language.
    * @returns A list of enrichment questions, one per gap, each targeting an
-   *   existing Question Engine slot.
+   *   existing Question Engine slot with localized display text.
    */
-  map(gaps: EnrichmentGap[]): EnrichmentQuestion[] {
+  map(
+    gaps: EnrichmentGap[],
+    language: LanguageCodeValue = DEFAULT_LANGUAGE
+  ): EnrichmentQuestion[] {
     return gaps.map((gap, index) => ({
       id: `enrich-${index + 1}`,
       slot: gap.recommendedSlot,
-      text: SLOT_QUESTION_TEMPLATES[gap.recommendedSlot](gap.capability),
+      text: localizeQuestionText(gap.recommendedSlot, language),
       intent: SLOT_INTENTS[gap.recommendedSlot],
       gapCapability: gap.capability,
     }));
@@ -85,6 +77,9 @@ export class QuestionMapper {
 /**
  * Convenience function: map gaps to questions in one call.
  */
-export function mapGapsToQuestions(gaps: EnrichmentGap[]): EnrichmentQuestion[] {
-  return new QuestionMapper().map(gaps);
+export function mapGapsToQuestions(
+  gaps: EnrichmentGap[],
+  language: LanguageCodeValue = DEFAULT_LANGUAGE
+): EnrichmentQuestion[] {
+  return new QuestionMapper().map(gaps, language);
 }

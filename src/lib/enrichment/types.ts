@@ -142,4 +142,8 @@ export interface GapAnalysisInput {
   contentPlan?: ContentPlan;
   /** The available evidence/data, if any. */
   evidence?: EvidenceSet[];
+  /** The raw prompt text, used to resolve the enrichment question language. */
+  prompt?: string | null;
+  /** An optional explicit language hint (code, region-tagged code, or name). */
+  languageHint?: string | null;
 }

@@ -24,6 +24,8 @@
 
 import { GapAnalyzer, MAX_GAPS, MIN_GAPS } from './gap-analyzer';
 import { QuestionMapper } from './question-mapper';
+import { resolveLanguage } from '../language';
+import { DEFAULT_LANGUAGE, type LanguageCodeValue } from '../language/types';
 import {
   GapPriority,
   type EnrichmentGap,
@@ -31,6 +33,7 @@ import {
   type GapAnalysisInput,
   type GapPriorityValue,
 } from './types';
+
 
 /**
  * The Enrichment Service.
@@ -57,7 +60,8 @@ export class EnrichmentService {
    */
   analyze(input: GapAnalysisInput): EnrichmentResult {
     const gaps = this.analyzer.analyze(input);
-    const questions = this.mapper.map(gaps);
+    const language = this.resolveLanguage(input);
+    const questions = this.mapper.map(gaps, language);
     const priority = this.resolvePriority(gaps);
 
     return {
@@ -67,6 +71,19 @@ export class EnrichmentService {
       enrichmentReady: gaps.length > 0,
     };
   }
+
+  /**
+   * Resolves the canonical language for the enrichment question text.
+   *
+   * Resolution order: explicit language hint → detection from the prompt →
+   * canonical default. The slot and intent remain canonical Question Engine
+   * identifiers regardless of language.
+   */
+  private resolveLanguage(input: GapAnalysisInput): LanguageCodeValue {
+    const context = resolveLanguage(input.prompt, input.languageHint);
+    return context.code;
+  }
+
 
   /**
    * Resolves the overall enrichment priority.
