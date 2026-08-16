@@ -312,6 +312,7 @@ export const COUNSELING_CENTER_RECIPE: RecipeBlueprint = {
       { capability: 'requiresAddress', feature: Feature.Address },
       { capability: 'requiresContactForm', feature: Feature.Contact },
       { capability: 'requiresTeamProfile', feature: Feature.Team },
+      { capability: 'requiresTeamProfile', feature: Feature.Testimonials },
     ],
     sectionMappings: [
       {
@@ -331,6 +332,14 @@ export const COUNSELING_CENTER_RECIPE: RecipeBlueprint = {
         required: true,
       },
       {
+        feature: Feature.Testimonials,
+        sectionType: 'testimonials',
+        layout: 'grid',
+        page: 'home',
+        order: 6,
+        required: false,
+      },
+      {
         feature: Feature.Address,
         sectionType: 'text',
         layout: 'two-column',
@@ -347,6 +356,7 @@ export const COUNSELING_CENTER_RECIPE: RecipeBlueprint = {
         required: true,
       },
     ],
+
   },
 };
 
