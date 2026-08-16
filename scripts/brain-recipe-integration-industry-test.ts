@@ -149,6 +149,9 @@ assert(
   !genericResolved.matched && genericResolved.profile.industryId === 'generic',
   'unknown input falls back to the generic profile',
 );
+// The compatiblePlan (booking + inquiry + location) is NOT expressible by the
+// generic recipe (which maps only Gallery + Contact), so a scoped recipe must
+// never be selected for it — and the generic recipe must not be forced either.
 const genericSelection = integration.select(
   compatiblePlan,
   MOCK_RECIPES,
@@ -156,8 +159,26 @@ const genericSelection = integration.select(
 );
 assert(
   genericSelection === undefined,
-  'select(generic) returns undefined — a scoped recipe is never selected for an unresolved industry',
+  'select(generic, booking/inquiry/location) returns undefined — a scoped recipe is never selected for an unresolved industry',
 );
+
+console.log('\n=== 6. Test F — generic-compatible plan selects the generic recipe ===');
+// A plan the generic-professional recipe CAN express (discovery + inquiry).
+const genericCompatiblePlan = makePlan('generic-plan', [
+  makePlanned(Capability.discovery, CapabilityState.ACTIVE),
+  makePlanned(Capability.inquiry, CapabilityState.ACTIVE),
+]);
+const genericCompatibleSelection = integration.select(
+  genericCompatiblePlan,
+  MOCK_RECIPES,
+  genericResolved.profile.industryId,
+);
+assert(
+  genericCompatibleSelection !== undefined &&
+    genericCompatibleSelection.recipeId === 'generic-professional',
+  'select(generic, discovery/inquiry) returns the generic-professional recipe',
+);
+
 
 console.log(`\nRESULT: ${passed} passed, ${failed} failed\n`);
 

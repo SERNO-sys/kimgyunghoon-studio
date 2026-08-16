@@ -69,6 +69,10 @@ export {
 } from './merger';
 
 export {
+  COUNSELING_CENTER_RECIPE,
+  GENERIC_PROFESSIONAL_RECIPE,
   MODERN_BISTRO_RECIPE,
   MOCK_RECIPES,
 } from './mocks';
+
+

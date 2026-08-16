@@ -258,28 +258,29 @@ console.log('\n## 8. Empty prompt rejected');
 }
 
 // ---------------------------------------------------------------------------
-// 9. Unmatched industry must NOT fall through to a mismatched recipe
+// 9. Unmatched industry resolves to the GENERIC recipe (never a mismatched one)
 // ---------------------------------------------------------------------------
-console.log('\n## 9. Unmatched industry is rejected (no mismatched recipe)');
+console.log('\n## 9. Unmatched industry resolves to the generic recipe');
 {
   // A business type that is NOT in the industry registry (e.g. a photographer)
   // resolves to the generic profile. The industry safety boundary must remain
-  // ACTIVE so the pipeline returns NO_COMPATIBLE_RECIPE instead of silently
-  // selecting the first capability-compatible recipe (e.g. modern-bistro) and
-  // producing a wrong ThemeConfig. This is the regression guard for the
-  // production enrichment failure where a photographer received a bistro
+  // ACTIVE so the pipeline NEVER silently selects a mismatched scoped recipe
+  // (e.g. modern-bistro) and producing a wrong ThemeConfig. Instead it must
+  // select the GENERIC_PROFESSIONAL_RECIPE. This is the regression guard for
+  // the production enrichment failure where a photographer received a bistro
   // ThemeConfig whose metadata was then persisted to D1.
   const gp = new BrainGoldenPath();
   const result = await gp.run('사진작가');
-  assert(!result.ok, 'unmatched industry does not produce a recipe');
-  if (!result.ok) {
+  assert(result.ok, 'unmatched industry resolves to the generic recipe');
+  if (result.ok) {
     assertEqual(
-      result.error.code,
-      GoldenPathErrorCode.NoCompatibleRecipe,
-      'unmatched industry returns NO_COMPATIBLE_RECIPE',
+      result.recipe.recipeId,
+      'generic-professional',
+      'unmatched industry selects the generic-professional recipe',
     );
   }
 }
+
 
 // ---------------------------------------------------------------------------
 // 10. Matched industries still resolve to their dedicated recipe
