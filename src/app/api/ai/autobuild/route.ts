@@ -377,6 +377,11 @@ export async function POST(request: Request) {
       decisionPlan: pipeline.plan,
       contentPlan: pipeline.contentPlan,
       evidence: pipeline.meaning.evidence,
+      // Forward the original prompt so the enrichment language resolver can
+      // detect the input language (e.g. Korean) instead of falling back to the
+      // canonical default (English). The question text is localized to the
+      // detected language; the slot/intent remain canonical Question Engine ids.
+      prompt: trimmed,
     });
 
     // The enrichment metadata is OPTIONAL and never blocks the initial build.

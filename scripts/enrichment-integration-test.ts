@@ -437,6 +437,68 @@ async function runRegenerationTests(): Promise<void> {
     'enrichment result contains no internal DecisionPlan/ThemeConfig/UI concepts',
   );
 
+  // =========================================================================
+  console.log('\n=== N. REGRESSION: Korean prompt → Korean enrichment question ===');
+  // This is the exact regression that shipped in production: the autobuild
+  // route called EnrichmentService.analyze() WITHOUT forwarding the original
+  // prompt, so language detection never ran and the QuestionMapper fell back to
+  // English. This test exercises the ACTUAL autobuild caller path — the same
+  // call shape the route uses (decisionPlan + contentPlan + evidence + prompt).
+  //
+  // The Korean one-line input observed in production:
+  const koreanPrompt =
+    '강남역 인근에서 2030 직장인을 대상으로 야간 진료를 진행하는 ' +
+    '프라이빗 심리 상담 센터입니다';
+
+  // The autobuild route passes the trimmed prompt into analyze(). We replicate
+  // that exact call shape so this regression cannot silently return.
+  const koreanResult = service.analyze({
+    decisionPlan: counselingPlan,
+    contentPlan: undefined,
+    evidence: [],
+    prompt: koreanPrompt,
+  });
+  assert(
+    koreanResult.enrichmentReady === true,
+    'Korean counseling prompt → enrichment is ready (gaps exist)',
+  );
+  assert(
+    koreanResult.questions.length > 0,
+    'Korean counseling prompt → at least one enrichment question is produced',
+  );
+  assert(
+    koreanResult.questions.every((q) => q.text.length > 0),
+    'Korean counseling prompt → every question has human-readable text',
+  );
+  // The question text must be Korean (Hangul), NOT English. This is the exact
+  // production symptom: English questions for a Korean input.
+  const koreanText = koreanResult.questions.map((q) => q.text).join(' ');
+  const hasHangul = /[\uAC00-\uD7A3]/.test(koreanText);
+  assert(
+    hasHangul,
+    'Korean prompt → question text is localized to Korean (contains Hangul)',
+  );
+  // The canonical slot/intent must remain Question Engine identifiers even when
+  // the display text is Korean.
+  assert(
+    koreanResult.questions.every((q) => canonicalSlots.has(q.slot)),
+    'Korean prompt → slots remain canonical Question Engine slots',
+  );
+
+  // Control: WITHOUT forwarding the prompt, the same plan falls back to the
+  // canonical default (English). This proves the fix (forwarding the prompt) is
+  // what drives the Korean localization — not a change to the mapper.
+  const noPromptResult = service.analyze({
+    decisionPlan: counselingPlan,
+    contentPlan: undefined,
+    evidence: [],
+  });
+  const noPromptText = noPromptResult.questions.map((q) => q.text).join(' ');
+  assert(
+    !/[\uAC00-\uD7A3]/.test(noPromptText),
+    'control: without the prompt, question text is NOT Korean (English default)',
+  );
+
   console.log(`\nRESULT: ${passed} passed, ${failed} failed\n`);
   if (failed > 0) {
     process.exit(1);
