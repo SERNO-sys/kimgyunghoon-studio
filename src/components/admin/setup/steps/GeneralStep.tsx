@@ -113,8 +113,12 @@ export function GeneralStep({ form }: GeneralStepProps) {
   /** Submits the answered questions to re-enter the Brain pipeline. */
   const handleSubmitAnswers = async () => {
     if (!builtSiteId) return;
+    // Guard against duplicate submissions: once enrichment has completed (or is
+    // in-flight), ignore further clicks. The site is already enriched.
+    if (enrichDone || enrichLoading) return;
     setEnrichLoading(true);
     setEnrichError(null);
+
 
     // Only non-blank answers are sent. Blank answers are ignored by the
     // ingestion bridge — they never become facts.

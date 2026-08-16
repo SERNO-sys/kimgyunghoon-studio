@@ -21,5 +21,5 @@ export * from './question-mapper';
 export * from './service';
 export * from './answer-ingestion';
 export * from './regenerate';
-
+export * from './error-mapping';
 

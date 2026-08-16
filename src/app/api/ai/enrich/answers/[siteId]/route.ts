@@ -6,9 +6,11 @@ import { getSiteById } from '@/lib/db/queries';
 import {
   AnswerIngestionBridge,
   EnrichmentRegenerator,
+  localizeEnrichmentError,
   type EnrichmentAnswer,
 } from '@/lib/enrichment';
 import type { SlotKey } from '@/lib/question-engine/brief';
+
 
 
 export const runtime = 'edge';
@@ -152,14 +154,15 @@ export async function POST(
     const result = await regenerator.regenerate(prompt.trim(), evidence);
 
     if (!result.ok) {
+      // Surface a SAFE, localized message — never leak the raw provider error
+      // (which may contain Gemini JSON or internal identifiers) to the client.
+      const message = localizeEnrichmentError(result.error);
       return NextResponse.json(
-        {
-          success: false,
-          message: `Enrichment failed: ${result.error.code} — ${result.error.message}`,
-        },
+        { success: false, message },
         { status: 422 }
       );
     }
+
 
     // 3. Persist the regenerated ThemeConfig onto the existing site via the
     //    existing DB update path. This is the ONLY write performed.
@@ -182,9 +185,10 @@ export async function POST(
       answered: evidence.length,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to enrich site';
+    // Log the full error server-side for diagnostics, but return only a SAFE,
+    // localized message to the client — never the raw provider error.
     console.error('[EnrichAnswers] error:', error);
+    const message = localizeEnrichmentError(error);
     return NextResponse.json(
       { success: false, message },
       { status: 500 }

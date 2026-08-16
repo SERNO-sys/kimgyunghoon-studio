@@ -1,10 +1,16 @@
 import type { RetryPolicy } from './types';
 
 export const DEFAULT_RETRY_POLICY: RetryPolicy = {
-  maxAttempts: 3,
+  // A single user action may trigger AT MOST ONE automatic retry (2 attempts
+  // total) for transient provider failures such as HTTP 503. Deterministic
+  // errors (400/401/403, schema mismatch, invalid request) are never retried —
+  // they are classified as non-transient by `isTransientError` and returned
+  // immediately. This bounds Gemini cost and latency per user action.
+  maxAttempts: 2,
   baseDelayMs: 500,
   maxDelayMs: 4000,
 };
+
 
 /**
  * Returns true when an error is transient and worth retrying: rate limits,
