@@ -16,6 +16,7 @@ import { BrainGoldenPath } from '@/lib/golden-path/brain-pipeline';
 import { GeminiCopywriterProvider } from '@/lib/brain/copywriter';
 import { RecipeMerger } from '@/lib/recipe-engine';
 import { EnrichmentService } from '@/lib/enrichment';
+import { extractSingleShotEvidence } from '@/lib/ai/build/single-shot-brief';
 import type { ThemeConfig } from '@/types/site';
 import type { Site, SiteSettings, User, Post, SitePage } from '@/lib/db/types';
 import type { ThemeConfig as V2ThemeConfig } from '@/lib/theme-config/v2/types';
@@ -152,8 +153,20 @@ export async function POST(request: Request) {
     // transparently falls back to the deterministic mock when GEMINI_API_KEY is
     // not configured, so the pipeline stays deterministic in tests and local
     // dev while using real Gemini in production.
+    //
+    // SEMANTIC EVIDENCE PRESERVATION (AWIE V2): the single-shot boundary
+    // deterministically extracts user-asserted semantic facts (offering,
+    // address, tone, business_type) from the SAME raw prompt and threads them
+    // into the existing BrainGoldenPath.run(prompt, { evidence }) seam. This
+    // feeds the existing BusinessMeaning -> DecisionPlan -> ContentPlan ->
+    // Copywriter pipeline with the user's actual business facts instead of
+    // generic requirements. It is provider-independent and never fabricates
+    // facts.
     const goldenPath = new BrainGoldenPath(new GeminiCopywriterProvider());
-    const pipeline = await goldenPath.run(trimmed);
+    const singleShotEvidence = extractSingleShotEvidence(trimmed);
+    const pipeline = await goldenPath.run(trimmed, {
+      evidence: singleShotEvidence,
+    });
     if (!pipeline.ok) {
       return NextResponse.json(
         { success: false, message: `Golden Path failed: ${pipeline.error.code} — ${pipeline.error.message}` },
