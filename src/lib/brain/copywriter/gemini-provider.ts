@@ -79,11 +79,14 @@ export class GeminiCopywriterProvider implements CopywriterProvider {
    * This is async because it awaits an external LLM call through the engine.
    */
   async generate(request: CopywriterRequest): Promise<GeneratedContentSet> {
-    const { contentPlan, config } = request;
+    const { contentPlan, config, evidence } = request;
 
     // Build the deterministic prompt contract from the ContentPlan. This is the
-    // ONLY instruction boundary — the model may not add requirements.
-    const prompt = buildPromptContract(contentPlan, config);
+    // ONLY instruction boundary — the model may not add requirements. The
+    // request's evidence is passed so the builder can surface ONLY the concrete
+    // facts that each requirement explicitly permits (via its `evidenceRefs`).
+    const prompt = buildPromptContract(contentPlan, config, evidence);
+
 
     const engine = getAiEngine();
     const result = await engine.generateStructured(llmGeneratedContentSetSchema, {
@@ -277,7 +280,20 @@ function buildUserPrompt(
       `  prohibitedInventions: ${instruction.prohibitedInventions.join(', ') || '(none)'}`,
       ''
     );
+
+    // Surface ONLY the concrete evidence this requirement explicitly permits.
+    // These are the exact facts the model may reference when writing the copy.
+    // When the requirement is generic-safe (or no evidence was permitted), the
+    // context is empty and the model must stay generic-safe.
+    if (instruction.evidenceContext.length > 0) {
+      lines.push('  permittedEvidence:');
+      for (const item of instruction.evidenceContext) {
+        lines.push(`    - ${item}`);
+      }
+      lines.push('');
+    }
   }
+
 
   return lines.join('\n');
 }

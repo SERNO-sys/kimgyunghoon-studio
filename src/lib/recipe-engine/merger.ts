@@ -27,7 +27,9 @@ import type {
   ThemeResources,
 } from '../theme-config/v2/types';
 import type { RecipeBlueprint, FeatureId } from './types';
+import { Feature } from './types';
 import type { ContentPlan } from '../brain/content-plan';
+import { ContentShape } from '../brain/content-plan';
 import type { GeneratedContentSet } from '../brain/copywriter';
 import { CAPABILITY_FEATURE_COMPATIBILITY } from '../brain/recipe-bridge';
 import type { CapabilityId } from '../brain/capability';
@@ -410,10 +412,20 @@ export class RecipeMerger {
       // we never route content to a section the recipe does not produce.
       const candidateFeatures =
         CAPABILITY_FEATURE_COMPATIBILITY[capability as CapabilityId] ?? [];
-      const targetFeatures = candidateFeatures.filter((feature: FeatureId) =>
+      let targetFeatures = candidateFeatures.filter((feature: FeatureId) =>
         recipeFeatures.has(feature),
       );
 
+      // HERO-PRIORITY ROUTING RULE (deterministic):
+      // A generated item whose semantic shape is `hero` carries hero copy
+      // (headline / subheadline / cta). When the recipe declares a `hero`
+      // feature, that copy MUST be routed to the hero section ONLY — never
+      // duplicated into a sibling feature (e.g. gallery) that also expresses
+      // the same capability. This keeps the hero copy in the hero section and
+      // prevents the gallery from being overwritten with hero boilerplate.
+      if (item.shape === ContentShape.Hero && targetFeatures.includes(Feature.Hero)) {
+        targetFeatures = [Feature.Hero];
+      }
 
       if (targetFeatures.length === 0) {
         warnings.push(

@@ -60,7 +60,8 @@ import {
   type ContentShapeValue,
 } from '../content-plan';
 import type { ContentPlan } from '../content-plan';
-import type { ProvenanceValue } from '../evidence';
+import type { Evidence, EvidenceSet, ProvenanceValue } from '../evidence';
+
 
 // Re-export the canonical semantic content-shape vocabulary.
 //
@@ -309,13 +310,29 @@ export interface CopywriterRequest {
   contentPlan: ContentPlan;
   /** The expression configuration (tone, language). */
   config: CopywriterConfig;
+  /**
+   * The evidence available to the expression layer.
+   *
+   * This is the SAME evidence the Decision Planner already consumed to build the
+   * ContentPlan. It is passed so the provider can render the concrete facts that
+   * the ContentPlan explicitly permits (via each requirement's `evidenceRefs`)
+   * into the LLM prompt. It is NOT a new decision input: the ContentPlan remains
+   * the authoritative instruction boundary, and only the evidence ids listed in
+   * a requirement's `evidenceRefs` may be surfaced for that requirement.
+   *
+   * When omitted, the provider renders no evidence context (equivalent to the
+   * canonical one-line path where evidence = []).
+   */
+  evidence?: EvidenceSet[];
 }
 
 /** Zod schema for a CopywriterRequest. */
 export const copywriterRequestSchema = z.object({
   contentPlan: z.unknown(), // validated structurally by the provider; see note
   config: copywriterConfigSchema,
+  evidence: z.array(z.unknown()).optional(),
 });
+
 
 /**
  * The provider-independent AI #2 interface.
@@ -381,6 +398,16 @@ export interface PromptInstruction {
   allowedEvidenceRefs: string[];
   /** The prohibited invention categories (from mustNotInvent). */
   prohibitedInventions: string[];
+  /**
+   * The concrete evidence context the model may use for this requirement.
+   *
+   * This is the serialized text of ONLY the evidence items whose ids appear in
+   * `allowedEvidenceRefs`. It is derived deterministically from the request's
+   * `evidence` and the requirement's permitted refs. When the requirement is
+   * generic-safe (no permitted refs) or no evidence was supplied, this is empty
+   * and the model must write generic-safe copy.
+   */
+  evidenceContext: string[];
 }
 
 /** Zod schema for a PromptInstruction. */
@@ -393,7 +420,9 @@ export const promptInstructionSchema = z.object({
   genericSafe: z.boolean(),
   allowedEvidenceRefs: z.array(z.string()),
   prohibitedInventions: z.array(z.string()),
+  evidenceContext: z.array(z.string()),
 });
+
 
 
 /**

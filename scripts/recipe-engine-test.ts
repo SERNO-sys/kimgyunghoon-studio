@@ -14,10 +14,13 @@ import {
   RecipeSelector,
   RecipeMerger,
   MODERN_BISTRO_RECIPE,
+  GENERIC_PROFESSIONAL_RECIPE,
 } from '../src/lib/recipe-engine';
 
 import { RESTAURANT_PROFILE } from '../src/lib/industry-registry';
 import { createEmptyBrief } from '../src/lib/question-engine/brief';
+import { ContentShape, type ContentPlan } from '../src/lib/brain/content-plan';
+import type { GeneratedContentSet } from '../src/lib/brain/copywriter';
 
 let passed = 0;
 let failed = 0;
@@ -156,6 +159,90 @@ check('F1: warning emitted for missing requiresContactForm capability', result3.
 check('F2: default contact section injected', result3.config.resources.sections.some((s) => s.id === 'requiresContactForm' && s.type === 'contact'));
 
 
+// ---------------------------------------------------------------------------
+// 6. Hero-priority routing rule (regression for DeepSeek content fidelity)
+// ---------------------------------------------------------------------------
+// A generated item whose semantic shape is `hero` (e.g. the `discovery`
+// capability) must be routed to the `hero` section ONLY — never duplicated
+// into a sibling feature (e.g. `gallery`) that also expresses the same
+// capability. This prevents hero copy from overwriting the gallery with
+// generic boilerplate.
+console.log('\n=== Hero-priority routing rule ===');
+
+const heroContentPlan: ContentPlan = {
+  id: 'content-test-hero',
+  planId: 'plan-test-hero',
+  requirements: [
+    {
+      id: 'content-discovery',
+      capability: 'discovery',
+      type: 'generic',
+      shape: ContentShape.Hero,
+      fields: ['headline', 'subheadline', 'cta'],
+      required: true,
+      description: 'Hero copy describing the business.',
+      factAvailability: 'generic_safe',
+      genericAllowed: true,
+      evidenceRefs: [],
+      mustNotInvent: [],
+    },
+  ],
+  dormant: [],
+  dropped: [],
+};
+
+const heroContent: GeneratedContentSet = {
+  id: 'gen-test-hero',
+  contentPlanId: 'content-test-hero',
+  items: [
+    {
+      id: 'content-discovery',
+      requirementId: 'content-discovery',
+      shape: ContentShape.Hero,
+      fields: {
+        headline: '부산 흑백 인물 사진 전문',
+        subheadline: '감성적인 브랜드 룩북을 촬영하는 1인 상업 포토그래퍼',
+        cta: '포트폴리오 보기',
+      },
+      body: '부산 흑백 인물 사진 전문',
+      factReferences: [],
+    },
+  ],
+};
+
+const heroResult = merger.merge({
+  recipe: GENERIC_PROFESSIONAL_RECIPE,
+  industryProfile: RESTAURANT_PROFILE,
+  brief,
+  content: heroContent,
+  contentPlan: heroContentPlan,
+});
+
+const heroSection = heroResult.config.resources.sections.find(
+  (s) => s.id === Feature.Hero,
+);
+const gallerySection = heroResult.config.resources.sections.find(
+  (s) => s.id === Feature.Gallery,
+);
+
+check(
+  'H1: generic recipe produces a hero section',
+  !!heroSection,
+);
+check(
+  'H2: hero copy routed to hero section',
+  heroSection?.content?.headline === '부산 흑백 인물 사진 전문',
+);
+check(
+  'H3: hero copy NOT duplicated into gallery section',
+  gallerySection?.content?.headline !== '부산 흑백 인물 사진 전문',
+);
+check(
+  'H4: gallery section retains its own content (not overwritten by hero)',
+  gallerySection === undefined ||
+    gallerySection.content?.headline === undefined ||
+    gallerySection.content?.headline !== '부산 흑백 인물 사진 전문',
+);
 
 // ---------------------------------------------------------------------------
 // Result

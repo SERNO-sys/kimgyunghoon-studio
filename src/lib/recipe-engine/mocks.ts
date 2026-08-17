@@ -492,9 +492,18 @@ export const GENERIC_PROFESSIONAL_RECIPE: RecipeBlueprint = {
   mapping: {
     capabilityFeatures: [
       { capability: 'supportsPortfolio', feature: Feature.Gallery },
+      { capability: 'supportsPortfolio', feature: Feature.Hero },
       { capability: 'requiresContactForm', feature: Feature.Contact },
     ],
     sectionMappings: [
+      {
+        feature: Feature.Hero,
+        sectionType: 'hero',
+        layout: 'centered',
+        page: 'home',
+        order: 0,
+        required: false,
+      },
       {
         feature: Feature.Gallery,
         sectionType: 'gallery',

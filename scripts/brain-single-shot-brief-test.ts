@@ -17,8 +17,10 @@
 
 import {
   extractSingleShotBrief,
+  extractSingleShotEvidence,
   EmptyPromptError,
 } from '../src/lib/ai/build/single-shot-brief';
+
 
 let passed = 0;
 let failed = 0;
@@ -153,6 +155,58 @@ console.log('I. The adapter does NOT contain UI/Recipe/ThemeConfig/capability co
   assert(
     !('sections' in brief) && !('theme' in brief) && !('capabilities' in brief),
     'no sections/theme/capabilities on the brief',
+  );
+}
+console.log('');
+
+// --- J. extractSingleShotEvidence preserves the photographer's offerings ---
+console.log('J. extractSingleShotEvidence preserves the photographer offerings');
+{
+  const prompt =
+    '부산에서 활동하며 흑백 인물 사진과 감성적인 브랜드 룩북을 전문으로 촬영하는 1인 상업 포토그래퍼입니다';
+  const evidence = extractSingleShotEvidence(prompt);
+
+  // The discovery requirement (ContentPlan) resolves evidence by the
+  // `offering` subject. The photographer's offerings MUST be present there so
+  // the ContentPlan can attach evidenceRefs and the copywriter prompt can
+  // surface the concrete offerings.
+  const offering = evidence.find((set) => set.subject === 'offering');
+  assert(!!offering, 'offering evidence subject present');
+  if (offering) {
+    const claims = offering.items.map((i) => i.claim).join(' ');
+    assert(claims.includes('흑백 인물 사진'), 'offering includes 흑백 인물 사진');
+    assert(claims.includes('브랜드 룩북'), 'offering includes 브랜드 룩북');
+    assert(
+      offering.items.every((i) => i.provenance === 'user_asserted'),
+      'offering provenance is user_asserted',
+    );
+  }
+
+  // The location requirement resolves evidence by the `address` subject.
+  const address = evidence.find((set) => set.subject === 'address');
+  assert(!!address, 'address evidence subject present');
+  if (address) {
+    assert(
+      address.items.some((i) => i.claim.includes('부산')),
+      'address includes 부산',
+    );
+  }
+
+  // The business_type subject carries the full user-asserted description.
+  const businessType = evidence.find((set) => set.subject === 'business_type');
+  assert(!!businessType, 'business_type evidence subject present');
+  if (businessType) {
+    assert(
+      businessType.items.some((i) => i.claim.includes('1인 상업 포토그래퍼')),
+      'business_type includes 1인 상업 포토그래퍼',
+    );
+  }
+
+  // Deterministic: same input -> same evidence.
+  const again = extractSingleShotEvidence(prompt);
+  assert(
+    JSON.stringify(evidence) === JSON.stringify(again),
+    'evidence extraction is deterministic',
   );
 }
 console.log('');

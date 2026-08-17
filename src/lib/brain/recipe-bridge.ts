@@ -43,8 +43,13 @@ export const CAPABILITY_FEATURE_COMPATIBILITY: Record<
   CapabilityId,
   readonly FeatureId[]
 > = {
-  /** Users discover offerings — expressible via menu, gallery, or blog. */
-  discovery: ['menu', 'gallery', 'blog'],
+  /**
+   * Users discover offerings — expressible via menu, gallery, blog, or hero.
+   * `hero` is the semantic Feature for primary hero content (headline /
+   * subheadline / cta). It is additive; the existing menu/gallery/blog
+   * mappings are preserved.
+   */
+  discovery: ['menu', 'gallery', 'blog', 'hero'],
   /** Users purchase — expressible via menu (purchasable items). */
   purchase: ['menu'],
   /** Users book — expressible via reservation. */

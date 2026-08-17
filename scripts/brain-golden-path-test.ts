@@ -28,8 +28,9 @@
  */
 
 import { BrainGoldenPath, GoldenPathErrorCode } from '../src/lib/golden-path/brain-pipeline';
-import { extractSingleShotBrief } from '../src/lib/ai/build/single-shot-brief';
+import { extractSingleShotBrief, extractSingleShotEvidence } from '../src/lib/ai/build/single-shot-brief';
 import { RecipeMerger } from '../src/lib/recipe-engine';
+
 
 let passed = 0;
 let failed = 0;
@@ -306,11 +307,85 @@ console.log('\n## 10. Matched industries resolve to dedicated recipes');
 }
 
 
+// ---------------------------------------------------------------------------
+// 11. Photographer evidence flows through to ContentPlan discovery + copywriter
+// ---------------------------------------------------------------------------
+console.log('\n## 11. Photographer evidence flows through the pipeline');
+{
+  const prompt =
+    '부산에서 활동하며 흑백 인물 사진과 감성적인 브랜드 룩북을 전문으로 촬영하는 1인 상업 포토그래퍼입니다';
+
+  // Mirror the production autobuild wiring: extract evidence from the SAME
+  // raw prompt and thread it into the pipeline via the { evidence } seam.
+  const evidence = extractSingleShotEvidence(prompt);
+  const gp = new BrainGoldenPath();
+  const result = await gp.run(prompt, { evidence });
+  const ok = assertOk(result);
+
+  // The ContentPlan discovery requirement must carry evidenceRefs that resolve
+  // to the photographer's offerings (흑백 인물 사진 / 브랜드 룩북).
+  const discovery = ok.contentPlan.requirements.find(
+    (r) => r.id === 'content-discovery',
+  );
+  assert(!!discovery, 'ContentPlan has a discovery requirement');
+
+  if (discovery) {
+    assert(
+      Array.isArray(discovery.evidenceRefs) && discovery.evidenceRefs.length > 0,
+      'discovery requirement has evidenceRefs',
+    );
+    if (Array.isArray(discovery.evidenceRefs)) {
+      const refs = discovery.evidenceRefs.join(' ');
+      assert(refs.includes('offering'), 'discovery evidenceRefs reference the offering subject');
+    }
+  }
+
+  // The copywriter prompt must surface the concrete offerings. The mock
+  // provider receives the built prompt; we assert the evidence subject claims
+  // are present in the pipeline's plan evidence (the source of the prompt).
+  // NOTE: the enrichment evidence is threaded into the DecisionPlan's
+  // `evidence` (plannerEvidence), NOT into `meaning.evidence` (which stays
+  // empty by design).
+  const planEvidence = ok.plan.evidence;
+  const offeringSet = planEvidence.find((set) => set.subject === 'offering');
+  assert(!!offeringSet, 'plan evidence carries the offering subject');
+  if (offeringSet) {
+    const claims = offeringSet.items.map((i) => i.claim).join(' ');
+    assert(claims.includes('흑백 인물 사진'), 'offering claim includes 흑백 인물 사진');
+    assert(claims.includes('브랜드 룩북'), 'offering claim includes 브랜드 룩북');
+  }
+
+  // The address subject carries 부산.
+  const addressSet = planEvidence.find((set) => set.subject === 'address');
+  assert(!!addressSet, 'plan evidence carries the address subject');
+  if (addressSet) {
+    assert(
+      addressSet.items.some((i) => i.claim.includes('부산')),
+      'address claim includes 부산',
+    );
+  }
+
+  // The business_type subject carries the full description.
+  const businessTypeSet = planEvidence.find(
+    (set) => set.subject === 'business_type',
+  );
+  assert(!!businessTypeSet, 'plan evidence carries the business_type subject');
+  if (businessTypeSet) {
+    assert(
+      businessTypeSet.items.some((i) => i.claim.includes('1인 상업 포토그래퍼')),
+      'business_type claim includes 1인 상업 포토그래퍼',
+    );
+  }
+}
+
+
+
 console.log(`\n# Result: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) {
   process.exit(1);
 }
 }
+
 
 main().catch((err) => {
   console.error(err);

@@ -317,10 +317,21 @@ export class BrainGoldenPath {
     const contentPlan = buildContentPlan(plan);
 
     // 8. AI #2: ContentPlan → generated content (expression only).
+    //
+    //    The SAME evidence the Decision Planner consumed (plannerEvidence) is
+    //    passed to the expression layer so the provider can render the concrete
+    //    facts that the ContentPlan explicitly permits (via each requirement's
+    //    `evidenceRefs`) into the LLM prompt. This is NOT a new decision input:
+    //    the ContentPlan remains the authoritative instruction boundary, and the
+    //    prompt builder surfaces ONLY the evidence ids a requirement permits.
+    //    When no evidence is supplied, this is exactly the canonical one-line
+    //    path (evidence = []).
     const content = await this.copywriter.generate({
       contentPlan,
       config: { tone: 'professional', language: options?.language ?? 'ko' },
+      evidence: plannerEvidence,
     });
+
 
 
     // 9. Fact Validator: generated content must PASS before the bridge.

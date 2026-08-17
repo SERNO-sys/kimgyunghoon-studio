@@ -59,6 +59,13 @@ export const Feature = {
   Team: 'team',
   Blog: 'blog',
   Faq: 'faq',
+  /**
+   * Hero — a semantic Feature representing the primary hero content of a site
+   * (headline / subheadline / cta). It is SEMANTIC content, NOT a UI
+   * implementation detail. It is additive and does not replace any existing
+   * Feature.
+   */
+  Hero: 'hero',
 } as const;
 
 /** The union of all valid Feature identifiers. */
